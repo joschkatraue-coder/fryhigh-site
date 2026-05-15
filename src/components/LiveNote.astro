@@ -1,0 +1,96 @@
+---
+interface Props {
+  title: string;
+  tag: string;
+  category: "hot" | "fresh" | "event" | "normal";
+  body: string;
+  stamps: string[];
+}
+
+const { title, tag, category, body, stamps } = Astro.props;
+---
+<article class:list={["note", `note-${category}`]}>
+  <span class="tag">{tag}</span>
+  <h3>{title}</h3>
+  <p>{body}</p>
+  {stamps.length > 0 && (
+    <div class="stamp">
+      {stamps.map((s) => <span>{s}</span>)}
+    </div>
+  )}
+</article>
+
+<style>
+  .note {
+    background: var(--cream-warm);
+    color: var(--ink);
+    padding: var(--space-5);
+    border-radius: var(--r-md);
+    display: grid;
+    gap: var(--space-3);
+    align-content: start;
+    position: relative;
+    transform: rotate(var(--rotate, 0deg));
+    box-shadow:
+      0 1px 0 color-mix(in oklab, var(--ink) 8%, transparent),
+      0 12px 24px -16px color-mix(in oklab, var(--ink) 30%, transparent);
+    border-left: 6px solid var(--accent-line, var(--ink));
+  }
+
+  /* Post-It-Style: leichte Rotation je Karte für Pinnwand-Vibe */
+  .note:nth-child(4n+1) { --rotate: -0.8deg; }
+  .note:nth-child(4n+2) { --rotate: 0.6deg; }
+  .note:nth-child(4n+3) { --rotate: -0.4deg; }
+  .note:nth-child(4n+4) { --rotate: 1deg; }
+
+  .note-hot {
+    background: color-mix(in oklab, var(--orange) 18%, var(--cream));
+    --accent-line: var(--orange);
+  }
+
+  .note-fresh {
+    background: color-mix(in oklab, var(--green) 18%, var(--cream));
+    --accent-line: var(--green);
+  }
+
+  .note-event {
+    background: color-mix(in oklab, var(--yellow) 28%, var(--cream));
+    --accent-line: var(--ink);
+  }
+
+  .tag {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    opacity: 0.75;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--ink);
+  }
+
+  p {
+    line-height: 1.5;
+  }
+
+  .stamp {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px dashed color-mix(in oklab, var(--ink) 25%, transparent);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .note { transform: none; }
+  }
+</style>

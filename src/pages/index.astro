@@ -1,14 +1,17 @@
 ---
-import { getEntry } from "astro:content";
+import { getCollection, getEntry } from "astro:content";
 import MarketingLayout from "../layouts/MarketingLayout.astro";
 import Hero from "../components/Hero.astro";
 import StatsStrip from "../components/StatsStrip.astro";
+import LiveBoard from "../components/LiveBoard.astro";
+import StandortGrid from "../components/StandortGrid.astro";
 import NewsletterCTA from "../components/NewsletterCTA.astro";
 
 const home = await getEntry("home", "home");
 if (!home) throw new Error("src/content/home.md fehlt — Home-Singleton ist Pflicht.");
 
 const { hero, stats, newsletter } = home.data;
+const standorte = await getCollection("standorte");
 ---
 <MarketingLayout
   title="Fry High — First Class Fritten · Bremerhaven seit 2020"
@@ -23,11 +26,15 @@ const { hero, stats, newsletter } = home.data;
 
   <StatsStrip stats={stats} />
 
+  <LiveBoard />
+
+  <StandortGrid standorte={standorte} />
+
   <section class="placeholder">
     <span class="eyebrow">Phase A · in Entwicklung</span>
     <h2>Restliche Sektionen folgen.</h2>
     <p class="lead">
-      Live-Tagestafel · Pommes-Kreationen · Standorte · Abendgeschäft ·
+      Cutout-Wall (Mood) · Abendgeschäft ·
       Catering · Kindergeburtstag · Story · Pantry.
     </p>
   </section>

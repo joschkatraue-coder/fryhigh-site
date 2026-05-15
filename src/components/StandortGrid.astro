@@ -1,0 +1,64 @@
+---
+import StandortCard from "./StandortCard.astro";
+import type { CollectionEntry } from "astro:content";
+
+interface Props {
+  standorte: CollectionEntry<"standorte">[];
+}
+
+const { standorte } = Astro.props;
+const sorted = [...standorte].sort((a, b) => a.data.order - b.data.order);
+---
+<section class="standorte" id="standorte">
+  <div class="lead">
+    <span class="eyebrow">Standorte · drei Gates</span>
+    <h2>Wo wir sind.</h2>
+    <p class="lead-copy">
+      Hauptbude am Zoo am Meer, Mittagsversorgung am Hafen, mobil als Food Truck.
+      Drei Wege uns zu finden — wir kommen euch entgegen.
+    </p>
+  </div>
+
+  <div class="grid">
+    {sorted.map((entry) => (
+      <StandortCard
+        gate={entry.data.gate}
+        gate_subtitle={entry.data.gate_subtitle}
+        name={entry.data.name}
+        slug={entry.data.slug}
+        address={entry.data.address}
+        opening={entry.data.opening}
+        description={entry.data.description}
+        modes={entry.data.modes}
+        status={entry.data.status}
+      />
+    ))}
+  </div>
+</section>
+
+<style>
+  .standorte {
+    max-width: var(--container-wide);
+    margin: 0 auto;
+    padding: var(--space-9) var(--space-6);
+    display: grid;
+    gap: var(--space-7);
+  }
+
+  .lead {
+    display: grid;
+    gap: var(--space-3);
+    max-width: 720px;
+  }
+
+  .lead-copy {
+    line-height: 1.55;
+    margin-top: var(--space-2);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-5);
+  }
+</style>

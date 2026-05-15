@@ -1,0 +1,121 @@
+---
+import { getCollection } from "astro:content";
+import LiveNote from "./LiveNote.astro";
+
+const now = new Date();
+
+const all = await getCollection("live-notes", ({ data }) => {
+  if (data.draft) return false;
+  if (data.publish_at > now) return false;
+  if (data.expires_at <= now) return false;
+  return true;
+});
+
+const notes = all
+  .sort((a, b) => a.data.order - b.data.order)
+  .slice(0, 4);
+
+const updatedLabel = now.toLocaleDateString("de-DE", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+---
+<section class="live-strip" id="live">
+  <div class="lead">
+    <div>
+      <span class="eyebrow">Live · Tagestafel</span>
+      <h2>Heute. Hier.<br><span class="accent">Jetzt.</span></h2>
+    </div>
+    <div class="meta">
+      <span class="pulse"></span>Aktualisiert {updatedLabel}<br>
+      Crew schreibt mit Kreide
+    </div>
+  </div>
+
+  {notes.length > 0 ? (
+    <div class="board">
+      {notes.map((entry) => (
+        <LiveNote
+          title={entry.data.title}
+          tag={entry.data.tag}
+          category={entry.data.category}
+          body={entry.data.body}
+          stamps={entry.data.stamps}
+        />
+      ))}
+    </div>
+  ) : (
+    <div class="empty">
+      <p>Tafel wird gerade frisch beschrieben. Schaut gleich wieder rein.</p>
+    </div>
+  )}
+</section>
+
+<style>
+  .live-strip {
+    background: var(--bg);
+    padding: var(--space-9) var(--space-6);
+    max-width: var(--container-wide);
+    margin: 0 auto;
+    display: grid;
+    gap: var(--space-7);
+  }
+
+  .lead {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-5);
+    align-items: end;
+    max-width: 1100px;
+  }
+
+  .meta {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    line-height: 1.6;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    text-align: right;
+  }
+
+  .pulse {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--orange);
+    margin-right: var(--space-2);
+    animation: pulse 1.8s ease-in-out infinite;
+    vertical-align: middle;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--orange) 50%, transparent); }
+    50% { box-shadow: 0 0 0 8px transparent; }
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--space-5);
+  }
+
+  .empty {
+    padding: var(--space-7);
+    background: var(--surface);
+    border: 1px dashed color-mix(in oklab, var(--ink) 25%, transparent);
+    border-radius: var(--r-lg);
+    text-align: center;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pulse { animation: none; }
+  }
+
+  @media (max-width: 720px) {
+    .lead { grid-template-columns: 1fr; }
+    .meta { text-align: left; }
+  }
+</style>

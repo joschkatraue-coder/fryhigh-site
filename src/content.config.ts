@@ -122,23 +122,18 @@ const liveNotes = defineCollection({
   }),
 });
 
-const creations = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/creations' }),
+// Cutouts: rein visuelle Designelemente, KEINE Speisekarte.
+// Schema-Lock gegen Drift — siehe Spec §4.4.3 + code/CLAUDE.md NO-Liste.
+// NIE Felder hinzufügen: name, description, country, ingredients, price_eur,
+//                        tags, rotation_status, season, flag_codepoint.
+const cutouts = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/cutouts' }),
   schema: z.object({
-    number: z.string(),
-    name: z.string(),
-    country: z.string().optional(),
-    flag_codepoint: z.string().optional(),
-    description: z.string(),
-    ingredients: z.array(z.string()).default([]),
-    image: z.string(),
-    bg_color: bgColorEnum.default('cream'),
-    tags: z.array(z.string()).default([]),
-    price_eur: z.number().optional(),
-    rotation_status: z.enum(['always', 'saison', 'drop', 'archive']).default('saison'),
-    season: z.enum(['ganzjährig', 'sommer', 'herbst', 'winter', 'frühling']).default('ganzjährig'),
-    draft: z.boolean().default(false),
+    image: z.string(),                       // PNG-Filename in public/cutouts/
+    bg_color: bgColorEnum.default('cream'),  // Mood-Verteilung, nicht für Anzeige
+    alt: z.string().default('Loaded Fries Kreation'),  // generisch, NIE Gerichtsname
     order: z.number().int().default(99),
+    draft: z.boolean().default(false),
   }),
 });
 
@@ -223,7 +218,7 @@ export const collections = {
   pantry,
   story,
   'live-notes': liveNotes,
-  creations,
+  cutouts,
   standorte,
   crew,
   'dusk-programs': duskPrograms,
