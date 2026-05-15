@@ -1,4 +1,6 @@
 ---
+import FloatingMascot from "./FloatingMascot.astro";
+
 interface Props {
   headline: string;
   lead: string;
@@ -6,7 +8,14 @@ interface Props {
 
 const { headline, lead } = Astro.props;
 ---
-<section id="newsletter" class="newsletter">
+<section id="newsletter" class="newsletter has-mascot">
+  <FloatingMascot
+    image="16_Gyoza_Fusion.png"
+    size={120}
+    rotate={-14}
+    top="-30px"
+    left="5%"
+  />
   <div class="lead-block">
     <span class="eyebrow">Newsletter</span>
     <h2>{headline}</h2>

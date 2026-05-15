@@ -1,6 +1,7 @@
 ---
 import { getCollection } from "astro:content";
 import LiveNote from "./LiveNote.astro";
+import FloatingMascot from "./FloatingMascot.astro";
 
 const now = new Date();
 
@@ -21,7 +22,14 @@ const updatedLabel = now.toLocaleDateString("de-DE", {
   year: "numeric",
 });
 ---
-<section class="live-strip" id="live">
+<section class="live-strip has-mascot" id="live">
+  <FloatingMascot
+    image="03_Crunch_Fries_Chicken.png"
+    size={130}
+    rotate={11}
+    top="-44px"
+    right="6%"
+  />
   <div class="lead">
     <div>
       <span class="eyebrow">Live · Tagestafel</span>

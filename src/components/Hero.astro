@@ -1,5 +1,6 @@
 ---
 import { Picture } from "astro:assets";
+import FloatingMascot from "./FloatingMascot.astro";
 import loadedFries from "../assets/hero/loaded-fries-hero.jpg";
 
 interface HeadlinePart {
@@ -26,7 +27,15 @@ const normalizedLines = headline_lines.map((line) =>
   typeof line === "string" ? { text: line, accent: false } : { accent: false, ...line }
 );
 ---
-<section class="hero">
+<section class="hero has-mascot">
+  <FloatingMascot
+    image="02_Tropical_Drachenfrucht.png"
+    size={170}
+    rotate={-8}
+    top="6%"
+    right="44%"
+    z={3}
+  />
   <div class="hero-photo">
     <Picture
       src={loadedFries}

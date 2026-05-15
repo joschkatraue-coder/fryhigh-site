@@ -1,0 +1,94 @@
+---
+interface Props {
+  image: string;                       // dateiname in public/cutouts/
+  size?: number;                       // px, default 130
+  rotate?: number;                     // base rotation in deg
+  top?: string;                        // CSS value, e.g. "20%" or "-30px"
+  bottom?: string;
+  left?: string;
+  right?: string;
+  z?: number;                          // z-index, default 2
+  alt?: string;
+}
+
+const {
+  image,
+  size = 130,
+  rotate = 0,
+  top,
+  bottom,
+  left,
+  right,
+  z = 2,
+  alt = "",
+} = Astro.props;
+
+const positionStyle = [
+  top !== undefined && `top:${top}`,
+  bottom !== undefined && `bottom:${bottom}`,
+  left !== undefined && `left:${left}`,
+  right !== undefined && `right:${right}`,
+  `--mascot-size:${size}px`,
+  `--mascot-base-rotate:${rotate}deg`,
+  `z-index:${z}`,
+].filter(Boolean).join(";");
+---
+<div class="mascot" data-mascot style={positionStyle} aria-hidden="true">
+  <img src={`/cutouts/${image}`} alt={alt} loading="lazy" decoding="async" />
+</div>
+
+<style>
+  .mascot {
+    position: absolute;
+    width: var(--mascot-size, 130px);
+    height: var(--mascot-size, 130px);
+    pointer-events: auto;
+    opacity: 0;
+    --evasion-x: 0px;
+    --evasion-y: 0px;
+    --evasion-rotate: 0deg;
+    --reveal-translate: 12px;
+    transform:
+      translate(var(--evasion-x), calc(var(--reveal-translate) + var(--evasion-y)))
+      rotate(calc(var(--mascot-base-rotate, 0deg) + var(--evasion-rotate)));
+    transition:
+      opacity var(--duration-slow) var(--ease-out),
+      transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, opacity;
+  }
+
+  .mascot.in-view {
+    opacity: 1;
+    --reveal-translate: 0px;
+  }
+
+  .mascot.fleeing {
+    transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .mascot img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter:
+      drop-shadow(2px 2px 0 white)
+      drop-shadow(-2px -2px 0 white)
+      drop-shadow(2px -2px 0 white)
+      drop-shadow(-2px 2px 0 white)
+      drop-shadow(0 12px 24px color-mix(in oklab, black 35%, transparent));
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mascot {
+      --reveal-translate: 0px;
+      transition: opacity var(--duration-slow) ease;
+    }
+    .mascot.fleeing { transition: none; }
+  }
+
+  @media (max-width: 720px) {
+    .mascot { transform: scale(0.7) translate(var(--evasion-x), var(--evasion-y)) rotate(calc(var(--mascot-base-rotate, 0deg) + var(--evasion-rotate))); }
+  }
+</style>

@@ -122,20 +122,12 @@ const liveNotes = defineCollection({
   }),
 });
 
-// Cutouts: rein visuelle Designelemente, KEINE Speisekarte.
-// Schema-Lock gegen Drift — siehe Spec §4.4.3 + code/CLAUDE.md NO-Liste.
-// NIE Felder hinzufügen: name, description, country, ingredients, price_eur,
-//                        tags, rotation_status, season, flag_codepoint.
-const cutouts = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/cutouts' }),
-  schema: z.object({
-    image: z.string(),                       // PNG-Filename in public/cutouts/
-    bg_color: bgColorEnum.default('cream'),  // Mood-Verteilung, nicht für Anzeige
-    alt: z.string().default('Loaded Fries Kreation'),  // generisch, NIE Gerichtsname
-    order: z.number().int().default(99),
-    draft: z.boolean().default(false),
-  }),
-});
+// Cutouts: KEIN Collection-Schema. PNGs liegen als statische Assets in
+// public/cutouts/. Mascot-Positionen werden explizit pro Sektion in der
+// <FloatingMascot>-Komponente platziert — kuratiertes Sprinkling, kein
+// Daten-Driven-Grid. Begründung: Joschka 2026-05-15 — "Wall of Fries"
+// verworfen, Cutouts sollen zwischen Texten/Informationen aufploppen
+// und bei Mauszeiger-Annäherung wegflappern. Siehe Spec §4.7.1.
 
 const standorte = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/standorte' }),
@@ -218,7 +210,6 @@ export const collections = {
   pantry,
   story,
   'live-notes': liveNotes,
-  cutouts,
   standorte,
   crew,
   'dusk-programs': duskPrograms,

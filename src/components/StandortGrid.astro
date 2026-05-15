@@ -1,5 +1,6 @@
 ---
 import StandortCard from "./StandortCard.astro";
+import FloatingMascot from "./FloatingMascot.astro";
 import type { CollectionEntry } from "astro:content";
 
 interface Props {
@@ -9,7 +10,21 @@ interface Props {
 const { standorte } = Astro.props;
 const sorted = [...standorte].sort((a, b) => a.data.order - b.data.order);
 ---
-<section class="standorte" id="standorte">
+<section class="standorte has-mascot" id="standorte">
+  <FloatingMascot
+    image="11_Karaage_Panko.png"
+    size={150}
+    rotate={-12}
+    top="-30px"
+    left="4%"
+  />
+  <FloatingMascot
+    image="13_Nordsee_Fries_Gruenkohl.png"
+    size={115}
+    rotate={7}
+    bottom="-40px"
+    right="8%"
+  />
   <div class="lead">
     <span class="eyebrow">Standorte · drei Gates</span>
     <h2>Wo wir sind.</h2>

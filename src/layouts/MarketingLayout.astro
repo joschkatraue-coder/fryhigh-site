@@ -17,4 +17,19 @@ const props = Astro.props;
     <slot />
   </main>
   <Footer />
+  <script>
+    import "../scripts/mascot.ts";
+  </script>
 </BaseLayout>
+
+<style is:global>
+  /* Sections, die Floating Mascots tragen, müssen position:relative haben
+     und Overflow:visible erlauben, damit Mascots an Rändern aufploppen können. */
+  .has-mascot {
+    position: relative;
+    overflow: visible;
+  }
+  main {
+    overflow-x: clip;   /* Mascots dürfen sich austragen, aber kein H-Scroll. */
+  }
+</style>
