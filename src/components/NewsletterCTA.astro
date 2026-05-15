@@ -1,0 +1,123 @@
+---
+interface Props {
+  headline: string;
+  lead: string;
+}
+
+const { headline, lead } = Astro.props;
+---
+<section id="newsletter" class="newsletter">
+  <div class="lead-block">
+    <span class="eyebrow">Newsletter</span>
+    <h2>{headline}</h2>
+    <p class="lead">{lead}</p>
+  </div>
+  <form class="signup" data-newsletter>
+    <label class="sr-only" for="newsletter-email">E-Mail-Adresse</label>
+    <input
+      id="newsletter-email"
+      type="email"
+      name="email"
+      placeholder="dein@email.de"
+      required
+      autocomplete="email"
+    />
+    <button type="submit">Eintragen</button>
+    <p class="hint" data-status></p>
+  </form>
+</section>
+
+<style>
+  .newsletter {
+    background: var(--ink);
+    color: var(--ink-on-dark);
+    padding: var(--space-9) var(--space-6);
+    display: grid;
+    gap: var(--space-7);
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+  }
+
+  .newsletter .eyebrow {
+    color: var(--cream);
+    opacity: 0.6;
+  }
+
+  .newsletter h2 {
+    margin-top: var(--space-2);
+    color: var(--cream);
+  }
+
+  .newsletter .lead {
+    margin-top: var(--space-3);
+    color: var(--cream);
+    opacity: 0.85;
+  }
+
+  .signup {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-3);
+    align-items: center;
+  }
+
+  .signup input {
+    background: transparent;
+    color: var(--cream);
+    border: 0;
+    border-bottom: 2px solid color-mix(in oklab, var(--cream) 30%, transparent);
+    padding: var(--space-4) 0;
+    font-family: var(--font-body);
+    font-size: var(--t-lead);
+    transition: border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .signup input::placeholder {
+    color: color-mix(in oklab, var(--cream) 45%, transparent);
+  }
+
+  .signup input:focus {
+    outline: none;
+    border-bottom-color: var(--accent);
+  }
+
+  .signup button {
+    background: var(--accent);
+    color: var(--cream);
+    padding: var(--space-4) var(--space-6);
+    border-radius: var(--r-md);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+
+  .signup button:hover,
+  .signup button:focus-visible {
+    transform: translateY(-2px);
+  }
+
+  .hint {
+    grid-column: 1 / -1;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    opacity: 0.7;
+    min-height: 1em;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (max-width: 720px) {
+    .newsletter { grid-template-columns: 1fr; padding: var(--space-8) var(--space-5); }
+    .signup { grid-template-columns: 1fr; }
+  }
+</style>

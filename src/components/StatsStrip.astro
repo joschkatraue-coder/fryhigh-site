@@ -1,0 +1,49 @@
+---
+interface Stat {
+  value: string;
+  label: string;
+}
+
+interface Props {
+  stats: Stat[];
+}
+
+const { stats } = Astro.props;
+---
+<aside class="stats">
+  {stats.map((stat) => (
+    <div class="stat">
+      <b>{stat.value}</b>
+      <span class="eyebrow">{stat.label}</span>
+    </div>
+  ))}
+</aside>
+
+<style>
+  .stats {
+    background: var(--ink);
+    color: var(--ink-on-dark);
+    padding: var(--space-7) var(--space-6);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--space-6);
+    text-align: center;
+  }
+
+  .stat {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .stat b {
+    font-family: var(--font-display);
+    font-size: clamp(2.25rem, 5vw, 4rem);
+    font-weight: 400;
+    line-height: 1;
+  }
+
+  .stats .eyebrow {
+    color: var(--cream);
+    opacity: 0.65;
+  }
+</style>

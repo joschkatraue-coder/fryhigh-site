@@ -1,121 +1,41 @@
 ---
+import { getEntry } from "astro:content";
 import MarketingLayout from "../layouts/MarketingLayout.astro";
+import Hero from "../components/Hero.astro";
+import StatsStrip from "../components/StatsStrip.astro";
+import NewsletterCTA from "../components/NewsletterCTA.astro";
+
+const home = await getEntry("home", "home");
+if (!home) throw new Error("src/content/home.md fehlt — Home-Singleton ist Pflicht.");
+
+const { hero, stats, newsletter } = home.data;
 ---
 <MarketingLayout
   title="Fry High — First Class Fritten · Bremerhaven seit 2020"
   description="Loaded Fries, Smashburger, Catering. Eigene Kreationen aus dem Foodtruck und vom Zoo am Meer."
 >
-  <section class="hero">
-    <span class="eyebrow">First Class Fritten · seit 2020</span>
-    <h1>
-      Loaded Fries.<br />
-      Smashburger.<br />
-      <span class="accent">Bremerhaven.</span>
-    </h1>
-    <p class="lead">
-      Eigene Kreationen aus dem Foodtruck und vom Zoo am Meer.
-      Über 100 Pommes-Kreationen entwickelt, saisonal rotierend.
-    </p>
-    <div class="ctas">
-      <a class="btn btn-primary" href="#menu">Pommes-Kreationen ansehen</a>
-      <a class="btn btn-secondary" href="/catering">Catering anfragen</a>
-    </div>
-  </section>
+  <Hero
+    eyebrow={hero.eyebrow}
+    headline_lines={hero.headline_lines}
+    lead={hero.lead}
+    ctas={hero.ctas}
+  />
 
-  <section class="stats">
-    <div><b>2020</b><span class="eyebrow">Gegründet</span></div>
-    <div><b>83K+</b><span class="eyebrow">@fry_high2020</span></div>
-    <div><b>100+</b><span class="eyebrow">Pommes-Kreationen</span></div>
-    <div><b>3</b><span class="eyebrow">Standorte</span></div>
-  </section>
+  <StatsStrip stats={stats} />
 
   <section class="placeholder">
     <span class="eyebrow">Phase A · in Entwicklung</span>
     <h2>Restliche Sektionen folgen.</h2>
     <p class="lead">
       Live-Tagestafel · Pommes-Kreationen · Standorte · Abendgeschäft ·
-      Catering · Kindergeburtstag · Story · Pantry · Newsletter.
+      Catering · Kindergeburtstag · Story · Pantry.
     </p>
   </section>
+
+  <NewsletterCTA headline={newsletter.headline} lead={newsletter.lead} />
 </MarketingLayout>
 
 <style>
-  .hero {
-    max-width: var(--container-wide);
-    margin: 0 auto;
-    padding: var(--space-10) var(--space-6) var(--space-9);
-    display: grid;
-    gap: var(--space-5);
-  }
-
-  .ctas {
-    display: flex;
-    gap: var(--space-4);
-    flex-wrap: wrap;
-    margin-top: var(--space-3);
-  }
-
-  .btn {
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: var(--space-4) var(--space-6);
-    border-radius: var(--r-md);
-    transition: transform var(--duration-fast) var(--ease-out),
-                background var(--duration-fast) var(--ease-out);
-  }
-
-  .btn-primary {
-    background: var(--accent);
-    color: var(--cream);
-  }
-
-  .btn-primary:hover,
-  .btn-primary:focus-visible {
-    transform: translateY(-2px);
-    background: color-mix(in oklab, var(--accent) 88%, black);
-  }
-
-  .btn-secondary {
-    background: transparent;
-    color: var(--ink);
-    border: 2px solid var(--ink);
-  }
-
-  .btn-secondary:hover,
-  .btn-secondary:focus-visible {
-    background: var(--ink);
-    color: var(--cream);
-  }
-
-  .stats {
-    background: var(--ink);
-    color: var(--ink-on-dark);
-    padding: var(--space-7) var(--space-6);
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: var(--space-6);
-    text-align: center;
-  }
-
-  .stats div {
-    display: grid;
-    gap: var(--space-2);
-  }
-
-  .stats b {
-    font-family: var(--font-display);
-    font-size: clamp(2.25rem, 5vw, 4rem);
-    font-weight: 400;
-    line-height: 1;
-  }
-
-  .stats .eyebrow {
-    color: var(--cream);
-    opacity: 0.65;
-  }
-
   .placeholder {
     max-width: var(--container-wide);
     margin: var(--space-8) auto;
