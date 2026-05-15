@@ -1,0 +1,75 @@
+/* Fry High Brand Tokens — Variant B (locked 2026-05-15)
+ * Canonical reference: 10_businesses/fry-high/code/CLAUDE.md <fryhigh_brand>
+ * Direction doc:       10_businesses/fry-high/2026-05-15_brand-direction_v1.md
+ */
+
+:root {
+  /* Colors — 70% navy+cream / 15% orange / 15% pink+green+yellow */
+  --navy: #1A2A4E;
+  --navy-deep: #0E1825;
+  --cream: #F5F0E1;
+  --cream-warm: #EFE7D2;
+  --orange: #E94F0E;
+  --pink: #E4326D;
+  --green: #1B7E4B;
+  --yellow: #F5C518;
+
+  /* Semantic aliases */
+  --bg: var(--cream);
+  --bg-deep: var(--navy-deep);
+  --surface: var(--cream-warm);
+  --ink: var(--navy);
+  --ink-on-dark: var(--cream);
+  --accent: var(--orange);
+  --accent-pantry-01: var(--pink);
+  --accent-pantry-02: var(--green);
+  --accent-dusk: var(--yellow);
+
+  /* Typography */
+  --font-display: "Anton", "Impact", system-ui, sans-serif;
+  --font-body: "Crimson Pro", "Iowan Old Style", Georgia, serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+
+  /* Type scale — bold jumps, not 1.5x increments */
+  --t-eyebrow: 0.75rem;
+  --t-body: 1.0625rem;
+  --t-lead: 1.25rem;
+  --t-h3: 1.75rem;
+  --t-h2: clamp(2.25rem, 5vw, 4.5rem);
+  --t-h1: clamp(3rem, 9vw, 8rem);
+
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+  --space-9: 6rem;
+  --space-10: 9rem;
+
+  /* Radii */
+  --r-sm: 4px;
+  --r-md: 12px;
+  --r-lg: 24px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 180ms;
+  --duration-base: 320ms;
+  --duration-slow: 640ms;
+
+  /* Container */
+  --container-wide: 1440px;
+  --container-text: 72ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}

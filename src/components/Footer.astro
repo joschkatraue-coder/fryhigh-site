@@ -1,0 +1,88 @@
+---
+const year = new Date().getFullYear();
+---
+<footer class="footer">
+  <div class="cols">
+    <div class="col">
+      <span class="eyebrow">Standort</span>
+      <p>Zoo am Meer<br />H.-H.-Meier-Straße 7<br />27568 Bremerhaven</p>
+    </div>
+    <div class="col">
+      <span class="eyebrow">Kontakt</span>
+      <p>
+        <a href="mailto:info@fryhigh.de">info@fryhigh.de</a><br />
+        <a href="tel:+4915773814964">+49 157 73814964</a>
+      </p>
+    </div>
+    <div class="col">
+      <span class="eyebrow">Social</span>
+      <p>
+        <a href="https://instagram.com/fry_high2020" rel="me" target="_blank">@fry_high2020</a><br />
+        <a href="https://facebook.com/FryHighBHV" rel="me" target="_blank">Facebook</a><br />
+        <a href="https://www.tiktok.com/@fryhigh" rel="me" target="_blank">TikTok</a>
+      </p>
+    </div>
+    <div class="col">
+      <span class="eyebrow">Rechtliches</span>
+      <p>
+        <a href="/impressum">Impressum</a><br />
+        <a href="/datenschutz">Datenschutz</a>
+      </p>
+    </div>
+  </div>
+  <div class="bottom">
+    <span class="mono">Fry High GbR · seit 2020 · First Class Fritten · &copy; {year}</span>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    background: var(--bg-deep);
+    color: var(--ink-on-dark);
+    padding: var(--space-8) var(--space-6) var(--space-5);
+    margin-top: var(--space-9);
+  }
+
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-6);
+    max-width: var(--container-wide);
+    margin: 0 auto;
+  }
+
+  .col p {
+    margin-top: var(--space-2);
+    line-height: 1.7;
+  }
+
+  .col a {
+    color: var(--cream);
+    border-bottom: 1px solid color-mix(in oklab, var(--cream) 30%, transparent);
+    transition: border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .col a:hover,
+  .col a:focus-visible {
+    border-bottom-color: var(--accent);
+  }
+
+  .footer .eyebrow {
+    color: var(--cream);
+    opacity: 0.6;
+  }
+
+  .bottom {
+    max-width: var(--container-wide);
+    margin: var(--space-7) auto 0;
+    padding-top: var(--space-5);
+    border-top: 1px solid color-mix(in oklab, var(--cream) 12%, transparent);
+  }
+
+  .mono {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    opacity: 0.5;
+  }
+</style>

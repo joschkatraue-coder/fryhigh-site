@@ -1,0 +1,110 @@
+---
+const currentPath = Astro.url.pathname;
+const links = [
+  { href: "/#menu", label: "Kreationen" },
+  { href: "/standorte", label: "Standorte" },
+  { href: "/abend", label: "Abend" },
+  { href: "/catering", label: "Catering" },
+  { href: "/pantry", label: "Pantry" },
+  { href: "/story", label: "Story" },
+];
+---
+<header class="nav-bar">
+  <a href="/" class="brand" aria-label="Fry High Startseite">
+    <span class="brand-mark">FRY HIGH</span>
+    <span class="brand-sub">First Class Fritten</span>
+  </a>
+  <nav aria-label="Hauptnavigation">
+    <ul>
+      {links.map((link) => {
+        const isActive = currentPath === link.href || currentPath.startsWith(link.href + "/");
+        return (
+          <li>
+            <a href={link.href} aria-current={isActive ? "page" : undefined}>{link.label}</a>
+          </li>
+        );
+      })}
+    </ul>
+  </nav>
+</header>
+
+<style>
+  .nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-6);
+    padding: var(--space-4) var(--space-6);
+    background: var(--bg);
+    border-bottom: 1px solid color-mix(in oklab, var(--ink) 12%, transparent);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+  }
+
+  .brand-mark {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+  }
+
+  .brand-sub {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+    opacity: 0.6;
+    margin-top: 2px;
+  }
+
+  nav ul {
+    display: flex;
+    gap: var(--space-5);
+    align-items: center;
+  }
+
+  nav a {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink);
+    padding: var(--space-2) 0;
+    position: relative;
+    transition: color var(--duration-fast) var(--ease-out);
+  }
+
+  nav a::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 -2px;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+
+  nav a:hover::after,
+  nav a:focus-visible::after,
+  nav a[aria-current="page"]::after {
+    transform: scaleX(1);
+  }
+
+  nav a[aria-current="page"] {
+    color: var(--accent);
+  }
+
+  @media (max-width: 720px) {
+    .nav-bar { flex-direction: column; gap: var(--space-3); padding: var(--space-3) var(--space-4); }
+    nav ul { flex-wrap: wrap; gap: var(--space-3); justify-content: center; }
+  }
+</style>

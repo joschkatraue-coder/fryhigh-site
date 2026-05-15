@@ -1,0 +1,20 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import NavBar from "../components/NavBar.astro";
+import Footer from "../components/Footer.astro";
+
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+}
+
+const props = Astro.props;
+---
+<BaseLayout {...props}>
+  <NavBar />
+  <main>
+    <slot />
+  </main>
+  <Footer />
+</BaseLayout>
