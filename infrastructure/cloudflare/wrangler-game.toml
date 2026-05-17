@@ -1,0 +1,44 @@
+# Fry High — Pilot-Flight Game Worker
+# Deploy: cd infrastructure/cloudflare && wrangler deploy --config wrangler-game.toml
+#
+# Vor erstem Deploy:
+#   1. wrangler d1 create fryhigh-game
+#      → database_id aus Output unten in [[d1_databases]] eintragen
+#   2. wrangler d1 execute fryhigh-game --file=./game-schema.sql --remote
+#   3. wrangler secret put RESEND_API_KEY    --config wrangler-game.toml
+#   4. wrangler secret put MAILERLITE_API_KEY --config wrangler-game.toml   (optional, falls Newsletter-Opt-In aktiv)
+#   5. wrangler secret put CREW_PIN          --config wrangler-game.toml   (Crew-Tool /crew/vouchers, 4-6 stelliger PIN)
+#   6. wrangler deploy --config wrangler-game.toml
+
+name = "fryhigh-game"
+main = "game-worker.js"
+compatibility_date = "2026-05-17"
+
+# Cron-Trigger — Sonntag 22:00 UTC = 24:00 Berlin (CEST) / 23:00 Berlin (CET).
+# Worker prüft im Handler die ISO-Week-Boundary, immun gegen DST-Shift.
+[triggers]
+crons = ["0 22 * * SUN"]
+
+[vars]
+FROM_EMAIL          = "spiel@fryhigh.de"     # TBD: in Resend als verified-from-address eintragen
+TO_EMAIL_OPS        = "info@fryhigh.de"      # Voucher-Ausgabe-Notification an Crew
+ALLOW_ORIGIN        = "https://fryhigh.de"
+PUBLIC_BASE         = "https://fryhigh.de"   # Für Magic-Link-Redirects
+VOUCHER_VALUE_EUR   = "20"
+VOUCHER_VALID_DAYS  = "30"
+SCORE_HARD_CAP      = "99999"
+MIN_DURATION_MS     = "5000"
+SCORE_PER_SECOND_MAX = "5"                   # max plausible Score-Rate (Anti-Cheat)
+MAILERLITE_GROUP_ID = ""                     # TBD nach Mailerlite-Setup
+
+# D1-Database — fryhigh-game
+# Nach `wrangler d1 create fryhigh-game` die database_id hier eintragen.
+[[d1_databases]]
+binding       = "DB"
+database_name = "fryhigh-game"
+database_id   = "TBD-AFTER-D1-CREATE"
+
+# Secrets (NICHT hier eintragen, via wrangler secret put):
+#   RESEND_API_KEY      — gleicher Key wie für catering-form
+#   MAILERLITE_API_KEY  — optional, für Newsletter-Opt-In-Subscribe
+#   CREW_PIN            — Pflicht für /vouchers/redeem (4-6 stelliger PIN; Crew teilt sich einen)

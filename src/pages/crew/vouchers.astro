@@ -1,0 +1,356 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const apiBase = "https://fryhigh-game.fryhigh.workers.dev";
+---
+<BaseLayout
+  title="Crew · Voucher-Tool · Fry High"
+  description="Voucher prüfen + einlösen. Crew-intern."
+  noindex={true}
+>
+  <main class="crew">
+    <header>
+      <span class="eyebrow">Crew-Tool · Pilot-Flight-Voucher</span>
+      <h1>Voucher prüfen<br/>+ einlösen.</h1>
+      <p>Gast zeigt den Code (Format <code>FLY-XXXX</code>). Erst <strong>Prüfen</strong>, dann <strong>Einlösen</strong>. PIN bleibt im Browser bis du auf „Abmelden" klickst.</p>
+    </header>
+
+    <section class="card pin-card" data-step="pin">
+      <h2>PIN</h2>
+      <label>
+        <span>Crew-PIN</span>
+        <input type="password" id="pin" inputmode="numeric" autocomplete="off" placeholder="••••" required />
+      </label>
+      <div class="row">
+        <button type="button" id="pin-save">PIN speichern</button>
+        <button type="button" id="pin-clear" class="ghost">Abmelden</button>
+      </div>
+      <p class="hint" id="pin-status">PIN nicht gesetzt.</p>
+    </section>
+
+    <section class="card code-card" data-step="code">
+      <h2>Code</h2>
+      <label>
+        <span>Voucher-Code</span>
+        <input type="text" id="code" autocomplete="off" placeholder="FLY-XXXX" maxlength="12" required />
+      </label>
+      <div class="row">
+        <button type="button" id="check">Prüfen</button>
+        <button type="button" id="reset" class="ghost">Zurücksetzen</button>
+      </div>
+    </section>
+
+    <section class="card result-card" data-step="result" hidden>
+      <h2>Status</h2>
+      <div id="result"></div>
+      <label class="redeem-note" hidden>
+        <span>Notiz (optional · z. B. „Walross Fries + Cola")</span>
+        <input type="text" id="note" maxlength="120" placeholder="..." />
+      </label>
+      <div class="row">
+        <button type="button" id="redeem" class="primary" hidden>Einlösen</button>
+      </div>
+    </section>
+
+    <footer class="fineprint">
+      <p>Endpoint: <code>{apiBase}</code> · keine Cookies, kein Tracking. PIN nur in <code>localStorage</code>.</p>
+    </footer>
+  </main>
+</BaseLayout>
+
+<script define:vars={{ apiBase }}>
+  const PIN_KEY = 'fh-crew-pin';
+  const $ = (id) => document.getElementById(id);
+
+  const pinInput = $('pin');
+  const pinStatus = $('pin-status');
+  const codeInput = $('code');
+  const resultCard = document.querySelector('[data-step="result"]');
+  const resultBox = $('result');
+  const redeemBtn = $('redeem');
+  const noteWrap = document.querySelector('.redeem-note');
+  const noteInput = $('note');
+
+  let lastValidCode = null;
+
+  function loadPin() {
+    const p = localStorage.getItem(PIN_KEY);
+    if (p) {
+      pinInput.value = p;
+      pinStatus.textContent = 'PIN gespeichert (' + p.length + ' Stellen).';
+      pinStatus.classList.add('ok');
+    } else {
+      pinStatus.textContent = 'PIN nicht gesetzt.';
+      pinStatus.classList.remove('ok');
+    }
+  }
+
+  $('pin-save').addEventListener('click', () => {
+    const v = pinInput.value.trim();
+    if (!v) { pinStatus.textContent = 'Leer.'; return; }
+    localStorage.setItem(PIN_KEY, v);
+    loadPin();
+  });
+
+  $('pin-clear').addEventListener('click', () => {
+    localStorage.removeItem(PIN_KEY);
+    pinInput.value = '';
+    loadPin();
+  });
+
+  $('reset').addEventListener('click', () => {
+    codeInput.value = '';
+    resultCard.hidden = true;
+    redeemBtn.hidden = true;
+    noteWrap.hidden = true;
+    noteInput.value = '';
+    lastValidCode = null;
+    codeInput.focus();
+  });
+
+  codeInput.addEventListener('input', () => {
+    codeInput.value = codeInput.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+  });
+
+  function render(state, body) {
+    resultCard.hidden = false;
+    resultBox.className = 'result-body state-' + state;
+    resultBox.innerHTML = body;
+  }
+
+  $('check').addEventListener('click', async () => {
+    const code = codeInput.value.trim();
+    if (!code) { render('warn', '<p>Kein Code eingegeben.</p>'); return; }
+    render('loading', '<p>Prüfe ' + code + ' …</p>');
+    redeemBtn.hidden = true;
+    noteWrap.hidden = true;
+    try {
+      const r = await fetch(apiBase + '/vouchers/check?code=' + encodeURIComponent(code));
+      const d = await r.json();
+      if (d.ok && d.valid) {
+        const exp = new Date(d.expires_at).toLocaleDateString('de-DE');
+        render('ok',
+          '<p><strong>Gültig.</strong> Score ' + d.score + ' · Woche ' + d.week_key + ' · gültig bis ' + exp + '.</p>'
+        );
+        redeemBtn.hidden = false;
+        noteWrap.hidden = false;
+        lastValidCode = code;
+      } else if (d.reason === 'redeemed') {
+        const when = new Date(d.redeemed_at).toLocaleString('de-DE');
+        render('warn', '<p>Schon eingelöst am ' + when + '.</p>');
+      } else if (d.reason === 'expired') {
+        render('err', '<p>Abgelaufen.</p>');
+      } else {
+        render('err', '<p>Unbekannter Code.</p>');
+      }
+    } catch (e) {
+      render('err', '<p>Netzwerk-Fehler. Nochmal versuchen.</p>');
+    }
+  });
+
+  redeemBtn.addEventListener('click', async () => {
+    const pin = localStorage.getItem(PIN_KEY);
+    if (!pin) { render('warn', '<p>PIN fehlt. Oben speichern.</p>'); return; }
+    if (!lastValidCode) { render('warn', '<p>Erst prüfen.</p>'); return; }
+    redeemBtn.disabled = true;
+    redeemBtn.textContent = 'Löse ein …';
+    try {
+      const r = await fetch(apiBase + '/vouchers/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin, code: lastValidCode, note: noteInput.value.trim() }),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        const when = new Date(d.redeemed_at).toLocaleString('de-DE');
+        render('ok', '<p><strong>Eingelöst.</strong> ' + lastValidCode + ' · ' + when + '.</p>');
+        noteWrap.hidden = true;
+        noteInput.value = '';
+      } else if (r.status === 401) {
+        render('err', '<p>PIN falsch. Korrigieren + speichern.</p>');
+      } else if (r.status === 409) {
+        render('warn', '<p>War schon eingelöst.</p>');
+      } else if (r.status === 410) {
+        render('err', '<p>Abgelaufen.</p>');
+      } else {
+        render('err', '<p>Fehler: ' + (d.error || r.status) + '.</p>');
+      }
+    } catch (e) {
+      render('err', '<p>Netzwerk-Fehler. Nochmal.</p>');
+    } finally {
+      redeemBtn.disabled = false;
+      redeemBtn.textContent = 'Einlösen';
+    }
+  });
+
+  loadPin();
+</script>
+
+<style>
+  .crew {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: clamp(32px, 6vw, 72px) clamp(20px, 5vw, 40px);
+    background: var(--cream);
+    min-height: 100vh;
+    color: var(--ink);
+    font-family: var(--font-body);
+  }
+
+  header {
+    margin-bottom: 32px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: inline-block;
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 6vw, 3.2rem);
+    line-height: 0.95;
+    text-transform: uppercase;
+    color: var(--navy);
+    margin: 0 0 14px;
+    letter-spacing: -0.3px;
+  }
+
+  header p {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .card {
+    background: #fff;
+    border: 2px solid var(--navy);
+    padding: 20px 22px;
+    margin-bottom: 18px;
+  }
+
+  .card h2 {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--navy);
+    margin: 0 0 12px;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 12px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  label span {
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: var(--font-mono);
+    font-size: 1.15rem;
+    letter-spacing: 0.08em;
+    padding: 10px 12px;
+    border: 1.5px solid var(--navy);
+    background: var(--cream-warm);
+    color: var(--navy);
+    text-transform: none;
+  }
+
+  input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  #code {
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 1.4rem;
+  }
+
+  .row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 11px 18px;
+    border: 1.5px solid var(--navy);
+    background: var(--navy);
+    color: var(--cream);
+    cursor: pointer;
+  }
+
+  button:hover { background: var(--navy-deep); }
+  button:disabled { opacity: 0.55; cursor: wait; }
+
+  button.ghost {
+    background: transparent;
+    color: var(--navy);
+  }
+
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--cream);
+  }
+
+  button.primary:hover { background: var(--orange-deep); border-color: var(--orange-deep); }
+
+  .hint {
+    font-size: 0.8rem;
+    margin: 10px 0 0;
+    color: var(--ink-soft);
+  }
+
+  .hint.ok { color: var(--green); }
+
+  .result-body {
+    padding: 14px 16px;
+    border-left: 4px solid var(--ink-soft);
+    background: var(--cream-warm);
+    font-size: 1rem;
+    margin-bottom: 14px;
+  }
+
+  .result-body p { margin: 0; line-height: 1.5; }
+  .result-body.state-ok { border-left-color: var(--green); background: color-mix(in oklab, var(--green) 8%, var(--cream-warm)); }
+  .result-body.state-warn { border-left-color: var(--yellow); background: color-mix(in oklab, var(--yellow) 14%, var(--cream-warm)); }
+  .result-body.state-err { border-left-color: var(--pink); background: color-mix(in oklab, var(--pink) 8%, var(--cream-warm)); }
+  .result-body.state-loading { border-left-color: var(--accent); }
+
+  .fineprint {
+    margin-top: 32px;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  code {
+    font-family: var(--font-mono);
+    background: var(--cream-warm);
+    padding: 1px 6px;
+    font-size: 0.92em;
+  }
+</style>
+</content>
+</invoke>

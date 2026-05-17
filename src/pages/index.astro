@@ -8,6 +8,7 @@ import MascotMenu from "../components/MascotMenu.astro";
 import StandortGrid from "../components/StandortGrid.astro";
 import Dusk from "../components/Dusk.astro";
 import Catering from "../components/Catering.astro";
+import TableReservation from "../components/TableReservation.astro";
 import Kinder from "../components/Kinder.astro";
 import Pantry from "../components/Pantry.astro";
 import Story from "../components/Story.astro";
@@ -21,6 +22,9 @@ if (!dusk) throw new Error("src/content/dusk.md fehlt — Dusk-Singleton ist Pfl
 
 const catering = await getEntry("catering", "catering");
 if (!catering) throw new Error("src/content/catering.md fehlt — Catering-Singleton ist Pflicht.");
+
+const tisch = await getEntry("tisch", "tisch");
+if (!tisch) throw new Error("src/content/tisch.md fehlt — Tisch-Singleton ist Pflicht.");
 
 const pantry = await getEntry("pantry", "pantry");
 if (!pantry) throw new Error("src/content/pantry.md fehlt — Pantry-Singleton ist Pflicht.");
@@ -76,6 +80,14 @@ const crew = await getCollection("crew");
     intro={catering.data.intro}
     features={catering.data.features}
     form={catering.data.form}
+  />
+
+  <TableReservation
+    eyebrow={tisch.data.eyebrow}
+    headline={tisch.data.headline}
+    intro={tisch.data.intro}
+    features={tisch.data.features}
+    form={tisch.data.form}
   />
 
   <Kinder

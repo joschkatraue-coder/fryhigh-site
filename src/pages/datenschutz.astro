@@ -47,7 +47,10 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
     <section>
       <h2>3. Hosting</h2>
       <p>
-        Diese Website wird gehostet bei <strong>[TBD Hosting-Anbieter — z. B. Cloudflare Pages, Vercel, Netlify]</strong>. Beim Aufruf werden technisch notwendige Verbindungsdaten verarbeitet. Mit dem Anbieter besteht ein Auftragsverarbeitungsvertrag gemäß Art. 28 DSGVO.
+        Diese Website wird gehostet bei <strong>Cloudflare, Inc.</strong> (Cloudflare Pages, 101 Townsend St., San Francisco, CA 94107, USA). Beim Aufruf werden technisch notwendige Verbindungsdaten verarbeitet (IP-Adresse, Browser-Information, Anfragezeitpunkt). Mit Cloudflare besteht ein Auftragsverarbeitungsvertrag gemäß Art. 28 DSGVO sowie Standardvertragsklauseln (SCC) für den Datentransfer in die USA.
+      </p>
+      <p>
+        Die für die Catering-Form, Tisch-Reservierung und das Pilot-Flight-Spiel notwendigen Backend-Funktionen laufen ebenfalls bei Cloudflare (<em>Cloudflare Workers</em>). Spiel-Scores liegen in einer <em>Cloudflare D1</em>-Datenbank (Region EU). Datenschutzerklärung Cloudflare: <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">cloudflare.com/privacypolicy</a>.
       </p>
     </section>
 
@@ -59,25 +62,42 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
     </section>
 
     <section>
-      <h2>5. Kontaktformulare</h2>
+      <h2>5. Kontaktformulare (Catering &amp; Tisch-Reservierung)</h2>
       <p>
-        Wenn du uns über das Catering-Anfrage-Formular kontaktierst, werden die von dir angegebenen Daten (Name, E-Mail, ggf. Telefon, Eventdaten, Anfragetext) zum Zweck der Bearbeitung deiner Anfrage gespeichert. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vertragsanbahnung).
+        Wenn du uns über das <strong>Catering-Anfrage-Formular</strong> oder das
+        <strong>Tisch-Reservierungs-Formular</strong> kontaktierst, werden die von dir angegebenen Daten
+        (Name, E-Mail, ggf. Telefon, Datum/Uhrzeit, Personenzahl, Bereich/Anlass, Anfragetext) zum Zweck
+        der Bearbeitung deiner Anfrage gespeichert und per E-Mail an info@fryhigh.de zugestellt.
       </p>
       <p>
-        Die Daten werden gelöscht, sobald sie für die Anfragebearbeitung nicht mehr erforderlich sind, spätestens jedoch nach Ablauf der gesetzlichen Aufbewahrungsfristen.
+        Der Mail-Versand erfolgt über unseren Versanddienstleister <strong>Resend, Inc.</strong>
+        (2261 Market Street #5039, San Francisco, CA 94114, USA). Mit Resend besteht ein
+        Auftragsverarbeitungsvertrag gemäß Art. 28 DSGVO sowie SCC für den USA-Transfer.
+        Datenschutzerklärung: <a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer">resend.com/legal/privacy-policy</a>.
+      </p>
+      <p>
+        Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vertragsanbahnung). Die Daten werden gelöscht,
+        sobald sie für die Anfragebearbeitung nicht mehr erforderlich sind, spätestens jedoch nach Ablauf
+        der gesetzlichen Aufbewahrungsfristen.
       </p>
     </section>
 
     <section>
       <h2>6. Newsletter</h2>
       <p>
-        Für den Versand unseres Newsletters nutzen wir <strong>[TBD Mailerlite / anderer Anbieter]</strong>. Die Anmeldung erfolgt im Double-Opt-In-Verfahren: Nach der Anmeldung erhältst du eine E-Mail zur Bestätigung. Erst nach Bestätigung wird deine Adresse in den Verteiler aufgenommen.
+        Für den Versand unseres Newsletters nutzen wir <strong>MailerLite Limited</strong>
+        (Bridge House, Cork, T12 K201, Irland). Die Anmeldung erfolgt im Double-Opt-In-Verfahren:
+        Nach der Anmeldung erhältst du eine E-Mail zur Bestätigung. Erst nach Bestätigung wird
+        deine Adresse in den Verteiler aufgenommen.
       </p>
       <p>
-        Gespeichert werden: E-Mail-Adresse, Anmeldedatum, IP-Adresse der Anmeldung, Bestätigungsdatum. Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO (Einwilligung).
+        Gespeichert werden: E-Mail-Adresse, Anmeldedatum, IP-Adresse der Anmeldung, Bestätigungsdatum.
+        Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO (Einwilligung).
       </p>
       <p>
         Du kannst den Newsletter jederzeit abbestellen — der Link dazu befindet sich in jeder Newsletter-Mail.
+        Auftragsverarbeitungsvertrag gemäß Art. 28 DSGVO besteht.
+        Datenschutzerklärung MailerLite: <a href="https://www.mailerlite.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer">mailerlite.com/legal/privacy-policy</a>.
       </p>
     </section>
 
@@ -128,7 +148,39 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
     </section>
 
     <section>
-      <h2>11. Aktualität dieser Datenschutzerklärung</h2>
+      <h2>11. Pilot-Flight-Spiel</h2>
+      <p>
+        Wenn du auf <a href="/spiel">/spiel</a> spielst und deinen Score in das Wochen-Leaderboard
+        einreichst, verarbeiten wir folgende Daten:
+      </p>
+      <ul>
+        <li><strong>E-Mail-Adresse</strong> — für die Bestätigung deines Scores und für den Voucher-Versand bei einem Gewinn.</li>
+        <li><strong>Display-Name</strong> (optional, frei wählbar) — wird im öffentlichen Wochen-Leaderboard angezeigt. Wenn du keinen Namen angibst, anonymisieren wir deine E-Mail (Beispiel: <code>jo***@example.de</code>).</li>
+        <li><strong>Score, Spieldauer, Session-Token</strong> — zur Bewertung und zur Plausibilitätsprüfung (Anti-Cheat).</li>
+        <li><strong>Verkürzter IP-Hash</strong> — zur Abwehr von Mehrfach-/Bot-Einreichungen. Aus dem Hash lässt sich die IP nicht rekonstruieren.</li>
+        <li><strong>Voucher-Code</strong> (nur bei Wochen-Gewinn) — zur Einlösung im Truck.</li>
+      </ul>
+      <p>
+        Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO (deine Einwilligung per Checkbox im Submit-Formular).
+        Mit dem Klick auf den Bestätigungs-Link in der Verifikations-Mail bestätigst du sowohl die Score-Speicherung
+        als auch die Aufnahme in den Fry-High-Newsletter.
+      </p>
+      <p>
+        Die Score-Daten werden in einer Cloudflare-D1-Datenbank (Region EU) gespeichert. Scores einer
+        Kalenderwoche werden am Wochen-Reset (jeweils Sonntag-Abend) archiviert und spätestens nach
+        90 Tagen gelöscht. Voucher-Codes werden nach Einlösung oder nach Ablauf des Gültigkeits­zeitraums
+        (30 Tage) anonymisiert. Den Newsletter kannst du jederzeit abbestellen (Link in jeder Mail) —
+        deine Score-Daten werden davon nicht berührt.
+      </p>
+      <p>
+        Du hast jederzeit das Recht, die Löschung deiner Spiel-Daten zu verlangen.
+        Schreib uns formlos an <a href="mailto:info@fryhigh.de">info@fryhigh.de</a> mit Stichwort
+        „Pilot Flight Löschung".
+      </p>
+    </section>
+
+    <section>
+      <h2>12. Aktualität dieser Datenschutzerklärung</h2>
       <p>
         Diese Datenschutzerklärung ist aktuell gültig und hat den oben angegebenen Stand. Durch die Weiterentwicklung unserer Website oder aufgrund geänderter gesetzlicher bzw. behördlicher Vorgaben kann es notwendig werden, diese Erklärung zu ändern.
       </p>

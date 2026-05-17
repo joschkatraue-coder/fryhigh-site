@@ -1,0 +1,625 @@
+---
+// Pilot Flight — Mini-Spiel (Flappy-Variante mit Captain).
+// Canvas-Logik im Client-Script. Brand-Treu: Navy/Orange/Cream/Yellow,
+// Anton+Mono Typo, keine Stock-Sprites, geometrische Hindernisse.
+//
+// Backend: src/components/.. ist dumb; alle API-Calls gehen an `apiBase`.
+
+interface Props {
+  apiBase?: string;
+}
+const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
+---
+<div class="game" data-api-base={apiBase}>
+  <div class="game-frame">
+    <canvas class="game-canvas" width="800" height="500" aria-label="Pilot Flight Spielfeld"></canvas>
+
+    <div class="game-hud" data-game-hud>
+      <div class="hud-cell hud-score">
+        <span class="hud-label">Score</span>
+        <span class="hud-value" data-score-display>0</span>
+      </div>
+      <div class="hud-cell hud-best">
+        <span class="hud-label">Best · Session</span>
+        <span class="hud-value" data-best-display>0</span>
+      </div>
+    </div>
+
+    <div class="game-overlay game-overlay--idle" data-overlay="idle">
+      <div class="overlay-card">
+        <div class="overlay-eyebrow">Pilot Flight</div>
+        <h3>Bring den Captain durch die Pommes-Berge.</h3>
+        <p>Klick, Tap oder <kbd>Space</kbd> = Steigen.<br/>Loslassen = Fallen. Crash = Game over.</p>
+        <button type="button" class="game-btn game-btn--primary" data-start-btn>
+          Abheben →
+        </button>
+        <div class="overlay-mini">Top-1 der Woche kriegt 20 € Gutschein.</div>
+      </div>
+    </div>
+
+    <div class="game-overlay game-overlay--gameover" data-overlay="gameover" hidden>
+      <div class="overlay-card">
+        <div class="overlay-eyebrow">Crash</div>
+        <h3>Du bist abgestürzt mit <span data-final-score>0</span> Punkten.</h3>
+
+        <form class="score-form" data-score-form>
+          <p class="form-lead">Bei Highscore mitmachen? Wir bestätigen per Mail.</p>
+
+          <label class="form-field">
+            <span class="form-label">Display-Name (öffentlich · optional)</span>
+            <input type="text" name="display_name" maxlength="32" placeholder="z. B. PiratPaul" />
+          </label>
+
+          <label class="form-field">
+            <span class="form-label">E-Mail · für Bestätigung + Wochen-Mail</span>
+            <input type="email" name="email" required autocomplete="email" placeholder="kontakt@…" />
+          </label>
+
+          <label class="form-consent">
+            <input type="checkbox" name="consent" required />
+            <span>
+              Ich bin einverstanden, dass mein Score gespeichert und mein Display-Name im
+              Wochen-Leaderboard angezeigt wird. Mit Bestätigungs-Klick komme ich in den
+              Fry-High-Newsletter (Wochen-Mail, Specials). Austragen jederzeit möglich.
+              <a href="/datenschutz" target="_blank" rel="noopener">Datenschutz</a>
+            </span>
+          </label>
+
+          <button type="submit" class="game-btn game-btn--primary" data-submit-btn>
+            Score einreichen →
+          </button>
+          <div class="form-meta" data-form-meta>&nbsp;</div>
+        </form>
+
+        <button type="button" class="game-btn game-btn--ghost" data-restart-btn>
+          Nochmal fliegen
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  type GameState = 'idle' | 'playing' | 'gameover' | 'submitting';
+
+  interface Pipe {
+    x: number;
+    gapY: number;
+    passed: boolean;
+  }
+
+  const W = 800;
+  const H = 500;
+  const GRAVITY = 0.45;
+  const JUMP_V = -7.5;
+  const PIPE_SPEED = 2.5;
+  const PIPE_GAP = 150;
+  const PIPE_SPACING = 280;
+  const PIPE_WIDTH = 70;
+  const PLAYER_W = 32;
+  const PLAYER_H = 22;
+  const PLAYER_X = 140;
+
+  const ROOT = document.querySelector<HTMLDivElement>('.game');
+  if (!ROOT) throw new Error('game root missing');
+  const apiBase = ROOT.dataset.apiBase ?? '';
+
+  const canvas = ROOT.querySelector<HTMLCanvasElement>('.game-canvas')!;
+  const ctx = canvas.getContext('2d')!;
+  const scoreDisplay = ROOT.querySelector<HTMLElement>('[data-score-display]')!;
+  const bestDisplay = ROOT.querySelector<HTMLElement>('[data-best-display]')!;
+  const finalScore = ROOT.querySelector<HTMLElement>('[data-final-score]')!;
+  const overlayIdle = ROOT.querySelector<HTMLElement>('[data-overlay="idle"]')!;
+  const overlayGameOver = ROOT.querySelector<HTMLElement>('[data-overlay="gameover"]')!;
+  const startBtn = ROOT.querySelector<HTMLButtonElement>('[data-start-btn]')!;
+  const restartBtn = ROOT.querySelector<HTMLButtonElement>('[data-restart-btn]')!;
+  const scoreForm = ROOT.querySelector<HTMLFormElement>('[data-score-form]')!;
+  const submitBtn = ROOT.querySelector<HTMLButtonElement>('[data-submit-btn]')!;
+  const formMeta = ROOT.querySelector<HTMLElement>('[data-form-meta]')!;
+
+  let state: GameState = 'idle';
+  let py = H / 2;
+  let vy = 0;
+  let pipes: Pipe[] = [];
+  let frame = 0;
+  let score = 0;
+  let best = 0;
+  let startTs = 0;
+  let durationMs = 0;
+  let sessionToken: string | null = null;
+  let cloudOffset = 0;
+
+  function reset() {
+    py = H / 2;
+    vy = 0;
+    pipes = [];
+    frame = 0;
+    score = 0;
+    scoreDisplay.textContent = '0';
+  }
+
+  async function requestSession(): Promise<string | null> {
+    if (!apiBase) return null;
+    try {
+      const res = await fetch(`${apiBase}/session/start`, { method: 'POST' });
+      if (!res.ok) return null;
+      const data = await res.json() as { token: string };
+      return data.token;
+    } catch {
+      return null;
+    }
+  }
+
+  async function startGame() {
+    overlayIdle.hidden = true;
+    overlayGameOver.hidden = true;
+    reset();
+    state = 'playing';
+    startTs = performance.now();
+    // Session-Token holen, parallel zum Spiel-Start (User merkt nix)
+    sessionToken = await requestSession();
+  }
+
+  function gameOver() {
+    if (state !== 'playing') return;
+    state = 'gameover';
+    durationMs = Math.round(performance.now() - startTs);
+    if (score > best) {
+      best = score;
+      bestDisplay.textContent = String(best);
+    }
+    finalScore.textContent = String(score);
+    formMeta.textContent = '';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Score einreichen →';
+    scoreForm.reset();
+    overlayGameOver.hidden = false;
+  }
+
+  function jump() {
+    if (state === 'playing') {
+      vy = JUMP_V;
+    } else if (state === 'idle') {
+      startGame();
+    }
+  }
+
+  function step() {
+    cloudOffset = (cloudOffset + 0.3) % W;
+
+    if (state === 'playing') {
+      vy += GRAVITY;
+      py += vy;
+
+      if (frame % Math.round(PIPE_SPACING / PIPE_SPEED) === 0) {
+        const margin = 60;
+        const gapY = margin + Math.random() * (H - PIPE_GAP - margin * 2);
+        pipes.push({ x: W + PIPE_WIDTH, gapY, passed: false });
+      }
+
+      for (const p of pipes) {
+        p.x -= PIPE_SPEED;
+        if (!p.passed && p.x + PIPE_WIDTH < PLAYER_X) {
+          p.passed = true;
+          score += 1;
+          scoreDisplay.textContent = String(score);
+        }
+      }
+      pipes = pipes.filter((p) => p.x + PIPE_WIDTH > 0);
+
+      if (py < 0 || py + PLAYER_H > H) gameOver();
+
+      for (const p of pipes) {
+        const inX = PLAYER_X + PLAYER_W > p.x && PLAYER_X < p.x + PIPE_WIDTH;
+        if (inX) {
+          const inGapY = py > p.gapY && py + PLAYER_H < p.gapY + PIPE_GAP;
+          if (!inGapY) { gameOver(); break; }
+        }
+      }
+
+      frame += 1;
+    }
+
+    draw();
+    requestAnimationFrame(step);
+  }
+
+  function draw() {
+    // Sunset-Gradient-Background
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0,    '#0E1825');  // navy-deep top
+    g.addColorStop(0.55, '#1A2A4E');  // navy mid
+    g.addColorStop(0.85, '#E94F0E');  // orange horizon
+    g.addColorStop(1,    '#F5C518');  // yellow ground-line
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // Wolken (Cream, multiply, parallax)
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = '#F5F0E1';
+    for (let i = 0; i < 5; i++) {
+      const cx = (i * 220 - cloudOffset * (i + 1) * 0.3) % (W + 200);
+      const cy = 60 + i * 40;
+      drawCloud(cx, cy, 36 + i * 6);
+    }
+    ctx.globalAlpha = 1;
+
+    // Pommes-Berge (orange-deep Säulen)
+    ctx.fillStyle = '#A53408';
+    ctx.strokeStyle = '#F5C518';
+    ctx.lineWidth = 2;
+    for (const p of pipes) {
+      // oben
+      ctx.fillRect(p.x, 0, PIPE_WIDTH, p.gapY);
+      ctx.strokeRect(p.x, 0, PIPE_WIDTH, p.gapY);
+      // unten
+      ctx.fillRect(p.x, p.gapY + PIPE_GAP, PIPE_WIDTH, H - (p.gapY + PIPE_GAP));
+      ctx.strokeRect(p.x, p.gapY + PIPE_GAP, PIPE_WIDTH, H - (p.gapY + PIPE_GAP));
+
+      // Pommes-Strich-Muster pro Säule
+      ctx.strokeStyle = 'rgba(245,197,24,0.35)';
+      ctx.lineWidth = 1.5;
+      for (let y = 6; y < p.gapY; y += 10) {
+        ctx.beginPath();
+        ctx.moveTo(p.x + 8, y);
+        ctx.lineTo(p.x + PIPE_WIDTH - 8, y);
+        ctx.stroke();
+      }
+      for (let y = p.gapY + PIPE_GAP + 6; y < H; y += 10) {
+        ctx.beginPath();
+        ctx.moveTo(p.x + 8, y);
+        ctx.lineTo(p.x + PIPE_WIDTH - 8, y);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = '#F5C518';
+      ctx.lineWidth = 2;
+    }
+
+    // Player — Pilot-Captain als Cream-Dreieck + Navy-Mütze
+    const rot = Math.max(-0.5, Math.min(0.9, vy * 0.06));
+    ctx.save();
+    ctx.translate(PLAYER_X + PLAYER_W / 2, py + PLAYER_H / 2);
+    ctx.rotate(rot);
+    // Body
+    ctx.fillStyle = '#F5F0E1';
+    ctx.beginPath();
+    ctx.moveTo(-PLAYER_W / 2, -PLAYER_H / 2);
+    ctx.lineTo( PLAYER_W / 2, 0);
+    ctx.lineTo(-PLAYER_W / 2,  PLAYER_H / 2);
+    ctx.closePath();
+    ctx.fill();
+    // Hat-Stripe
+    ctx.fillStyle = '#1A2A4E';
+    ctx.fillRect(-PLAYER_W / 2, -PLAYER_H / 2 - 1, PLAYER_W * 0.6, 6);
+    // Wing-Mark / Akzent
+    ctx.fillStyle = '#E94F0E';
+    ctx.beginPath();
+    ctx.moveTo(-PLAYER_W / 2 + 4, -2);
+    ctx.lineTo(-PLAYER_W / 2 - 4, 4);
+    ctx.lineTo(-PLAYER_W / 2 + 4, 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // Boden-Linie
+    ctx.strokeStyle = '#F5F0E1';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, H - 0.5);
+    ctx.lineTo(W, H - 0.5);
+    ctx.stroke();
+  }
+
+  function drawCloud(x: number, y: number, r: number) {
+    ctx.beginPath();
+    ctx.arc(x,           y,     r,     0, Math.PI * 2);
+    ctx.arc(x + r,       y + 4, r * 0.8, 0, Math.PI * 2);
+    ctx.arc(x - r * 0.9, y + 6, r * 0.7, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Input
+  startBtn.addEventListener('click', startGame);
+  restartBtn.addEventListener('click', () => {
+    overlayGameOver.hidden = true;
+    overlayIdle.hidden = false;
+    state = 'idle';
+    reset();
+  });
+
+  canvas.addEventListener('click', jump);
+  canvas.addEventListener('touchstart', (e) => { e.preventDefault(); jump(); }, { passive: false });
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') { e.preventDefault(); jump(); }
+  });
+
+  // Submit
+  scoreForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (state !== 'gameover') return;
+    if (!sessionToken) {
+      formMeta.textContent = 'Session-Fehler. Bitte nochmal spielen und erneut versuchen.';
+      return;
+    }
+    const formData = new FormData(scoreForm);
+    const email = String(formData.get('email') ?? '').trim();
+    const displayName = String(formData.get('display_name') ?? '').trim();
+    const consent = formData.get('consent') === 'on';
+    if (!email || !consent) {
+      formMeta.textContent = 'E-Mail und Einverständnis sind Pflicht.';
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Wird gesendet…';
+    formMeta.textContent = '';
+
+    try {
+      const res = await fetch(`${apiBase}/score/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: sessionToken,
+          email,
+          display_name: displayName,
+          score,
+          duration_ms: durationMs,
+          consent: true,
+        }),
+      });
+      const data = await res.json() as { ok?: boolean; error?: string; masked_email?: string };
+      if (!res.ok || !data.ok) throw new Error(data.error || 'submit failed');
+      submitBtn.textContent = 'Eingereicht ✓';
+      formMeta.innerHTML = `Bestätigungs-Mail unterwegs an <strong>${data.masked_email ?? email}</strong>. Klick rein, Score zählt.`;
+      // refresh leaderboard if present
+      window.dispatchEvent(new CustomEvent('leaderboard:refresh'));
+    } catch (err) {
+      console.error('score submit failed', err);
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Score einreichen →';
+      formMeta.textContent = 'Senden fehlgeschlagen. Versuchs gleich nochmal.';
+    }
+  });
+
+  // Initial draw + loop
+  draw();
+  requestAnimationFrame(step);
+</script>
+
+<style>
+  .game {
+    background: var(--navy-deep, #0E1825);
+    padding: clamp(24px, 5vw, 56px);
+    position: relative;
+  }
+
+  .game-frame {
+    max-width: 880px;
+    margin: 0 auto;
+    position: relative;
+    border: 2px solid var(--cream);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  }
+
+  .game-canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--navy-deep, #0E1825);
+    cursor: pointer;
+    image-rendering: optimizeQuality;
+  }
+
+  .game-hud {
+    position: absolute;
+    inset: 12px 14px auto auto;
+    display: flex;
+    gap: 12px;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .hud-cell {
+    background: rgba(26, 42, 78, 0.85);
+    border: 1px solid var(--cream);
+    padding: 6px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .hud-label {
+    font-family: var(--font-mono);
+    font-size: 0.56rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: color-mix(in oklab, var(--cream) 80%, transparent);
+  }
+
+  .hud-value {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    color: var(--cream);
+    line-height: 1;
+  }
+
+  .game-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(14, 24, 37, 0.78);
+    backdrop-filter: blur(2px);
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    z-index: 3;
+  }
+
+  .overlay-card {
+    background: var(--cream);
+    color: var(--ink);
+    padding: 28px 32px;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+    border: 2px solid var(--navy);
+  }
+
+  .overlay-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .overlay-card h3 {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    text-transform: uppercase;
+    line-height: 1.05;
+    margin: 0 0 14px;
+    color: var(--ink);
+    letter-spacing: -0.3px;
+  }
+
+  .overlay-card p {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.5;
+    margin: 0 0 18px;
+  }
+
+  .overlay-card kbd {
+    background: var(--navy);
+    color: var(--cream);
+    padding: 2px 8px;
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    border-radius: 3px;
+  }
+
+  .overlay-mini {
+    margin-top: 14px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: color-mix(in oklab, var(--ink) 60%, transparent);
+  }
+
+  .game-btn {
+    background: var(--accent);
+    color: var(--cream);
+    border: none;
+    padding: 14px 28px;
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-out);
+    margin-top: 8px;
+  }
+
+  .game-btn:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--accent) 88%, black);
+  }
+
+  .game-btn:disabled {
+    background: var(--green);
+    cursor: default;
+  }
+
+  .game-btn--ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1.5px solid var(--ink);
+    font-size: 0.95rem;
+    padding: 10px 22px;
+    margin-top: 14px;
+  }
+
+  .game-btn--ghost:hover {
+    background: var(--ink);
+    color: var(--cream);
+  }
+
+  .score-form {
+    text-align: left;
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px dashed color-mix(in oklab, var(--ink) 25%, transparent);
+  }
+
+  .form-lead {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: color-mix(in oklab, var(--ink) 75%, transparent);
+    margin: 0 0 14px;
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+
+  .form-label {
+    font-family: var(--font-mono);
+    font-size: 0.56rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: color-mix(in oklab, var(--ink) 60%, transparent);
+  }
+
+  .form-field input {
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid var(--ink);
+    padding: 6px 0;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--ink);
+    width: 100%;
+    border-radius: 0;
+    outline: none;
+  }
+
+  .form-field input:focus {
+    border-bottom-color: var(--accent);
+  }
+
+  .form-consent {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    line-height: 1.4;
+    color: color-mix(in oklab, var(--ink) 80%, transparent);
+    margin: 12px 0 14px;
+  }
+
+  .form-consent input { margin-top: 4px; }
+
+  .form-consent a {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  .form-meta {
+    margin-top: 10px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--accent);
+    line-height: 1.4;
+    min-height: 1.2em;
+  }
+
+  @media (max-width: 720px) {
+    .overlay-card { padding: 22px 18px; }
+    .hud-value { font-size: 1.2rem; }
+    .game-canvas { cursor: default; }
+  }
+</style>

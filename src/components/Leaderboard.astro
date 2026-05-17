@@ -1,0 +1,285 @@
+---
+interface Props {
+  apiBase?: string;
+}
+const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
+---
+<section class="leaderboard" data-api-base={apiBase}>
+  <div class="lb-head">
+    <div class="lb-eyebrow" data-lb-eyebrow>Diese Woche · Top 10</div>
+    <h3 data-lb-title>Wochen-Leaderboard.</h3>
+    <p data-lb-sub>Top-1 am Sonntag-Abend → 20 € Gutschein per Mail. Reset jeden Sonntag.</p>
+  </div>
+
+  <div class="lb-tabs" role="tablist" aria-label="Zeitraum">
+    <button type="button" class="lb-tab is-active" data-period="week" role="tab" aria-selected="true">Diese Woche</button>
+    <button type="button" class="lb-tab" data-period="all" role="tab" aria-selected="false">Allzeit</button>
+  </div>
+
+  <ol class="lb-list" data-lb-list>
+    <li class="lb-empty" data-lb-empty>Noch keine bestätigten Scores diese Woche. Sei der erste.</li>
+  </ol>
+
+  <div class="lb-meta">
+    <span data-lb-week>–</span>
+    <button type="button" class="lb-refresh" data-lb-refresh>Aktualisieren</button>
+  </div>
+</section>
+
+<script>
+  const SECTION = document.querySelector<HTMLElement>('.leaderboard');
+  if (SECTION) {
+    const apiBase = SECTION.dataset.apiBase ?? '';
+    const list = SECTION.querySelector<HTMLOListElement>('[data-lb-list]')!;
+    const empty = SECTION.querySelector<HTMLElement>('[data-lb-empty]')!;
+    const weekEl = SECTION.querySelector<HTMLElement>('[data-lb-week]')!;
+    const refreshBtn = SECTION.querySelector<HTMLButtonElement>('[data-lb-refresh]')!;
+    const eyebrowEl = SECTION.querySelector<HTMLElement>('[data-lb-eyebrow]')!;
+    const titleEl = SECTION.querySelector<HTMLElement>('[data-lb-title]')!;
+    const subEl = SECTION.querySelector<HTMLElement>('[data-lb-sub]')!;
+    const tabs = SECTION.querySelectorAll<HTMLButtonElement>('.lb-tab');
+
+    let currentPeriod: 'week' | 'all' = 'week';
+
+    interface Entry { rank: number; name: string; score: number }
+    interface Resp { period: 'week' | 'all'; week_key: string | null; top: Entry[] }
+
+    const labels = {
+      week: { eyebrow: 'Diese Woche · Top 10', title: 'Wochen-Leaderboard.', sub: 'Top-1 am Sonntag-Abend → 20 € Gutschein per Mail. Reset jeden Sonntag.', empty: 'Noch keine bestätigten Scores diese Woche. Sei der erste.' },
+      all:  { eyebrow: 'Allzeit · Top 10',     title: 'Hall of Pilots.',      sub: 'Beste Scores aller Wochen. Mehrere Versuche pro Person zählen — nur der höchste.', empty: 'Noch keine bestätigten Scores. Spiel mit.' },
+    };
+
+    function applyLabels() {
+      const l = labels[currentPeriod];
+      eyebrowEl.textContent = l.eyebrow;
+      titleEl.textContent = l.title;
+      subEl.textContent = l.sub;
+      empty.textContent = l.empty;
+    }
+
+    async function load() {
+      if (!apiBase) return;
+      refreshBtn.disabled = true;
+      try {
+        const url = currentPeriod === 'all'
+          ? `${apiBase}/leaderboard?period=all`
+          : `${apiBase}/leaderboard`;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('lb fetch failed');
+        const data = await res.json() as Resp;
+        weekEl.textContent = data.period === 'all'
+          ? 'Allzeit-Ranking'
+          : `Woche ${data.week_key ?? '–'}`;
+        list.innerHTML = '';
+        if (!data.top || data.top.length === 0) {
+          list.appendChild(empty);
+          return;
+        }
+        for (const entry of data.top) {
+          const li = document.createElement('li');
+          li.className = 'lb-item';
+          li.innerHTML = `
+            <span class="lb-rank">${String(entry.rank).padStart(2, '0')}</span>
+            <span class="lb-name">${escapeHtml(entry.name)}</span>
+            <span class="lb-score">${entry.score}</span>
+          `;
+          if (entry.rank === 1) li.classList.add('lb-item--top');
+          list.appendChild(li);
+        }
+      } catch (e) {
+        console.warn('leaderboard load failed', e);
+        weekEl.textContent = 'Leaderboard nicht erreichbar';
+      } finally {
+        refreshBtn.disabled = false;
+      }
+    }
+
+    function escapeHtml(s: string) {
+      return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+    }
+
+    tabs.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const next = (btn.dataset.period as 'week' | 'all') ?? 'week';
+        if (next === currentPeriod) return;
+        currentPeriod = next;
+        tabs.forEach((b) => {
+          const on = b === btn;
+          b.classList.toggle('is-active', on);
+          b.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        applyLabels();
+        load();
+      });
+    });
+
+    refreshBtn.addEventListener('click', load);
+    window.addEventListener('leaderboard:refresh', load);
+    load();
+  }
+</script>
+
+<style>
+  .leaderboard {
+    background: var(--navy);
+    color: var(--cream);
+    padding: clamp(48px, 7vw, 84px) clamp(20px, 6vw, 56px);
+  }
+
+  .lb-head {
+    max-width: 540px;
+    margin: 0 auto 24px;
+    text-align: center;
+  }
+
+  .lb-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--yellow);
+    margin-bottom: 8px;
+  }
+
+  .lb-head h3 {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 5vw, 3rem);
+    text-transform: uppercase;
+    line-height: 1;
+    margin: 0 0 12px;
+    letter-spacing: -0.5px;
+  }
+
+  .lb-head p {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.5;
+    color: color-mix(in oklab, var(--cream) 80%, transparent);
+    margin: 0;
+  }
+
+  .lb-tabs {
+    max-width: 540px;
+    margin: 0 auto 16px;
+    display: flex;
+    gap: 0;
+    border: 1.5px solid color-mix(in oklab, var(--cream) 30%, transparent);
+  }
+
+  .lb-tab {
+    flex: 1;
+    background: transparent;
+    color: color-mix(in oklab, var(--cream) 70%, transparent);
+    border: 0;
+    padding: 10px 14px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+  }
+
+  .lb-tab + .lb-tab {
+    border-left: 1.5px solid color-mix(in oklab, var(--cream) 30%, transparent);
+  }
+
+  .lb-tab:hover:not(.is-active) {
+    color: var(--yellow);
+  }
+
+  .lb-tab.is-active {
+    background: var(--yellow);
+    color: var(--navy);
+  }
+
+  .lb-list {
+    list-style: none;
+    margin: 0 auto;
+    padding: 0;
+    max-width: 540px;
+    border-top: 1px dashed color-mix(in oklab, var(--cream) 30%, transparent);
+  }
+
+  .lb-item {
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
+    gap: 14px;
+    align-items: baseline;
+    padding: 14px 6px;
+    border-bottom: 1px dashed color-mix(in oklab, var(--cream) 20%, transparent);
+  }
+
+  .lb-rank {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    letter-spacing: 0.18em;
+    color: color-mix(in oklab, var(--cream) 60%, transparent);
+  }
+
+  .lb-name {
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--cream);
+  }
+
+  .lb-score {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    color: var(--cream);
+    line-height: 1;
+  }
+
+  .lb-item--top {
+    background: linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--yellow) 18%, transparent) 60%, transparent 100%);
+  }
+
+  .lb-item--top .lb-rank { color: var(--yellow); }
+  .lb-item--top .lb-name { color: var(--yellow); }
+  .lb-item--top .lb-score { color: var(--yellow); }
+
+  .lb-empty {
+    text-align: center;
+    padding: 32px 0;
+    font-family: var(--font-body);
+    font-style: italic;
+    color: color-mix(in oklab, var(--cream) 70%, transparent);
+    list-style: none;
+    border-bottom: 1px dashed color-mix(in oklab, var(--cream) 20%, transparent);
+  }
+
+  .lb-meta {
+    max-width: 540px;
+    margin: 18px auto 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    color: color-mix(in oklab, var(--cream) 60%, transparent);
+    text-transform: uppercase;
+  }
+
+  .lb-refresh {
+    background: transparent;
+    color: var(--cream);
+    border: 1.5px solid color-mix(in oklab, var(--cream) 40%, transparent);
+    padding: 6px 14px;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .lb-refresh:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .lb-refresh:disabled { opacity: 0.5; cursor: default; }
+</style>

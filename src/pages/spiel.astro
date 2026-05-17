@@ -1,0 +1,178 @@
+---
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+import PilotFlightGame from "../components/PilotFlightGame.astro";
+import Leaderboard from "../components/Leaderboard.astro";
+---
+<MarketingLayout
+  title="Pilot Flight — Mini-Spiel · Fry High"
+  description="Fly den Captain durch die Pommes-Berge. Top-1 der Woche kriegt einen 20-Euro-Gutschein per Mail."
+>
+  <section class="spiel-hero">
+    <div class="spiel-hero-inner">
+      <span class="spiel-eyebrow">Pilot Flight · Mini-Spiel</span>
+      <h1>Flieg den Captain<br/>durch die Pommes-Berge.</h1>
+      <p>
+        Tap, klick oder <kbd>Space</kbd> hält den Pilot in der Luft. Ohne Tap fällt er.
+        Jeder Berg, den du durchfliegst, ein Punkt. Wer am Ende der Woche oben steht,
+        kriegt am Sonntag einen <strong>20 € Gutschein</strong> per Mail —
+        einlösbar im Truck oder im Zoo am Meer.
+      </p>
+    </div>
+  </section>
+
+  <PilotFlightGame />
+
+  <section class="spiel-rules">
+    <div class="spiel-rules-inner">
+      <h2>Wie's läuft.</h2>
+      <ol>
+        <li>
+          <strong>Spielen.</strong> Klick auf <em>Abheben</em>, dann tap/klick/Space. Boden oder Berg = Crash.
+        </li>
+        <li>
+          <strong>Score einreichen.</strong> Nach dem Crash: E-Mail rein, Display-Name (öffentlich, freiwillig),
+          Einverständnis bestätigen.
+        </li>
+        <li>
+          <strong>Mail bestätigen.</strong> Wir schicken einen Bestätigungs-Link. Klick rein, Score zählt im
+          Leaderboard, du bist im Newsletter.
+        </li>
+        <li>
+          <strong>Wochen-Sieger.</strong> Sonntag-Abend: Top-1 kriegt automatisch einen Voucher-Code per Mail.
+          Gültig 30 Tage, einlösbar im Truck.
+        </li>
+      </ol>
+      <p class="spiel-rules-fineprint">
+        Mehrere Versuche pro Person ausdrücklich erwünscht. Bot-Versuche kicken wir raus.
+        Voucher nicht in bar auszahlbar, nicht kombinierbar mit anderen Aktionen.
+        Volljährig oder Erziehungsberechtigte fragen. Details:
+        <a href="/datenschutz">Datenschutz</a>.
+      </p>
+    </div>
+  </section>
+
+  <Leaderboard />
+</MarketingLayout>
+
+<style>
+  .spiel-hero {
+    background: linear-gradient(180deg, var(--cream) 0%, var(--cream-warm) 100%);
+    color: var(--ink);
+    padding: clamp(48px, 7vw, 96px) clamp(20px, 6vw, 56px) clamp(32px, 5vw, 64px);
+  }
+
+  .spiel-hero-inner {
+    max-width: 720px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .spiel-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+    display: inline-block;
+  }
+
+  .spiel-hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.5rem, 7vw, 5rem);
+    line-height: 0.95;
+    margin: 12px 0 18px;
+    color: var(--navy);
+    text-transform: uppercase;
+    letter-spacing: -0.5px;
+  }
+
+  .spiel-hero p {
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    line-height: 1.55;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .spiel-hero kbd {
+    background: var(--navy);
+    color: var(--cream);
+    padding: 1px 8px;
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    border-radius: 3px;
+  }
+
+  .spiel-rules {
+    background: var(--cream);
+    color: var(--ink);
+    padding: clamp(48px, 7vw, 84px) clamp(20px, 6vw, 56px);
+  }
+
+  .spiel-rules-inner {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .spiel-rules h2 {
+    font-family: var(--font-display);
+    font-size: clamp(1.875rem, 5vw, 2.5rem);
+    text-transform: uppercase;
+    line-height: 1;
+    margin: 0 0 24px;
+    color: var(--navy);
+    letter-spacing: -0.3px;
+  }
+
+  .spiel-rules ol {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 28px;
+    counter-reset: rules;
+  }
+
+  .spiel-rules li {
+    counter-increment: rules;
+    padding: 14px 0 14px 56px;
+    position: relative;
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    line-height: 1.55;
+    border-bottom: 1px dashed color-mix(in oklab, var(--ink) 18%, transparent);
+  }
+
+  .spiel-rules li::before {
+    content: counter(rules, decimal-leading-zero);
+    position: absolute;
+    left: 0;
+    top: 16px;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    background: var(--cream-warm);
+    border: 1.5px solid var(--accent);
+    padding: 6px 10px;
+    line-height: 1;
+  }
+
+  .spiel-rules li strong {
+    font-weight: 600;
+    color: var(--navy);
+    display: inline;
+  }
+
+  .spiel-rules-fineprint {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: color-mix(in oklab, var(--ink) 65%, transparent);
+    margin: 24px 0 0;
+  }
+
+  .spiel-rules-fineprint a {
+    color: var(--accent);
+    border-bottom: 1px solid color-mix(in oklab, var(--accent) 35%, transparent);
+  }
+</style>

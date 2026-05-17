@@ -59,6 +59,27 @@ const catering = defineCollection({
   }),
 });
 
+const tisch = defineCollection({
+  loader: glob({ pattern: 'tisch.md', base: './src/content' }),
+  schema: z.object({
+    eyebrow: z.string(),
+    headline: z.string(),
+    intro: z.string(),
+    features: z.array(z.string()),
+    form: z.object({
+      submit_endpoint: z.string(),
+      pax_min: z.number().default(1),
+      pax_max: z.number().default(12),
+      booking_weeks: z.number().int().default(8),
+      zones: z.array(z.object({
+        value: z.string(),
+        label: z.string(),
+      })),
+      occasions: z.array(z.string()).default([]),
+    }),
+  }),
+});
+
 const dusk = defineCollection({
   loader: glob({ pattern: 'dusk.md', base: './src/content' }),
   schema: z.object({
@@ -228,6 +249,7 @@ const pantrySkus = defineCollection({
 export const collections = {
   home,
   catering,
+  tisch,
   dusk,
   kinder,
   pantry,
