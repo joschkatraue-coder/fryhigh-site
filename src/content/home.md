@@ -12,7 +12,7 @@ hero:
       href: "/#menu"
       style: "primary"
     - label: "Catering anfragen"
-      href: "/catering"
+      href: "/#catering"
       style: "secondary"
   image: "hero/loaded-fries-hero.jpg"
 stats:

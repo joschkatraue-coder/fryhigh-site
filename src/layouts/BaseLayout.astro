@@ -16,6 +16,40 @@ const {
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site).toString();
+const isHome = Astro.url.pathname === "/" || Astro.url.pathname === "";
+
+const localBusinessJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Restaurant",
+  "@id": "https://fryhigh.de/#restaurant",
+  name: "Fry High — First Class Fritten",
+  url: "https://fryhigh.de",
+  image: new URL("/og-default.jpg", Astro.site).toString(),
+  description:
+    "First Class Fritten aus Bremerhaven. Loaded Fries, Smashburger, Catering, Pommesgewürz.",
+  telephone: "+4915773814964",
+  email: "info@fryhigh.de",
+  servesCuisine: ["Loaded Fries", "Smashburger", "Streetfood"],
+  priceRange: "€",
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "H.-H.-Meier-Straße 7",
+    addressLocality: "Bremerhaven",
+    postalCode: "27568",
+    addressCountry: "DE",
+  },
+  geo: {
+    "@type": "GeoCoordinates",
+    latitude: 53.5466,
+    longitude: 8.5732,
+  },
+  sameAs: [
+    "https://instagram.com/fry_high2020",
+    "https://facebook.com/FryHighBHV",
+    "https://www.tiktok.com/@fryhigh",
+  ],
+  foundingDate: "2020",
+};
 ---
 <!doctype html>
 <html lang="de">
@@ -37,6 +71,10 @@ const canonical = new URL(Astro.url.pathname, Astro.site).toString();
     <meta name="twitter:card" content="summary_large_image" />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    {isHome && (
+      <script type="application/ld+json" set:html={JSON.stringify(localBusinessJsonLd)} />
+    )}
 
     <slot name="head" />
   </head>

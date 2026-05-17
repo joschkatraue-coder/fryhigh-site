@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fry High — Junior Crew (Sub-Brand Lockup, Kindergeburtstag)
+     Pakete: Pinguin Crew · Walross Crew · Eisbär Crew. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 240"
+     role="img" aria-label="Junior Crew by Fry High">
+
+  <g transform="translate(400,42)">
+    <rect x="-90" y="-16" width="180" height="32" fill="#1A2A4E"/>
+    <text x="0" y="6" font-family="'JetBrains Mono', monospace" font-size="13"
+          fill="#F5F0E1" text-anchor="middle" letter-spacing="6" font-weight="700">FRY HIGH ·</text>
+  </g>
+
+  <text x="400" y="138" font-family="Anton, 'Bebas Neue', sans-serif"
+        font-size="92" fill="#1A2A4E" text-anchor="middle"
+        letter-spacing="2" font-weight="400">JUNIOR CREW</text>
+
+  <g stroke="#1A2A4E" stroke-width="2">
+    <line x1="180" y1="170" x2="385" y2="170"/>
+    <line x1="415" y1="170" x2="620" y2="170"/>
+  </g>
+  <circle cx="400" cy="170" r="5" fill="#E4326D"/>
+
+  <text x="400" y="204" font-family="'JetBrains Mono', monospace"
+        font-size="15" fill="#1A2A4E" text-anchor="middle"
+        letter-spacing="8" font-weight="700">KINDERGEBURTSTAG · AB 4 JAHRE</text>
+</svg>

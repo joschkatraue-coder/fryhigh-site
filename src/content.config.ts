@@ -64,9 +64,19 @@ const dusk = defineCollection({
   schema: z.object({
     eyebrow: z.string(),
     headline: z.string(),
+    headline_accent: z.string().optional(),
     clock_pill: z.string(),
     intro: z.string(),
     honesty_note: z.string(),
+    honesty_cta_label: z.string().default('Newsletter abonnieren →'),
+    honesty_cta_href: z.string().default('#newsletter'),
+    tonight: z.object({
+      label: z.string(),
+      headline: z.string(),
+      sub: z.string(),
+      cta_label: z.string().optional(),
+      cta_href: z.string().optional(),
+    }).optional(),
   }),
 });
 
@@ -95,7 +105,13 @@ const pantry = defineCollection({
 const story = defineCollection({
   loader: glob({ pattern: 'story.md', base: './src/content' }),
   schema: z.object({
+    eyebrow: z.string().optional(),
     headline: z.string(),
+    headline_accent: z.string().optional(),
+    lead: z.array(z.string()).default([]),
+    closer: z.string().optional(),
+    hero_image: z.string().optional(),
+    hero_caption: z.string().optional(),
     timeline: z.array(z.object({
       year: z.string(),
       title: z.string(),
@@ -182,9 +198,16 @@ const kinderPakete = defineCollection({
     slug: z.string(),
     crew_name: z.string(),
     crew_size: z.string(),
+    age_range: z.string().optional(),
+    duration: z.string().optional(),
+    location: z.string().optional(),
     price_from_eur: z.number(),
-    includes: z.array(z.string()).default([]),
+    price_label: z.string().default('Gesamt-Paket'),
+    badge: z.string().optional(),
+    cta_label: z.string().optional(),
     image: z.string().optional(),
+    featured: z.boolean().default(false),
+    includes: z.array(z.string()).default([]),
     order: z.number().int().default(99),
   }),
 });

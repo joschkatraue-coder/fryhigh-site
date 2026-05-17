@@ -1,0 +1,477 @@
+---
+import FloatingMascot from "./FloatingMascot.astro";
+import type { CollectionEntry } from "astro:content";
+
+interface Props {
+  eyebrow: string;
+  headline: string;
+  headline_accent?: string;
+  clock_pill: string;
+  intro: string;
+  honesty_note: string;
+  honesty_cta_label: string;
+  honesty_cta_href: string;
+  tonight?: {
+    label: string;
+    headline: string;
+    sub: string;
+    cta_label?: string;
+    cta_href?: string;
+  };
+  programs: CollectionEntry<"dusk-programs">[];
+}
+
+const {
+  eyebrow,
+  headline,
+  headline_accent,
+  clock_pill,
+  intro,
+  honesty_note,
+  honesty_cta_label,
+  honesty_cta_href,
+  tonight,
+  programs,
+} = Astro.props;
+
+const sorted = [...programs].sort((a, b) => a.data.order - b.data.order);
+---
+<section id="abend" class="dusk has-mascot">
+  <FloatingMascot
+    image="05_Kapitaens_Fries_Schnitzel.png"
+    size={140}
+    rotate={6}
+    top="18%"
+    right="5%"
+  />
+
+  <div class="lead">
+    <div>
+      <span class="eyebrow">{eyebrow}</span>
+      <h2>
+        {headline}{headline_accent && (<><br /><span class="accent">{headline_accent}</span></>)}
+      </h2>
+    </div>
+    <div>
+      <span class="clock-pill"><span class="dot" aria-hidden="true"></span>{clock_pill}</span>
+      <p>{intro}</p>
+    </div>
+  </div>
+
+  {tonight && (
+    <aside class="tonight" aria-label="Heute Abend">
+      <div class="tonight-mark">
+        <span class="tonight-pulse" aria-hidden="true"></span>
+        {tonight.label}
+      </div>
+      <div class="tonight-body">
+        <h3>{tonight.headline}</h3>
+        <p>{tonight.sub}</p>
+      </div>
+      {tonight.cta_label && tonight.cta_href && (
+        <a class="tonight-cta" href={tonight.cta_href} target={tonight.cta_href.startsWith("http") ? "_blank" : undefined} rel={tonight.cta_href.startsWith("http") ? "noopener noreferrer" : undefined}>
+          {tonight.cta_label}
+        </a>
+      )}
+    </aside>
+  )}
+
+  <div class="dusk-grid">
+    {sorted.map((entry) => (
+      <article class:list={["dusk-card", `dusk-${entry.data.status}`]}>
+        <div class="num">{entry.data.num}</div>
+        <h3>{entry.data.title}</h3>
+        <p>{entry.data.body}</p>
+        {entry.data.tags.length > 0 && (
+          <div class="tag-row">
+            {entry.data.tags.map((t) => <span>{t}</span>)}
+          </div>
+        )}
+      </article>
+    ))}
+  </div>
+
+  <div class="dusk-honest">
+    <p>{honesty_note}</p>
+    <a href={honesty_cta_href}>{honesty_cta_label}</a>
+  </div>
+</section>
+
+<style>
+  .dusk {
+    background: linear-gradient(
+      180deg,
+      var(--navy-deep) 0%,
+      #1a1820 35%,
+      #3a1f1a 75%,
+      #5a2818 100%
+    );
+    color: var(--cream);
+    padding: clamp(60px, 9vw, 110px) clamp(20px, 6vw, 80px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .dusk::before {
+    content: '';
+    position: absolute;
+    bottom: -20%;
+    left: -10%;
+    right: -10%;
+    height: 60%;
+    background: radial-gradient(
+      ellipse at center bottom,
+      color-mix(in oklab, var(--yellow) 20%, transparent) 0%,
+      color-mix(in oklab, var(--orange) 10%, transparent) 35%,
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+
+  .dusk::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--cream) 20%, transparent),
+      transparent
+    );
+  }
+
+  .dusk > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .lead {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 40px;
+    align-items: end;
+    margin-bottom: 48px;
+    max-width: var(--container-wide);
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--yellow);
+    opacity: 0.85;
+    display: inline-block;
+    margin-bottom: 14px;
+  }
+
+  h2 {
+    font-family: var(--font-display);
+    font-size: clamp(2.25rem, 5.4vw, 4.25rem);
+    line-height: 0.96;
+    letter-spacing: -0.5px;
+    text-transform: uppercase;
+    margin: 0;
+    color: var(--cream);
+  }
+
+  h2 .accent {
+    color: var(--yellow);
+  }
+
+  .clock-pill {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    background: color-mix(in oklab, var(--yellow) 12%, transparent);
+    color: var(--yellow);
+    border: 1px solid color-mix(in oklab, var(--yellow) 35%, transparent);
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: 18px;
+  }
+
+  .clock-pill .dot {
+    width: 6px;
+    height: 6px;
+    background: var(--yellow);
+    border-radius: 50%;
+    animation: dusk-blink 1.6s ease-in-out infinite;
+  }
+
+  @keyframes dusk-blink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.3; }
+  }
+
+  .lead p {
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    font-style: italic;
+    line-height: 1.6;
+    opacity: 0.88;
+    margin: 0;
+  }
+
+  .tonight {
+    display: grid;
+    grid-template-columns: 220px 1fr auto;
+    align-items: center;
+    gap: 28px;
+    padding: 22px 28px;
+    margin: 0 0 36px;
+    max-width: var(--container-wide);
+    background:
+      linear-gradient(
+        135deg,
+        color-mix(in oklab, var(--yellow) 16%, transparent) 0%,
+        color-mix(in oklab, var(--yellow) 6%, transparent) 100%
+      ),
+      rgba(0, 0, 0, 0.32);
+    border: 1px solid color-mix(in oklab, var(--yellow) 55%, transparent);
+    border-left: 4px solid var(--yellow);
+    box-shadow:
+      0 14px 32px rgba(0, 0, 0, 0.28),
+      inset 0 0 0 1px color-mix(in oklab, var(--yellow) 12%, transparent);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tonight::before {
+    content: "";
+    position: absolute;
+    top: -40px;
+    right: -60px;
+    width: 220px;
+    height: 220px;
+    background: radial-gradient(
+      circle,
+      color-mix(in oklab, var(--yellow) 22%, transparent) 0%,
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+
+  .tonight > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .tonight-mark {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--yellow);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    line-height: 1.4;
+  }
+
+  .tonight-pulse {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--yellow);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--yellow) 60%, transparent);
+    animation: tonight-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes tonight-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--yellow) 55%, transparent); }
+    50%      { box-shadow: 0 0 0 10px transparent; }
+  }
+
+  .tonight-body h3 {
+    font-family: var(--font-display);
+    font-size: clamp(1.625rem, 3vw, 2.25rem);
+    line-height: 0.96;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--cream);
+    margin: 0 0 8px;
+  }
+
+  .tonight-body p {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.5;
+    color: color-mix(in oklab, var(--cream) 86%, transparent);
+    margin: 0;
+    max-width: 56ch;
+  }
+
+  .tonight-cta {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--navy-deep);
+    background: var(--yellow);
+    padding: 14px 20px;
+    border-radius: 4px;
+    white-space: nowrap;
+    transition: transform var(--duration-fast) var(--ease-out),
+                box-shadow var(--duration-fast) var(--ease-out);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+  }
+
+  .tonight-cta:hover,
+  .tonight-cta:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4);
+  }
+
+  .dusk-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    margin-bottom: 36px;
+    max-width: var(--container-wide);
+  }
+
+  .dusk-card {
+    background: color-mix(in oklab, var(--cream) 5%, transparent);
+    border: 1px solid color-mix(in oklab, var(--yellow) 18%, transparent);
+    padding: 28px 24px 26px;
+    position: relative;
+    transition: transform var(--duration-base) var(--ease-out),
+                border-color var(--duration-base) var(--ease-out),
+                background var(--duration-base) var(--ease-out);
+  }
+
+  .dusk-card:hover {
+    transform: translateY(-6px);
+    border-color: var(--yellow);
+    background: color-mix(in oklab, var(--yellow) 7%, transparent);
+  }
+
+  .dusk-card .num {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--yellow);
+    margin-bottom: 14px;
+  }
+
+  .dusk-card h3 {
+    font-family: var(--font-display);
+    font-size: 1.625rem;
+    line-height: 1.05;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--cream);
+    margin: 0 0 12px;
+  }
+
+  .dusk-card p {
+    font-family: var(--font-body);
+    font-size: 0.94rem;
+    line-height: 1.55;
+    color: color-mix(in oklab, var(--cream) 75%, transparent);
+    margin: 0 0 14px;
+  }
+
+  .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tag-row span {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    background: color-mix(in oklab, var(--cream) 8%, transparent);
+    color: var(--cream);
+    border-radius: 2px;
+    opacity: 0.85;
+  }
+
+  .dusk-card.dusk-live::after,
+  .dusk-card.dusk-soon::after {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+  }
+
+  .dusk-card.dusk-live::after {
+    content: 'Live';
+    color: var(--navy-deep);
+    background: var(--yellow);
+  }
+
+  .dusk-card.dusk-soon::after {
+    content: 'Im Aufbau';
+    color: var(--cream);
+    background: color-mix(in oklab, var(--cream) 15%, transparent);
+    border: 1px solid color-mix(in oklab, var(--cream) 25%, transparent);
+  }
+
+  .dusk-honest {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    padding: 20px 24px;
+    background: rgba(0, 0, 0, 0.25);
+    border-left: 3px solid var(--yellow);
+    flex-wrap: wrap;
+    max-width: var(--container-wide);
+  }
+
+  .dusk-honest p {
+    font-family: var(--font-body);
+    font-size: 0.94rem;
+    line-height: 1.55;
+    color: color-mix(in oklab, var(--cream) 85%, transparent);
+    margin: 0;
+    flex: 1 1 320px;
+  }
+
+  .dusk-honest a {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--yellow);
+    border-bottom: 1px solid var(--yellow);
+    padding-bottom: 4px;
+    transition: opacity var(--duration-fast) var(--ease-out);
+  }
+
+  .dusk-honest a:hover {
+    opacity: 0.75;
+  }
+
+  @media (max-width: 900px) {
+    .lead { grid-template-columns: 1fr; }
+    .dusk-grid { grid-template-columns: 1fr; }
+    .tonight {
+      grid-template-columns: 1fr;
+      gap: 16px;
+      padding: 22px 22px 24px;
+    }
+    .tonight-cta { justify-self: start; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tonight-pulse { animation: none; }
+  }
+</style>

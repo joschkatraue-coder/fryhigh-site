@@ -1,0 +1,185 @@
+---
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+---
+<MarketingLayout
+  title="Impressum — Fry High"
+  description="Anbieterkennzeichnung gemäß § 5 TMG für Fry High GbR, Bremerhaven."
+  noindex={true}
+>
+  <article class="legal">
+    <header class="legal-head">
+      <span class="eyebrow">Rechtliches · § 5 TMG</span>
+      <h1>Impressum.</h1>
+      <p class="legal-meta">Stand: <time datetime="2026-05-17">17.05.2026</time></p>
+    </header>
+
+    <section>
+      <h2>Anbieter</h2>
+      <p>
+        <strong>Fry High GbR</strong><br />
+        [TBD vollständige Anschrift einsetzen]<br />
+        H.-H.-Meier-Straße 7<br />
+        27568 Bremerhaven<br />
+        Deutschland
+      </p>
+    </section>
+
+    <section>
+      <h2>Vertreten durch</h2>
+      <p>
+        Joschka Traue<br />
+        Georg Vollenbruck
+      </p>
+    </section>
+
+    <section>
+      <h2>Kontakt</h2>
+      <p>
+        Telefon: <a href="tel:+4915773814964">+49 157 73814964</a><br />
+        E-Mail: <a href="mailto:info@fryhigh.de">info@fryhigh.de</a>
+      </p>
+    </section>
+
+    <section>
+      <h2>Umsatzsteuer-ID</h2>
+      <p>
+        Umsatzsteuer-Identifikationsnummer gemäß § 27 a UStG:<br />
+        <strong>[TBD USt-ID]</strong>
+      </p>
+    </section>
+
+    <section>
+      <h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
+      <p>
+        Joschka Traue<br />
+        Anschrift wie oben
+      </p>
+    </section>
+
+    <section>
+      <h2>Streitschlichtung</h2>
+      <p>
+        Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit:
+        <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener noreferrer">https://ec.europa.eu/consumers/odr</a>.
+      </p>
+      <p>
+        Unsere E-Mail-Adresse findest du oben im Impressum.
+      </p>
+      <p>
+        Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.
+      </p>
+    </section>
+
+    <section>
+      <h2>Haftung für Inhalte</h2>
+      <p>
+        Als Diensteanbieter sind wir gemäß § 7 Abs. 1 TMG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 TMG sind wir als Diensteanbieter jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen oder nach Umständen zu forschen, die auf eine rechtswidrige Tätigkeit hinweisen.
+      </p>
+      <p>
+        Verpflichtungen zur Entfernung oder Sperrung der Nutzung von Informationen nach den allgemeinen Gesetzen bleiben hiervon unberührt. Eine diesbezügliche Haftung ist jedoch erst ab dem Zeitpunkt der Kenntnis einer konkreten Rechtsverletzung möglich. Bei Bekanntwerden von entsprechenden Rechtsverletzungen werden wir diese Inhalte umgehend entfernen.
+      </p>
+    </section>
+
+    <section>
+      <h2>Haftung für Links</h2>
+      <p>
+        Unser Angebot enthält Links zu externen Webseiten Dritter, auf deren Inhalte wir keinen Einfluss haben. Deshalb können wir für diese fremden Inhalte auch keine Gewähr übernehmen. Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter oder Betreiber der Seiten verantwortlich.
+      </p>
+    </section>
+
+    <section>
+      <h2>Urheberrecht</h2>
+      <p>
+        Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung, Verbreitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen der schriftlichen Zustimmung des jeweiligen Autors bzw. Erstellers.
+      </p>
+    </section>
+
+    <footer class="legal-foot">
+      <a href="/">← Zurück zur Startseite</a>
+    </footer>
+  </article>
+</MarketingLayout>
+
+<style>
+  .legal {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: clamp(48px, 8vw, 96px) clamp(20px, 5vw, 40px);
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: var(--ink);
+  }
+
+  .legal-head {
+    margin-bottom: 56px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid color-mix(in oklab, var(--ink) 12%, transparent);
+  }
+
+  .legal-head h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    line-height: 0.95;
+    margin: 14px 0 12px;
+    color: var(--navy);
+  }
+
+  .legal-meta {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+    opacity: 0.55;
+    margin: 0;
+  }
+
+  .legal section {
+    margin-bottom: 36px;
+  }
+
+  .legal h2 {
+    font-family: var(--font-display);
+    font-size: 1.375rem;
+    line-height: 1.1;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--navy);
+    margin: 0 0 14px;
+  }
+
+  .legal p {
+    margin: 0 0 14px;
+  }
+
+  .legal a {
+    color: var(--orange);
+    border-bottom: 1px solid color-mix(in oklab, var(--orange) 35%, transparent);
+    transition: border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .legal a:hover,
+  .legal a:focus-visible {
+    border-bottom-color: var(--orange);
+  }
+
+  .legal strong {
+    font-weight: 600;
+    color: var(--navy-deep);
+  }
+
+  .legal-foot {
+    margin-top: 64px;
+    padding-top: 32px;
+    border-top: 1px solid color-mix(in oklab, var(--ink) 12%, transparent);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .legal-foot a {
+    border-bottom: none;
+  }
+</style>

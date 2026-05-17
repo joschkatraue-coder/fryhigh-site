@@ -1,12 +1,14 @@
 ---
 const currentPath = Astro.url.pathname;
+const onHome = currentPath === "/" || currentPath === "";
 const links = [
   { href: "/#menu", label: "Kreationen" },
-  { href: "/standorte", label: "Standorte" },
-  { href: "/abend", label: "Abend" },
-  { href: "/catering", label: "Catering" },
-  { href: "/pantry", label: "Pantry" },
-  { href: "/story", label: "Story" },
+  { href: "/#standorte", label: "Standorte" },
+  { href: "/#abend", label: "Abend" },
+  { href: "/#catering", label: "Catering" },
+  { href: "/#kinder", label: "Kindergeburtstag" },
+  { href: "/#pantry", label: "Pantry" },
+  { href: "/#story", label: "Story" },
 ];
 ---
 <header class="nav-bar">
@@ -16,14 +18,11 @@ const links = [
   </a>
   <nav aria-label="Hauptnavigation">
     <ul>
-      {links.map((link) => {
-        const isActive = currentPath === link.href || currentPath.startsWith(link.href + "/");
-        return (
-          <li>
-            <a href={link.href} aria-current={isActive ? "page" : undefined}>{link.label}</a>
-          </li>
-        );
-      })}
+      {links.map((link) => (
+        <li>
+          <a href={link.href} data-anchor={onHome ? link.href.replace("/#", "#") : null}>{link.label}</a>
+        </li>
+      ))}
     </ul>
   </nav>
 </header>

@@ -39,11 +39,12 @@ const positionStyle = [
 
 <style>
   .mascot {
-    position: absolute;
+    position: fixed;
     width: var(--mascot-size, 130px);
     height: var(--mascot-size, 130px);
     pointer-events: auto;
     opacity: 0;
+    z-index: 5;
     --evasion-x: 0px;
     --evasion-y: 0px;
     --evasion-rotate: 0deg;
@@ -78,6 +79,11 @@ const positionStyle = [
       drop-shadow(0 12px 24px color-mix(in oklab, black 35%, transparent));
     user-select: none;
     -webkit-user-drag: none;
+  }
+
+  /* Grünkohl-Cutout: weiße Outlines weglassen (Rembg-Artefakte am Tray). */
+  .mascot img[src*="13_Nordsee_Fries_Gruenkohl"] {
+    filter: drop-shadow(0 12px 24px color-mix(in oklab, black 35%, transparent));
   }
 
   @media (prefers-reduced-motion: reduce) {

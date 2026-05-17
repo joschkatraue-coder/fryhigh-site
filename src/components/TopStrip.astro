@@ -1,0 +1,65 @@
+---
+const slogans: string[] = [
+  "Probier zuerst",
+  "Bestell mutig",
+  "Pommes verdienen mehr als nur Paprika",
+];
+---
+<div class="top-strip" role="presentation" aria-hidden="true">
+  <div class="track">
+    {[...slogans, ...slogans].map((s, i) => (
+      <span class="slogan">
+        {s}
+        <span class="dot" aria-hidden="true">·</span>
+      </span>
+    ))}
+  </div>
+</div>
+
+<style>
+  .top-strip {
+    background: var(--navy);
+    color: var(--cream);
+    overflow: hidden;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid color-mix(in oklab, var(--cream) 12%, transparent);
+  }
+
+  .track {
+    display: inline-flex;
+    white-space: nowrap;
+    gap: var(--space-5);
+    padding-left: 100%;
+    animation: scroll 28s linear infinite;
+    will-change: transform;
+  }
+
+  .slogan {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-5);
+  }
+
+  .dot {
+    color: var(--accent);
+    opacity: 0.8;
+  }
+
+  @keyframes scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .track {
+      animation: none;
+      padding-left: 0;
+      justify-content: center;
+      width: 100%;
+    }
+  }
+</style>

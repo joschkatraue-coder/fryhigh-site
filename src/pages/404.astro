@@ -1,0 +1,211 @@
+---
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+import FloatingMascot from "../components/FloatingMascot.astro";
+---
+<MarketingLayout
+  title="Falsches Gate · Fry High"
+  description="Diese Seite existiert nicht. Zurück zum Boarding."
+  noindex={true}
+>
+  <section class="four-oh-four has-mascot">
+    <FloatingMascot
+      image="08_Seehund_Fries_Garnelen.png"
+      size={160}
+      rotate={-10}
+      top="12%"
+      right="8%"
+    />
+
+    <div class="strip">
+      <span>✈ Boarding · Lost &amp; Found</span>
+      <span class="rule"></span>
+      <span>Error 404</span>
+    </div>
+
+    <div class="frame">
+      <span class="eyebrow">Falsches Gate</span>
+      <h1>
+        Seite<br />
+        <span class="acc">verloren.</span>
+      </h1>
+      <p class="lead">
+        Der Pilot hat diese Route nicht im Logbuch. Vielleicht abgehoben, vielleicht nie gelandet. Zurück zum Boarding — da gibt&apos;s Loaded Fries.
+      </p>
+
+      <div class="actions">
+        <a class="btn btn-primary" href="/">← Zurück zur Startseite</a>
+        <a class="btn btn-secondary" href="/#standorte">Standorte ansehen</a>
+      </div>
+
+      <div class="hints">
+        <span class="hints-eyebrow">Du suchst vielleicht:</span>
+        <ul>
+          <li><a href="/#menu">Kreationen</a></li>
+          <li><a href="/#abend">Abendgeschäft</a></li>
+          <li><a href="/#catering">Catering</a></li>
+          <li><a href="/#kinder">Kindergeburtstag</a></li>
+          <li><a href="/#pantry">Pommesgewürz</a></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</MarketingLayout>
+
+<style>
+  .four-oh-four {
+    min-height: 78vh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    background:
+      radial-gradient(circle at 18% 28%, color-mix(in oklab, var(--orange) 12%, transparent) 0%, transparent 38%),
+      radial-gradient(circle at 82% 72%, color-mix(in oklab, var(--yellow) 10%, transparent) 0%, transparent 40%),
+      var(--navy-deep);
+    color: var(--cream);
+    padding: clamp(20px, 4vw, 36px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .strip {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 18px;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--yellow);
+    border: 1px solid color-mix(in oklab, var(--yellow) 35%, transparent);
+    border-radius: 4px;
+    max-width: 520px;
+  }
+
+  .strip .rule {
+    flex: 1;
+    height: 1px;
+    background: color-mix(in oklab, var(--yellow) 35%, transparent);
+  }
+
+  .frame {
+    align-self: center;
+    max-width: 720px;
+    margin: clamp(40px, 8vw, 80px) auto;
+    text-align: center;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--yellow);
+    display: inline-block;
+    margin-bottom: 18px;
+  }
+
+  .frame h1 {
+    font-family: var(--font-display);
+    font-size: clamp(4.5rem, 14vw, 10rem);
+    line-height: 0.86;
+    letter-spacing: -2px;
+    text-transform: uppercase;
+    color: var(--cream);
+    margin: 0 0 22px;
+    text-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+  }
+
+  .frame h1 .acc {
+    color: var(--orange);
+  }
+
+  .lead {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: clamp(1.0625rem, 2.2vw, 1.375rem);
+    line-height: 1.5;
+    color: color-mix(in oklab, var(--cream) 88%, transparent);
+    max-width: 56ch;
+    margin: 0 auto 36px;
+  }
+
+  .actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    justify-content: center;
+    margin-bottom: 56px;
+  }
+
+  .btn {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    padding: 16px 22px;
+    border-radius: 4px;
+    transition: transform var(--duration-fast) var(--ease-out),
+                box-shadow var(--duration-fast) var(--ease-out);
+  }
+
+  .btn-primary {
+    color: var(--cream);
+    background: var(--orange);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-secondary {
+    color: var(--cream);
+    border: 1px solid color-mix(in oklab, var(--cream) 35%, transparent);
+  }
+
+  .btn:hover,
+  .btn:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+  }
+
+  .hints {
+    padding-top: 28px;
+    border-top: 1px dashed color-mix(in oklab, var(--cream) 22%, transparent);
+  }
+
+  .hints-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: color-mix(in oklab, var(--cream) 60%, transparent);
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  .hints ul {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    justify-content: center;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .hints a {
+    font-family: var(--font-body);
+    font-size: 0.96rem;
+    color: var(--cream);
+    border-bottom: 1px solid color-mix(in oklab, var(--orange) 50%, transparent);
+    padding-bottom: 2px;
+    transition: color var(--duration-fast) var(--ease-out),
+                border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .hints a:hover,
+  .hints a:focus-visible {
+    color: var(--orange);
+    border-bottom-color: var(--orange);
+  }
+</style>

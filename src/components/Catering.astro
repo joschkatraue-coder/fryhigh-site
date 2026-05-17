@@ -1,0 +1,682 @@
+---
+import FloatingMascot from "./FloatingMascot.astro";
+
+interface Gate { value: string; label: string; }
+interface FormCfg {
+  submit_endpoint: string;
+  pax_min: number;
+  pax_max: number;
+  gates: Gate[];
+}
+interface Props {
+  eyebrow: string;
+  headline: string;
+  intro: string;
+  features: string[];
+  form: FormCfg;
+}
+
+const { eyebrow, headline, intro, features, form } = Astro.props;
+const headlineLines = headline.split("\n");
+const paxDefault = Math.round((form.pax_min + form.pax_max) / 2 / 10) * 10;
+const firstGate = form.gates[0]?.value ?? "";
+---
+<section id="catering" class="catering has-mascot">
+  <FloatingMascot
+    image="10_Koefte_Feta.png"
+    size={140}
+    rotate={9}
+    bottom="16%"
+    left="3%"
+  />
+
+  <div class="row">
+    <div class="copy">
+      <span class="eyebrow">{eyebrow}</span>
+      <h2>{headlineLines.map((line, i) => (
+        <>{line}{i < headlineLines.length - 1 && <br />}</>
+      ))}</h2>
+      <p>{intro}</p>
+      <ul class="feat">
+        {features.map((f) => <li>{f}</li>)}
+      </ul>
+    </div>
+
+    <form
+      class="flight-plan"
+      action={form.submit_endpoint}
+      method="post"
+      data-catering-form
+    >
+      <div class="fp-header">
+        <div class="fp-brand">
+          <div class="fp-stamp" aria-hidden="true">FH</div>
+          <div>
+            <div class="fp-label">Boarding-Antrag · Catering</div>
+            <div class="fp-route">Fry&nbsp;High<span class="arr">→</span>Euer Event</div>
+          </div>
+        </div>
+        <div class="fp-seq">SEQ · 2026<br />FH / CT / TBD</div>
+      </div>
+
+      <div class="fp-section">
+        <div class="fp-section-title">
+          <span>01 · Passenger Info</span>
+          <span class="hint">Wer schreibt da?</span>
+        </div>
+        <div class="fp-row">
+          <label class="fp-field">
+            <span class="fp-field-label">Name</span>
+            <input type="text" name="name" placeholder="Euer Name" required autocomplete="name" />
+          </label>
+          <label class="fp-field">
+            <span class="fp-field-label">E-Mail</span>
+            <input type="email" name="email" placeholder="kontakt@…" required autocomplete="email" />
+          </label>
+        </div>
+      </div>
+
+      <div class="fp-section">
+        <div class="fp-section-title">
+          <span>02 · Flight Details</span>
+          <span class="hint">Wann · wieviele</span>
+        </div>
+        <div class="fp-row">
+          <label class="fp-field">
+            <span class="fp-field-label">Departure Date</span>
+            <input type="date" name="event_date" required />
+          </label>
+          <div class="fp-field fp-range-wrap">
+            <span class="fp-field-label">Pax · Gäste</span>
+            <div class="fp-range-row">
+              <div class="n"><output data-pax-out>{paxDefault}</output><small>Personen</small></div>
+            </div>
+            <input
+              type="range"
+              name="pax"
+              min={form.pax_min}
+              max={form.pax_max}
+              step="10"
+              value={paxDefault}
+              class="fp-range"
+              data-pax-range
+            />
+            <div class="fp-range-readout" data-pax-readout>Catering-Crew + Foodtruck</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fp-section">
+        <div class="fp-section-title">
+          <span>03 · Departure Gate</span>
+          <span class="hint">Was feiert ihr?</span>
+        </div>
+        <div class="fp-gates" role="radiogroup" aria-label="Event-Typ">
+          {form.gates.map((gate, i) => (
+            <button
+              type="button"
+              class:list={["fp-gate", { active: i === 0 }]}
+              data-gate-value={gate.value}
+              role="radio"
+              aria-checked={i === 0 ? "true" : "false"}
+            >
+              <span class="fp-gate-num">G·{String(i + 1).padStart(2, "0")}</span>
+              <span class="fp-gate-name">{gate.label}</span>
+            </button>
+          ))}
+        </div>
+        <input type="hidden" name="gate" value={firstGate} data-gate-input />
+      </div>
+
+      <div class="fp-section">
+        <div class="fp-section-title">
+          <span>04 · Cargo Manifest</span>
+          <span class="hint">Erzählt uns vom Event</span>
+        </div>
+        <textarea
+          class="fp-cargo"
+          name="cargo"
+          placeholder="Was feiert ihr? Wo? Wieviel Hunger? Was sollten wir wissen?"
+        ></textarea>
+      </div>
+
+      <button type="submit" class="fp-submit">
+        Anfrage einchecken
+        <span class="fp-submit-meta">Antwort innerhalb 24h · Crew meldet sich</span>
+      </button>
+    </form>
+  </div>
+</section>
+
+<script>
+  // Boarding-Pass-Form: Range-Slider Readout + Gate-Selector State.
+  // Caveman: jeweils 1 Form pro Page, läuft auch mit mehreren Instanzen.
+  const tierFor = (pax: number): string => {
+    if (pax < 80)   return "Foodtruck-Crew · intimes Format";
+    if (pax < 150)  return "Catering-Crew + Foodtruck";
+    if (pax < 250)  return "Foodtruck + Buffet-Station";
+    if (pax < 400)  return "Catering + Foodtruck + Verstärkung";
+    return "Festival-Modus · mehrere Stationen";
+  };
+
+  document.querySelectorAll<HTMLFormElement>('[data-catering-form]').forEach((form) => {
+    const range = form.querySelector<HTMLInputElement>('[data-pax-range]');
+    const out = form.querySelector<HTMLOutputElement>('[data-pax-out]');
+    const readout = form.querySelector<HTMLElement>('[data-pax-readout]');
+    const updatePax = () => {
+      if (!range || !out || !readout) return;
+      const v = Number(range.value);
+      out.textContent = String(v);
+      readout.textContent = tierFor(v);
+      const min = Number(range.min);
+      const max = Number(range.max);
+      const pct = ((v - min) / (max - min)) * 100;
+      range.style.setProperty('--pax-pct', `${pct}%`);
+    };
+    range?.addEventListener('input', updatePax);
+    updatePax();
+
+    const gates = form.querySelectorAll<HTMLButtonElement>('.fp-gate');
+    const gateInput = form.querySelector<HTMLInputElement>('[data-gate-input]');
+    gates.forEach((g) => g.addEventListener('click', () => {
+      gates.forEach((x) => {
+        x.classList.remove('active');
+        x.setAttribute('aria-checked', 'false');
+      });
+      g.classList.add('active');
+      g.setAttribute('aria-checked', 'true');
+      if (gateInput) gateInput.value = g.dataset.gateValue ?? '';
+    }));
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const submit = form.querySelector<HTMLButtonElement>('.fp-submit');
+      const endpoint = form.getAttribute('action') ?? '';
+      if (!submit) return;
+
+      const originalHtml = submit.innerHTML;
+      submit.disabled = true;
+      submit.textContent = 'Wird gesendet…';
+
+      const payload = Object.fromEntries(new FormData(form).entries());
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ ...payload, source: 'fryhigh.de/catering', ts: new Date().toISOString() }),
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        submit.textContent = 'Eingecheckt · Crew meldet sich.';
+      } catch (err) {
+        console.error('catering submit failed', err);
+        submit.innerHTML = originalHtml;
+        submit.disabled = false;
+        const meta = submit.querySelector<HTMLElement>('.fp-submit-meta');
+        if (meta) meta.textContent = 'Hm. Schick uns die Infos kurz an info@fryhigh.de';
+      }
+    });
+  });
+</script>
+
+<style>
+  .catering {
+    padding: clamp(60px, 9vw, 110px) clamp(20px, 6vw, 80px);
+    background: var(--navy);
+    color: var(--cream);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 56px;
+    align-items: start;
+    max-width: var(--container-wide);
+    margin: 0 auto;
+  }
+
+  .copy .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+    display: inline-block;
+  }
+
+  .copy h2 {
+    font-family: var(--font-display);
+    font-size: clamp(2.125rem, 5vw, 3.75rem);
+    text-transform: uppercase;
+    line-height: 1;
+    margin: 0 0 18px;
+    color: var(--cream);
+    letter-spacing: -0.5px;
+  }
+
+  .copy p {
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    margin: 0 0 14px;
+    color: var(--cream);
+  }
+
+  .feat {
+    list-style: none;
+    margin: 18px 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    font-family: var(--font-body);
+    font-size: 0.94rem;
+  }
+
+  .feat li {
+    padding-left: 22px;
+    position: relative;
+    opacity: 0.95;
+    color: var(--cream);
+  }
+
+  .feat li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* Boarding-Pass-Form */
+  .flight-plan {
+    background: var(--cream);
+    color: var(--ink);
+    position: relative;
+    box-shadow:
+      0 24px 60px rgba(0, 0, 0, 0.5),
+      0 6px 14px rgba(0, 0, 0, 0.3);
+  }
+
+  .flight-plan::before,
+  .flight-plan::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 10px;
+    background-image: radial-gradient(circle at center, var(--navy) 4px, transparent 4.5px);
+    background-size: 16px 10px;
+    background-repeat: repeat-x;
+    pointer-events: none;
+  }
+
+  .flight-plan::before { top: -5px; }
+  .flight-plan::after { bottom: -5px; }
+
+  .fp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px dashed color-mix(in oklab, var(--ink) 35%, transparent);
+    background: linear-gradient(180deg, var(--cream-warm) 0%, var(--cream) 100%);
+    gap: 14px;
+  }
+
+  .fp-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .fp-stamp {
+    width: 44px;
+    height: 44px;
+    background: var(--accent);
+    color: var(--cream);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-display);
+    font-size: 17px;
+    letter-spacing: 1px;
+    border: 2px dashed var(--cream);
+    box-shadow: 0 0 0 2px var(--accent);
+    transform: rotate(-8deg);
+    flex-shrink: 0;
+  }
+
+  .fp-label {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: color-mix(in oklab, var(--ink) 60%, transparent);
+  }
+
+  .fp-route {
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--ink);
+    line-height: 1.05;
+  }
+
+  .fp-route .arr {
+    color: var(--accent);
+    margin: 0 6px;
+  }
+
+  .fp-seq {
+    font-family: var(--font-mono);
+    font-size: 0.56rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: color-mix(in oklab, var(--ink) 60%, transparent);
+    text-align: right;
+    line-height: 1.6;
+  }
+
+  .fp-section {
+    padding: 18px 22px;
+    border-bottom: 1px dashed color-mix(in oklab, var(--ink) 18%, transparent);
+  }
+
+  .fp-section-title {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .fp-section-title .hint {
+    color: color-mix(in oklab, var(--ink) 60%, transparent);
+    opacity: 0.8;
+    text-transform: none;
+    letter-spacing: 0.08em;
+    font-style: italic;
+  }
+
+  .fp-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .fp-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .fp-field-label {
+    font-family: var(--font-mono);
+    font-size: 0.56rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: color-mix(in oklab, var(--ink) 60%, transparent);
+  }
+
+  .fp-field input[type="text"],
+  .fp-field input[type="email"],
+  .fp-field input[type="date"] {
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid var(--ink);
+    padding: 6px 0;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--ink);
+    width: 100%;
+    border-radius: 0;
+    outline: none;
+    transition: border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .fp-field input::placeholder {
+    color: color-mix(in oklab, var(--ink) 35%, transparent);
+    font-style: italic;
+  }
+
+  .fp-field input:focus {
+    border-bottom-color: var(--accent);
+  }
+
+  .fp-range-wrap { padding-top: 6px; }
+
+  .fp-range-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+
+  .fp-range-row .n {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .fp-range-row .n small {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.16em;
+    color: color-mix(in oklab, var(--ink) 60%, transparent);
+    margin-left: 6px;
+  }
+
+  .fp-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(
+      to right,
+      var(--accent) 0%,
+      var(--accent) var(--pax-pct, 16%),
+      color-mix(in oklab, var(--ink) 18%, transparent) var(--pax-pct, 16%),
+      color-mix(in oklab, var(--ink) 18%, transparent) 100%
+    );
+    outline: none;
+    cursor: pointer;
+    border-radius: 0;
+    margin-top: 6px;
+  }
+
+  .fp-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--cream);
+    box-shadow: 0 0 0 1.5px var(--accent), 0 4px 10px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+  }
+
+  .fp-range::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--cream);
+    box-shadow: 0 0 0 1.5px var(--accent), 0 4px 10px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+  }
+
+  .fp-range-readout {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 0.875rem;
+    color: var(--accent);
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .fp-range-readout::before {
+    content: '→';
+    font-weight: 700;
+  }
+
+  /* Gate selector */
+  .fp-gates {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+
+  .fp-gate {
+    background: transparent;
+    border: 1.5px solid color-mix(in oklab, var(--ink) 35%, transparent);
+    padding: 12px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    color: var(--ink);
+    transition: all var(--duration-fast) var(--ease-out);
+    border-radius: 0;
+    font-family: inherit;
+  }
+
+  .fp-gate:hover {
+    border-color: var(--ink);
+    background: color-mix(in oklab, var(--ink) 5%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .fp-gate.active {
+    background: var(--ink);
+    color: var(--cream);
+    border-color: var(--ink);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  }
+
+  .fp-gate.active .fp-gate-num {
+    color: var(--accent);
+    opacity: 1;
+  }
+
+  .fp-gate-num {
+    font-family: var(--font-mono);
+    font-size: 0.56rem;
+    letter-spacing: 0.16em;
+    opacity: 0.6;
+  }
+
+  .fp-gate-name {
+    font-family: var(--font-display);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1;
+  }
+
+  /* Cargo manifest */
+  .fp-cargo {
+    width: 100%;
+    background: transparent;
+    border: 1.5px dashed color-mix(in oklab, var(--ink) 35%, transparent);
+    padding: 14px;
+    font-family: var(--font-body);
+    font-size: 0.94rem;
+    color: var(--ink);
+    min-height: 90px;
+    resize: vertical;
+    outline: none;
+    border-radius: 0;
+    transition: border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .fp-cargo::placeholder {
+    color: color-mix(in oklab, var(--ink) 35%, transparent);
+    font-style: italic;
+  }
+
+  .fp-cargo:focus {
+    border-color: var(--accent);
+  }
+
+  /* Submit · ticket-rip */
+  .fp-submit {
+    width: 100%;
+    background: var(--accent);
+    color: var(--cream);
+    padding: 22px;
+    font-family: var(--font-display);
+    font-size: 1.375rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 0;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: background var(--duration-fast) var(--ease-out),
+                transform var(--duration-fast) var(--ease-out);
+    position: relative;
+    line-height: 1;
+  }
+
+  .fp-submit::before {
+    content: '✈';
+    position: absolute;
+    left: 24px;
+    top: 50%;
+    transform: translateY(-50%) rotate(-12deg);
+    font-size: 1.375rem;
+  }
+
+  .fp-submit::after {
+    content: '→';
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.5rem;
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+
+  .fp-submit:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--accent) 88%, black);
+  }
+
+  .fp-submit:hover:not(:disabled)::after {
+    transform: translateY(-50%) translateX(4px);
+  }
+
+  .fp-submit:disabled {
+    background: var(--green);
+    cursor: default;
+  }
+
+  .fp-submit-meta {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    opacity: 0.85;
+  }
+
+  @media (max-width: 900px) {
+    .row { grid-template-columns: 1fr; }
+    .feat { grid-template-columns: 1fr; }
+    .fp-row { grid-template-columns: 1fr; }
+    .fp-gates { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>

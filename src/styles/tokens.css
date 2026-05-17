@@ -25,6 +25,13 @@
   --accent-pantry-02: var(--green);
   --accent-dusk: var(--yellow);
 
+  /* Section-Surface-Rhythmus (ported from Variant C, 2026-05-16)
+   * Sehr leise Tinten — CI v1 §3.1: max 4% pink, max 3% green/yellow.
+   * Hier nur als Surface-Tint, nie als saturated Block.
+   */
+  --surface-pink-tint: color-mix(in oklab, var(--pink) 8%, var(--cream));
+  --surface-cream-warm: var(--cream-warm);
+
   /* Typography */
   --font-display: "Anton", "Impact", system-ui, sans-serif;
   --font-body: "Crimson Pro", "Iowan Old Style", Georgia, serif;

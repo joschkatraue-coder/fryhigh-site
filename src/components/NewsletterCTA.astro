@@ -7,13 +7,18 @@ interface Props {
 }
 
 const { headline, lead } = Astro.props;
+
+// Mailerlite Embed-Endpoint (Decision 2026-05-17 — siehe launch-readiness).
+// TBD: echte Form-ID + Account-ID einsetzen sobald Mailerlite-Account live ist.
+// Aktueller Placeholder läuft als Optimistic-UI ohne echten POST.
+const MAILERLITE_ACTION = "https://assets.mailerlite.com/jsonp/TBD-ACCOUNT-ID/forms/TBD-FORM-ID/subscribe";
 ---
 <section id="newsletter" class="newsletter has-mascot">
   <FloatingMascot
     image="16_Gyoza_Fusion.png"
-    size={120}
+    size={130}
     rotate={-14}
-    top="-30px"
+    bottom="14%"
     left="5%"
   />
   <div class="lead-block">
@@ -21,16 +26,18 @@ const { headline, lead } = Astro.props;
     <h2>{headline}</h2>
     <p class="lead">{lead}</p>
   </div>
-  <form class="signup" data-newsletter>
+  <form class="signup" data-newsletter action={MAILERLITE_ACTION} method="post">
     <label class="sr-only" for="newsletter-email">E-Mail-Adresse</label>
     <input
       id="newsletter-email"
       type="email"
-      name="email"
+      name="fields[email]"
       placeholder="dein@email.de"
       required
       autocomplete="email"
     />
+    <input type="hidden" name="ml-submit" value="1" />
+    <input type="text" name="anticsrf" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;" />
     <button type="submit">Eintragen</button>
     <p class="hint" data-status></p>
   </form>

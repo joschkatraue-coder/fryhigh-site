@@ -1,0 +1,168 @@
+---
+import FloatingMascot from "./FloatingMascot.astro";
+
+// 16 Loaded-Fries-Kreationen als reine visuelle Mascot-Tiles.
+// Reihenfolge + Farb-Mapping aus Prototyp Variant B (locked 2026-05-15).
+// NIE mit Namen / Beschreibung / Preisen — Spec §4.7.1.
+type TileColor = "orange" | "pink" | "yellow" | "green" | "navy" | "cream";
+interface Tile { file: string; color: TileColor; }
+
+const tiles: Tile[] = [
+  { file: "01_Walross_Fries_Mexico.png",        color: "orange" },
+  { file: "02_Tropical_Drachenfrucht.png",      color: "pink" },
+  { file: "03_Crunch_Fries_Chicken.png",        color: "orange" },
+  { file: "04_Cheese_Fries.png",                color: "yellow" },
+  { file: "05_Kapitaens_Fries_Schnitzel.png",   color: "navy" },
+  { file: "06_Pinguin_Fries_Champignon.png",    color: "yellow" },
+  { file: "07_Eisbaer_Fries_Chili_Cheese.png",  color: "orange" },
+  { file: "08_Seehund_Fries_Garnelen.png",      color: "green" },
+  { file: "09_Chicken_Tortilla.png",            color: "orange" },
+  { file: "10_Koefte_Feta.png",                 color: "pink" },
+  { file: "11_Karaage_Panko.png",               color: "orange" },
+  { file: "12_Pulled_Pork_Fries.png",           color: "navy" },
+  { file: "13_Nordsee_Fries_Gruenkohl.png",     color: "green" },
+  { file: "14_Panko_Teriyaki.png",              color: "orange" },
+  { file: "15_Mozzarella_Bacon.png",            color: "yellow" },
+  { file: "16_Gyoza_Fusion.png",                color: "pink" },
+];
+---
+<section class="menu has-mascot" id="menu">
+  <FloatingMascot
+    image="11_Karaage_Panko.png"
+    size={160}
+    rotate={12}
+    top="8%"
+    left="4%"
+    z={3}
+  />
+  <FloatingMascot
+    image="04_Cheese_Fries.png"
+    size={120}
+    rotate={-6}
+    bottom="14%"
+    right="5%"
+    z={3}
+  />
+  <div class="lead">
+    <h2>
+      Über hundert Kreationen.<br />
+      <span class="accent">Sechzehn Eindrücke aus dem Archiv.</span>
+    </h2>
+    <p>
+      Klassiker, Saison, Zoo-Edition, Fusion. Wir rotieren saisonal — die
+      aktuelle Karte liegt am Tresen. Die Tageskarte landet oben in der
+      Live-Tagestafel.
+    </p>
+  </div>
+
+  <div class="menu-grid" aria-hidden="true">
+    {tiles.map((tile) => (
+      <div class:list={["mascot-tile", `bg-${tile.color}`]}>
+        <img src={`/cutouts/${tile.file}`} alt="" loading="lazy" decoding="async" />
+      </div>
+    ))}
+  </div>
+</section>
+
+<style>
+  .menu {
+    background: var(--cream);
+    padding: clamp(60px, 9vw, 110px) clamp(20px, 6vw, 80px);
+    display: grid;
+    gap: clamp(28px, 4vw, 48px);
+  }
+
+  .lead {
+    max-width: 880px;
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .lead h2 {
+    font-family: var(--font-display);
+    font-size: clamp(2.125rem, 5vw, 3.75rem);
+    line-height: 1;
+    letter-spacing: -0.5px;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin: 0;
+  }
+
+  .lead h2 .accent { color: var(--accent); }
+
+  .lead p {
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    font-style: italic;
+    line-height: 1.6;
+    color: color-mix(in oklab, var(--ink) 75%, transparent);
+    max-width: 680px;
+  }
+
+  .menu-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+  }
+
+  .mascot-tile {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    border: 3px solid var(--cream);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    transition: transform var(--duration-base) var(--ease-out),
+                box-shadow var(--duration-base) var(--ease-out);
+  }
+
+  .mascot-tile:hover {
+    transform: translateY(-8px) rotate(-0.5deg);
+    box-shadow: 0 16px 32px color-mix(in oklab, var(--navy) 22%, transparent);
+  }
+
+  .mascot-tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter:
+      drop-shadow(2px 0 0 #fff)
+      drop-shadow(-2px 0 0 #fff)
+      drop-shadow(0 2px 0 #fff)
+      drop-shadow(0 -2px 0 #fff)
+      drop-shadow(1.5px 1.5px 0 #fff)
+      drop-shadow(-1.5px -1.5px 0 #fff)
+      drop-shadow(1.5px -1.5px 0 #fff)
+      drop-shadow(-1.5px 1.5px 0 #fff)
+      drop-shadow(0 8px 14px rgba(0, 0, 0, 0.25));
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+
+  .mascot-tile:hover img {
+    transform: rotate(-3deg) scale(1.05);
+  }
+
+  /* Grünkohl-Cutout hat Rembg-Edges am Tray — der weiße Multi-Drop-Shadow
+     verstärkt die Fringes sichtbar. Nur Bottom-Shadow behalten bis rembg
+     birefnet v2 das Bild sauber neu freistellt. */
+  .mascot-tile img[src*="13_Nordsee_Fries_Gruenkohl"] {
+    filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.25));
+  }
+
+  .bg-orange { background: linear-gradient(135deg, var(--orange) 0%, #b8400a 100%); }
+  .bg-pink   { background: linear-gradient(135deg, var(--pink)   0%, #a92450 100%); }
+  .bg-green  { background: linear-gradient(135deg, var(--green)  0%, #0e5a35 100%); }
+  .bg-yellow { background: linear-gradient(135deg, var(--yellow) 0%, #d4a300 100%); }
+  .bg-navy   { background: linear-gradient(135deg, var(--navy)   0%, var(--navy-deep) 100%); }
+  .bg-cream  { background: linear-gradient(135deg, var(--cream)  0%, var(--cream-warm) 100%); }
+
+  @media (max-width: 900px) {
+    .menu-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  @media (max-width: 600px) {
+    .menu-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>

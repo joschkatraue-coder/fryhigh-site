@@ -4,14 +4,39 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
 import Hero from "../components/Hero.astro";
 import StatsStrip from "../components/StatsStrip.astro";
 import LiveBoard from "../components/LiveBoard.astro";
+import MascotMenu from "../components/MascotMenu.astro";
 import StandortGrid from "../components/StandortGrid.astro";
+import Dusk from "../components/Dusk.astro";
+import Catering from "../components/Catering.astro";
+import Kinder from "../components/Kinder.astro";
+import Pantry from "../components/Pantry.astro";
+import Story from "../components/Story.astro";
 import NewsletterCTA from "../components/NewsletterCTA.astro";
 
 const home = await getEntry("home", "home");
 if (!home) throw new Error("src/content/home.md fehlt — Home-Singleton ist Pflicht.");
 
+const dusk = await getEntry("dusk", "dusk");
+if (!dusk) throw new Error("src/content/dusk.md fehlt — Dusk-Singleton ist Pflicht.");
+
+const catering = await getEntry("catering", "catering");
+if (!catering) throw new Error("src/content/catering.md fehlt — Catering-Singleton ist Pflicht.");
+
+const pantry = await getEntry("pantry", "pantry");
+if (!pantry) throw new Error("src/content/pantry.md fehlt — Pantry-Singleton ist Pflicht.");
+
+const kinder = await getEntry("kinder", "kinder");
+if (!kinder) throw new Error("src/content/kinder.md fehlt — Kinder-Singleton ist Pflicht.");
+
+const story = await getEntry("story", "story");
+if (!story) throw new Error("src/content/story.md fehlt — Story-Singleton ist Pflicht.");
+
 const { hero, stats, newsletter } = home.data;
 const standorte = await getCollection("standorte");
+const duskPrograms = await getCollection("dusk-programs");
+const pantrySkus = await getCollection("pantry-skus");
+const kinderPakete = await getCollection("kinder-pakete");
+const crew = await getCollection("crew");
 ---
 <MarketingLayout
   title="Fry High — First Class Fritten · Bremerhaven seit 2020"
@@ -28,27 +53,59 @@ const standorte = await getCollection("standorte");
 
   <LiveBoard />
 
+  <MascotMenu />
+
   <StandortGrid standorte={standorte} />
 
-  <section class="placeholder">
-    <span class="eyebrow">Phase A · in Entwicklung</span>
-    <h2>Restliche Sektionen folgen.</h2>
-    <p class="lead">
-      Abendgeschäft · Catering · Kindergeburtstag · Story · Pantry.
-    </p>
-  </section>
+  <Dusk
+    eyebrow={dusk.data.eyebrow}
+    headline={dusk.data.headline}
+    headline_accent={dusk.data.headline_accent}
+    clock_pill={dusk.data.clock_pill}
+    intro={dusk.data.intro}
+    honesty_note={dusk.data.honesty_note}
+    honesty_cta_label={dusk.data.honesty_cta_label}
+    honesty_cta_href={dusk.data.honesty_cta_href}
+    tonight={dusk.data.tonight}
+    programs={duskPrograms}
+  />
+
+  <Catering
+    eyebrow={catering.data.eyebrow}
+    headline={catering.data.headline}
+    intro={catering.data.intro}
+    features={catering.data.features}
+    form={catering.data.form}
+  />
+
+  <Kinder
+    eyebrow={kinder.data.eyebrow}
+    headline={kinder.data.headline}
+    headline_accent={kinder.data.headline_accent}
+    intro={kinder.data.intro}
+    pakete={kinderPakete}
+  />
+
+  <Pantry
+    status={pantry.data.status}
+    launch_target={pantry.data.launch_target}
+    headline={pantry.data.headline}
+    sub={pantry.data.sub}
+    lead={pantry.data.lead}
+    skus={pantrySkus}
+  />
+
+  <Story
+    eyebrow={story.data.eyebrow}
+    headline={story.data.headline}
+    headline_accent={story.data.headline_accent}
+    lead={story.data.lead}
+    closer={story.data.closer}
+    hero_image={story.data.hero_image}
+    hero_caption={story.data.hero_caption}
+    timeline={story.data.timeline}
+    crew={crew}
+  />
 
   <NewsletterCTA headline={newsletter.headline} lead={newsletter.lead} />
 </MarketingLayout>
-
-<style>
-  .placeholder {
-    max-width: var(--container-wide);
-    margin: var(--space-8) auto;
-    padding: var(--space-9) var(--space-6);
-    display: grid;
-    gap: var(--space-4);
-    background: var(--surface);
-    border-radius: var(--r-lg);
-  }
-</style>
