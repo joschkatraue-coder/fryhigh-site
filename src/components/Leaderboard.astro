@@ -40,6 +40,7 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     const tabs = SECTION.querySelectorAll<HTMLButtonElement>('.lb-tab');
 
     let currentPeriod: 'week' | 'all' = 'week';
+    let lbController: AbortController | null = null;  // P2 fix: abort in-flight on tab-switch
 
     interface Entry { rank: number; name: string; score: number }
     interface Resp { period: 'week' | 'all'; week_key: string | null; top: Entry[] }
@@ -59,14 +60,22 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
 
     async function load() {
       if (!apiBase) return;
+      // P2 fix (supervisor-extended): abort prior in-flight + check controller-identity post-await
+      if (lbController) lbController.abort();
+      const controller = new AbortController();
+      lbController = controller;
+      const signal = controller.signal;
       refreshBtn.disabled = true;
       try {
         const url = currentPeriod === 'all'
           ? `${apiBase}/leaderboard?period=all`
           : `${apiBase}/leaderboard`;
-        const res = await fetch(url, { cache: 'no-store' });
+        const res = await fetch(url, { cache: 'no-store', signal });
+        // Drop stale response if a newer load() started while we awaited
+        if (lbController !== controller) return;
         if (!res.ok) throw new Error('lb fetch failed');
         const data = await res.json() as Resp;
+        if (lbController !== controller) return;  // re-check after JSON-parse-await
         weekEl.textContent = data.period === 'all'
           ? 'Allzeit-Ranking'
           : `Woche ${data.week_key ?? '–'}`;
@@ -75,22 +84,33 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
           list.appendChild(empty);
           return;
         }
+        // P1 fix: safe DOM-construction instead of innerHTML template-literal
         for (const entry of data.top) {
+          const rankNum = Math.floor(Number(entry.rank) || 0);
+          const scoreNum = Math.floor(Number(entry.score) || 0);
           const li = document.createElement('li');
           li.className = 'lb-item';
-          li.innerHTML = `
-            <span class="lb-rank">${String(entry.rank).padStart(2, '0')}</span>
-            <span class="lb-name">${escapeHtml(entry.name)}</span>
-            <span class="lb-score">${entry.score}</span>
-          `;
-          if (entry.rank === 1) li.classList.add('lb-item--top');
+          const rankSpan = document.createElement('span');
+          rankSpan.className = 'lb-rank';
+          rankSpan.textContent = String(rankNum).padStart(2, '0');
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'lb-name';
+          nameSpan.textContent = String(entry.name ?? '');
+          const scoreSpan = document.createElement('span');
+          scoreSpan.className = 'lb-score';
+          scoreSpan.textContent = String(scoreNum);
+          li.append(rankSpan, nameSpan, scoreSpan);
+          if (rankNum === 1) li.classList.add('lb-item--top');
           list.appendChild(li);
         }
       } catch (e) {
+        if ((e as Error).name === 'AbortError') return;  // swallow aborts (tab-switch)
+        if (lbController !== controller) return;  // stale error from prior load
         console.warn('leaderboard load failed', e);
         weekEl.textContent = 'Leaderboard nicht erreichbar';
       } finally {
-        refreshBtn.disabled = false;
+        // Only re-enable refresh if THIS load() is still the latest (prevents UI-thrash on rapid switches)
+        if (lbController === controller) refreshBtn.disabled = false;
       }
     }
 
@@ -189,8 +209,9 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
   }
 
   .lb-tab.is-active {
-    background: var(--yellow);
+    background: var(--cream);
     color: var(--navy);
+    border-bottom: 2px solid var(--accent);
   }
 
   .lb-list {
@@ -236,9 +257,9 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     background: linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--yellow) 18%, transparent) 60%, transparent 100%);
   }
 
-  .lb-item--top .lb-rank { color: var(--yellow); }
-  .lb-item--top .lb-name { color: var(--yellow); }
-  .lb-item--top .lb-score { color: var(--yellow); }
+  .lb-item--top .lb-rank { color: var(--accent); }
+  .lb-item--top .lb-name { color: var(--accent); }
+  .lb-item--top .lb-score { color: var(--accent); }
 
   .lb-empty {
     text-align: center;

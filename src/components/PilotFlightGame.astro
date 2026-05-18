@@ -12,18 +12,19 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
 ---
 <div class="game" data-api-base={apiBase}>
   <div class="game-frame">
-    <canvas class="game-canvas" width="800" height="500" aria-label="Pilot Flight Spielfeld"></canvas>
+    <canvas class="game-canvas" width="800" height="500" role="application" tabindex="0" aria-label="Pilot Flight — Drücke Leertaste oder klick zum Steigen"></canvas>
 
     <div class="game-hud" data-game-hud>
       <div class="hud-cell hud-score">
         <span class="hud-label">Score</span>
-        <span class="hud-value" data-score-display>0</span>
+        <span class="hud-value" data-score-display aria-hidden="true">0</span>
       </div>
       <div class="hud-cell hud-best">
         <span class="hud-label">Best · Session</span>
-        <span class="hud-value" data-best-display>0</span>
+        <span class="hud-value" data-best-display aria-hidden="true">0</span>
       </div>
     </div>
+    <span class="sr-only" data-score-announce aria-live="polite" aria-atomic="true"></span>
 
     <div class="game-overlay game-overlay--idle" data-overlay="idle">
       <div class="overlay-card">
@@ -58,9 +59,8 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
           <label class="form-consent">
             <input type="checkbox" name="consent" required />
             <span>
-              Ich bin einverstanden, dass mein Score gespeichert und mein Display-Name im
-              Wochen-Leaderboard angezeigt wird. Mit Bestätigungs-Klick komme ich in den
-              Fry-High-Newsletter (Wochen-Mail, Specials). Austragen jederzeit möglich.
+              Klar — speichere meinen Score, zeig meinen Spitznamen in der Rangliste.
+              Mit dem Klick bin ich auch in der Wochen-Mail dabei. Austragen jederzeit per Link in jeder Mail.
               <a href="/datenschutz" target="_blank" rel="noopener">Datenschutz</a>
             </span>
           </label>
@@ -99,6 +99,7 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
   const PLAYER_W = 32;
   const PLAYER_H = 22;
   const PLAYER_X = 140;
+  const TARGET_DT = 1000 / 60;  // ms per frame at 60Hz (delta-time normalization)
 
   const ROOT = document.querySelector<HTMLDivElement>('.game');
   if (!ROOT) throw new Error('game root missing');
@@ -108,6 +109,7 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
   const ctx = canvas.getContext('2d')!;
   const scoreDisplay = ROOT.querySelector<HTMLElement>('[data-score-display]')!;
   const bestDisplay = ROOT.querySelector<HTMLElement>('[data-best-display]')!;
+  const scoreAnnounce = ROOT.querySelector<HTMLElement>('[data-score-announce]')!;
   const finalScore = ROOT.querySelector<HTMLElement>('[data-final-score]')!;
   const overlayIdle = ROOT.querySelector<HTMLElement>('[data-overlay="idle"]')!;
   const overlayGameOver = ROOT.querySelector<HTMLElement>('[data-overlay="gameover"]')!;
@@ -128,6 +130,10 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
   let durationMs = 0;
   let sessionToken: string | null = null;
   let cloudOffset = 0;
+  let rafId = 0;
+  let lastTs = 0;
+  let spawnTimer = 0;
+  let currentRunId = 0;
 
   function reset() {
     py = H / 2;
@@ -135,7 +141,10 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     pipes = [];
     frame = 0;
     score = 0;
+    spawnTimer = 0;
+    lastTs = 0;
     scoreDisplay.textContent = '0';
+    scoreAnnounce.textContent = '';
   }
 
   async function requestSession(): Promise<string | null> {
@@ -154,10 +163,13 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     overlayIdle.hidden = true;
     overlayGameOver.hidden = true;
     reset();
+    sessionToken = null;  // clear synchronously — no stale-token reuse (P1 fix)
     state = 'playing';
     startTs = performance.now();
+    const runId = ++currentRunId;
     // Session-Token holen, parallel zum Spiel-Start (User merkt nix)
-    sessionToken = await requestSession();
+    const tok = await requestSession();
+    if (runId === currentRunId) sessionToken = tok;  // only set if still latest run
   }
 
   function gameOver() {
@@ -184,25 +196,44 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     }
   }
 
-  function step() {
-    cloudOffset = (cloudOffset + 0.3) % W;
+  function step(ts?: number) {
+    // P1 fix: pause on hidden tab (battery, prevent pipe-accumulation crash on return)
+    if (document.hidden) {
+      lastTs = 0;  // reset on next visible tick
+      rafId = requestAnimationFrame(step);
+      return;
+    }
+
+    // P1 fix: delta-time normalization for frame-rate-independent physics
+    const now = ts ?? performance.now();
+    if (!lastTs) lastTs = now;
+    const dt = Math.min((now - lastTs) / TARGET_DT, 2.5);  // cap dt to prevent huge jumps
+    lastTs = now;
+
+    cloudOffset = (cloudOffset + 0.3 * dt) % W;
 
     if (state === 'playing') {
-      vy += GRAVITY;
-      py += vy;
+      vy += GRAVITY * dt;
+      py += vy * dt;
 
-      if (frame % Math.round(PIPE_SPACING / PIPE_SPEED) === 0) {
+      // Spawn-Timer accumulator (not frame-modulo) for delta-time consistency
+      spawnTimer += dt;
+      const spawnInterval = PIPE_SPACING / PIPE_SPEED;  // frames at 60Hz
+      if (spawnTimer >= spawnInterval) {
+        spawnTimer -= spawnInterval;
         const margin = 60;
         const gapY = margin + Math.random() * (H - PIPE_GAP - margin * 2);
         pipes.push({ x: W + PIPE_WIDTH, gapY, passed: false });
       }
 
       for (const p of pipes) {
-        p.x -= PIPE_SPEED;
+        p.x -= PIPE_SPEED * dt;
         if (!p.passed && p.x + PIPE_WIDTH < PLAYER_X) {
           p.passed = true;
           score += 1;
           scoreDisplay.textContent = String(score);
+          // P0 fix: throttled live-region announce every 5 points (not every frame)
+          if (score % 5 === 0) scoreAnnounce.textContent = `${score} Punkte`;
         }
       }
       pipes = pipes.filter((p) => p.x + PIPE_WIDTH > 0);
@@ -221,7 +252,7 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     }
 
     draw();
-    requestAnimationFrame(step);
+    rafId = requestAnimationFrame(step);
   }
 
   function draw() {
@@ -330,7 +361,20 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
   canvas.addEventListener('click', jump);
   canvas.addEventListener('touchstart', (e) => { e.preventDefault(); jump(); }, { passive: false });
   window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') { e.preventDefault(); jump(); }
+    if (e.code !== 'Space') return;
+    // P1 fix (supervisor-extended): don't hijack Space on any interactive element
+    // — inputs, textareas, buttons, links, contenteditable — keyboard activation must work
+    const target = e.target as HTMLElement | null;
+    if (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLButtonElement ||
+      target instanceof HTMLSelectElement ||
+      target instanceof HTMLAnchorElement ||
+      (target && target.isContentEditable)
+    ) return;
+    e.preventDefault();
+    jump();
   });
 
   // Submit
@@ -370,20 +414,38 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
       const data = await res.json() as { ok?: boolean; error?: string; masked_email?: string };
       if (!res.ok || !data.ok) throw new Error(data.error || 'submit failed');
       submitBtn.textContent = 'Eingereicht ✓';
-      formMeta.innerHTML = `Bestätigungs-Mail unterwegs an <strong>${data.masked_email ?? email}</strong>. Klick rein, Score zählt.`;
+      // P0 fix: safe DOM construction, no innerHTML interpolation of user/server data
+      const targetEmail = data.masked_email ?? email;
+      formMeta.replaceChildren(
+        document.createTextNode('Bestätigungs-Mail unterwegs an '),
+        Object.assign(document.createElement('strong'), { textContent: String(targetEmail) }),
+        document.createTextNode('. Klick rein, Score zählt.')
+      );
       // refresh leaderboard if present
       window.dispatchEvent(new CustomEvent('leaderboard:refresh'));
     } catch (err) {
       console.error('score submit failed', err);
       submitBtn.disabled = false;
       submitBtn.textContent = 'Score einreichen →';
-      formMeta.textContent = 'Senden fehlgeschlagen. Versuchs gleich nochmal.';
+      // P1 fix: map backend error codes to specific UX messages
+      const msg = (err instanceof Error ? err.message : String(err ?? '')).toLowerCase();
+      if (msg.includes('session expired') || msg.includes('invalid session') || msg.includes('session already used')) {
+        formMeta.textContent = 'Spiel-Sitzung abgelaufen oder ungültig. Spiel nochmal.';
+      } else if (msg.includes('consent')) {
+        formMeta.textContent = 'Einverständnis fehlt — Haken setzen und nochmal senden.';
+      } else if (msg.includes('implausible') || msg.includes('impossible') || msg.includes('too short')) {
+        formMeta.textContent = 'Score sieht unplausibel aus. Spiel ehrlich nochmal — wir kicken Bots raus.';
+      } else if (msg.includes('invalid email')) {
+        formMeta.textContent = 'E-Mail-Adresse prüfen.';
+      } else {
+        formMeta.textContent = 'Senden fehlgeschlagen. Versuchs gleich nochmal.';
+      }
     }
   });
 
   // Initial draw + loop
   draw();
-  requestAnimationFrame(step);
+  rafId = requestAnimationFrame(step);
 </script>
 
 <style>
@@ -391,6 +453,19 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     background: var(--navy-deep, #0E1825);
     padding: clamp(24px, 5vw, 56px);
     position: relative;
+  }
+
+  /* Screen-reader-only utility for hidden aria-live announcers (P0 fix) */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   .game-frame {

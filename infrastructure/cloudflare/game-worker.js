@@ -63,10 +63,11 @@ function maskEmail(email) {
 }
 
 function voucherCode() {
-  // FLY-XXXX (4 alphanumerisch, ohne 0/O/1/I-Verwechslung)
+  // FLY-XXXXXXXXXXXXXXXX (16 alphanumerisch, ohne 0/O/1/I-Verwechslung)
+  // P0 fix: 16 chars * 32 alphabet = ~80 bits entropy (was 4 chars = ~20 bits, brute-forceable)
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let s = 'FLY-';
-  const bytes = new Uint8Array(4);
+  const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
   for (const b of bytes) s += alphabet[b % alphabet.length];
   return s;
@@ -182,19 +183,31 @@ async function scoreSubmit(request, env, origin) {
   if (session.used) return json({ error: 'session already used' }, 410, origin);
   if (session.expires_at < now()) return json({ error: 'session expired' }, 410, origin);
 
-  await env.DB.prepare('UPDATE sessions SET used = 1 WHERE token = ?').bind(token).run();
+  // P0 fix: atomic conditional UPDATE (was: read-then-update race-window allowing duplicate scores)
+  const updateResult = await env.DB.prepare(
+    'UPDATE sessions SET used = 1 WHERE token = ? AND used = 0 AND expires_at >= ?'
+  ).bind(token, now()).run();
+
+  if (!updateResult.meta || updateResult.meta.changes !== 1) {
+    // Race lost OR concurrent submit OR session already used between SELECT and UPDATE
+    return json({ error: 'session already used or expired' }, 410, origin);
+  }
 
   const id = uuid();
   const verifyToken = uuid();
   const wk = weekKey();
   const created = now();
+  // P1 fix: verify-token expiry (7 days)
+  const verifyExpiresAt = created + 7 * 24 * 60 * 60 * 1000;
 
   await env.DB.prepare(
-    `INSERT INTO scores (id, email, display_name, score, duration_ms, verified, verify_token, created_at, week_key)
-     VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`
-  ).bind(id, email, displayName || null, score, durationMs, verifyToken, created, wk).run();
+    `INSERT INTO scores (id, email, display_name, score, duration_ms, verified, verify_token, verify_expires_at, created_at, week_key)
+     VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`
+  ).bind(id, email, displayName || null, score, durationMs, verifyToken, verifyExpiresAt, created, wk).run();
 
-  const verifyUrl = `${request.url.split('/score/submit')[0]}/verify?t=${verifyToken}`;
+  // P1 fix: build verify-URL from trusted PUBLIC_BASE, NOT request.url (which could be alt-host)
+  const publicBase = env.PUBLIC_BASE ?? 'https://fryhigh.de';
+  const verifyUrl = `${publicBase}/verify?t=${verifyToken}`;
   const mailHtml = `
     <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1A1A1A">
       <h2 style="font-family:'Impact',Arial,sans-serif;letter-spacing:1px;color:#1A2A4E">Bestätige deinen Highscore</h2>
@@ -241,10 +254,14 @@ async function verify(request, env) {
   if (!token) return html(verifyPage('Ungültiger Bestätigungs-Link.', false, publicBase), 400);
 
   const row = await env.DB.prepare(
-    'SELECT id, email, score, verified, week_key FROM scores WHERE verify_token = ?'
+    'SELECT id, email, score, verified, week_key, verify_expires_at FROM scores WHERE verify_token = ?'
   ).bind(token).first();
   if (!row) return html(verifyPage('Bestätigungs-Link unbekannt oder abgelaufen.', false, publicBase), 404);
   if (row.verified) return html(verifyPage('Score war schon bestätigt — alles gut. Viel Glück bei der Wochen-Wertung.', true, publicBase, row.score), 200);
+  // P1 fix: reject expired verify-tokens (7d after submit)
+  if (row.verify_expires_at && row.verify_expires_at < now()) {
+    return html(verifyPage('Bestätigungs-Link abgelaufen (7 Tage). Spiel nochmal für einen frischen Link.', false, publicBase), 410);
+  }
 
   await env.DB.prepare(
     'UPDATE scores SET verified = 1, verified_at = ? WHERE id = ?'
@@ -316,17 +333,32 @@ async function leaderboard(request, env, origin) {
 async function voucherCheck(request, env, origin) {
   const url = new URL(request.url);
   const code = String(url.searchParams.get('code') ?? '').trim().toUpperCase();
+  // P0 fix: crew-PIN required for detailed reasons; unauthenticated gets generic invalid (prevents enumeration-oracle)
+  const crewPin = String(url.searchParams.get('pin') ?? '').trim();
+  const isCrew = crewPin && env.CREW_PIN && crewPin === env.CREW_PIN;
+
   if (!code) return json({ ok: false, error: 'no code' }, 400, origin);
 
   const row = await env.DB.prepare(
     'SELECT code, score, week_key, issued_at, expires_at, redeemed_at FROM vouchers WHERE code = ?'
   ).bind(code).first();
 
-  if (!row) return json({ ok: false, valid: false, reason: 'unknown' }, 200, origin);
-  if (row.redeemed_at) return json({ ok: false, valid: false, reason: 'redeemed', redeemed_at: row.redeemed_at }, 200, origin);
-  if (row.expires_at < now()) return json({ ok: false, valid: false, reason: 'expired' }, 200, origin);
+  if (!row) {
+    return json({ ok: false, valid: false, reason: isCrew ? 'unknown' : 'invalid' }, 200, origin);
+  }
+  if (row.redeemed_at) {
+    return json({ ok: false, valid: false, reason: isCrew ? 'redeemed' : 'invalid', ...(isCrew ? { redeemed_at: row.redeemed_at } : {}) }, 200, origin);
+  }
+  if (row.expires_at < now()) {
+    return json({ ok: false, valid: false, reason: isCrew ? 'expired' : 'invalid' }, 200, origin);
+  }
 
-  return json({ ok: true, valid: true, score: row.score, week_key: row.week_key, expires_at: row.expires_at }, 200, origin);
+  // Authenticated crew gets details, unauthenticated gets minimal "valid" signal only
+  return json({
+    ok: true,
+    valid: true,
+    ...(isCrew ? { score: row.score, week_key: row.week_key, expires_at: row.expires_at } : {})
+  }, 200, origin);
 }
 
 async function voucherRedeem(request, env, origin) {
@@ -344,17 +376,20 @@ async function voucherRedeem(request, env, origin) {
   if (pin !== env.CREW_PIN) return json({ ok: false, error: 'wrong pin' }, 401, origin);
   if (!code) return json({ ok: false, error: 'no code' }, 400, origin);
 
-  const row = await env.DB.prepare(
-    'SELECT code, expires_at, redeemed_at FROM vouchers WHERE code = ?'
-  ).bind(code).first();
-  if (!row) return json({ ok: false, error: 'unknown code' }, 404, origin);
-  if (row.redeemed_at) return json({ ok: false, error: 'already redeemed', redeemed_at: row.redeemed_at }, 409, origin);
-  if (row.expires_at < now()) return json({ ok: false, error: 'expired' }, 410, origin);
-
+  // P0 fix: atomic conditional UPDATE (was: read-then-update double-spend race)
   const ts = now();
-  await env.DB.prepare(
-    'UPDATE vouchers SET redeemed_at = ?, redeemed_by_note = ? WHERE code = ?'
-  ).bind(ts, note || null, code).run();
+  const updateResult = await env.DB.prepare(
+    'UPDATE vouchers SET redeemed_at = ?, redeemed_by_note = ? WHERE code = ? AND redeemed_at IS NULL AND expires_at >= ?'
+  ).bind(ts, note || null, code, ts).run();
+
+  if (!updateResult.meta || updateResult.meta.changes !== 1) {
+    // Determine why for crew-tool UX
+    const check = await env.DB.prepare('SELECT redeemed_at, expires_at FROM vouchers WHERE code = ?').bind(code).first();
+    if (!check) return json({ ok: false, error: 'unknown code' }, 404, origin);
+    if (check.redeemed_at) return json({ ok: false, error: 'already redeemed', redeemed_at: check.redeemed_at }, 409, origin);
+    if (check.expires_at < now()) return json({ ok: false, error: 'expired' }, 410, origin);
+    return json({ ok: false, error: 'redemption failed' }, 500, origin);
+  }
 
   return json({ ok: true, redeemed_at: ts }, 200, origin);
 }
@@ -375,25 +410,23 @@ async function runWeeklyVoucher(env) {
     return;
   }
 
-  // Doppel-Voucher-Schutz: pro Woche nur einen Voucher ausstellen
-  const existing = await env.DB.prepare(
-    'SELECT code FROM vouchers WHERE week_key = ? LIMIT 1'
-  ).bind(wk).first();
-  if (existing) {
-    console.log('weekly-voucher: voucher already exists for', wk, existing.code);
-    return;
-  }
-
   const code = voucherCode();
   const issuedAt = now();
   const validDays = Number(env.VOUCHER_VALID_DAYS ?? 30);
   const expiresAt = issuedAt + validDays * 24 * 60 * 60 * 1000;
   const value = env.VOUCHER_VALUE_EUR ?? '20';
 
-  await env.DB.prepare(
+  // P1 fix: idempotent INSERT via UNIQUE(week_key) + ON CONFLICT (was: read-then-insert race)
+  const insertResult = await env.DB.prepare(
     `INSERT INTO vouchers (code, email, score_id, score, week_key, issued_at, expires_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(week_key) DO NOTHING`
   ).bind(code, winner.email, winner.id, winner.score, wk, issuedAt, expiresAt).run();
+
+  if (!insertResult.meta || insertResult.meta.changes !== 1) {
+    console.log('weekly-voucher: already issued for', wk, '(conflict on week_key)');
+    return;
+  }
 
   const winnerName = winner.display_name || 'Pilotin · Pilot';
   const winnerHtml = `
