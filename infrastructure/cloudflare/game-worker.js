@@ -313,9 +313,9 @@ async function leaderboard(request, env, origin) {
        GROUP BY email
        ORDER BY score DESC
        LIMIT 10`
-    : `SELECT email, display_name, score FROM scores
+    : `SELECT email, display_name, score, id FROM scores
        WHERE week_key = ? AND verified = 1
-       ORDER BY score DESC, created_at ASC
+       ORDER BY score DESC, created_at ASC, id ASC
        LIMIT 10`;
 
   const stmt = env.DB.prepare(query);
@@ -397,7 +397,8 @@ async function voucherRedeem(request, env, origin) {
 // ─── Scheduled (Cron) ─────────────────────────────────────────────────────
 
 async function runWeeklyVoucher(env) {
-  const wk = weekKey();
+  // P1 fix Run-11/2026-05-18j: 5-min offset prevents week-boundary drift if cron fires just past midnight Sunday
+  const wk = weekKey(new Date(Date.now() - 5 * 60 * 1000));
   const winner = await env.DB.prepare(
     `SELECT id, email, display_name, score FROM scores
      WHERE week_key = ? AND verified = 1
@@ -412,7 +413,8 @@ async function runWeeklyVoucher(env) {
 
   const code = voucherCode();
   const issuedAt = now();
-  const validDays = Number(env.VOUCHER_VALID_DAYS ?? 30);
+  const parsedDays = parseInt(env.VOUCHER_VALID_DAYS, 10);
+  const validDays = Number.isFinite(parsedDays) && parsedDays > 0 ? parsedDays : 30;
   const expiresAt = issuedAt + validDays * 24 * 60 * 60 * 1000;
   const value = env.VOUCHER_VALUE_EUR ?? '20';
 
