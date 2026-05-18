@@ -237,13 +237,20 @@ async function scoreSubmit(request, env, origin) {
     </div>
   `;
 
-  await sendMail(env, {
+  const mailResult = await sendMail(env, {
     to: email,
     subject: `Highscore bestätigen · ${score} Punkte · Pilot Flight`,
     html: mailHtml,
   });
+  // P1 fix Run-12: persist mail-status; failure visible for crew + retry-eligibility
+  await env.DB.prepare('UPDATE scores SET mail_status = ? WHERE id = ?')
+    .bind(mailResult.ok ? 'sent' : 'failed', id)
+    .run();
+  if (!mailResult.ok) {
+    console.error('scoreSubmit: verify-mail failed for', maskEmail(email), 'score-id', id, mailResult);
+  }
 
-  return json({ ok: true, verify_required: true, masked_email: maskEmail(email) }, 200, origin);
+  return json({ ok: true, verify_required: true, mail_sent: mailResult.ok, masked_email: maskEmail(email) }, 200, origin);
 }
 
 async function verify(request, env) {
@@ -452,16 +459,20 @@ async function runWeeklyVoucher(env) {
     </div>
   `;
 
-  await sendMail(env, {
+  const winnerMailResult = await sendMail(env, {
     to: winner.email,
     subject: `Du hast gewonnen · ${value} € Gutschein · ${code}`,
     html: winnerHtml,
   });
+  // P1 fix Run-12: log failure prominently — voucher exists in DB but winner unreachable
+  if (!winnerMailResult.ok) {
+    console.error('weekly-voucher: WINNER MAIL FAILED', { wk, code, email: maskEmail(winner.email), result: winnerMailResult });
+  }
 
   // Crew-Notification
-  await sendMail(env, {
+  const crewMailResult = await sendMail(env, {
     to: env.TO_EMAIL_OPS ?? 'info@fryhigh.de',
-    subject: `[Pilot Flight] Wochen-Gewinner ${wk} · ${winner.score} Pkt · ${code}`,
+    subject: `[Pilot Flight] Wochen-Gewinner ${wk} · ${winner.score} Pkt · ${code}${winnerMailResult.ok ? '' : ' · WINNER-MAIL-FEHLER'}`,
     html: `
       <p>Wochen-Sieger <strong>${wk}</strong>:</p>
       <ul>
@@ -469,10 +480,15 @@ async function runWeeklyVoucher(env) {
         <li>Display-Name: ${escape(winnerName)}</li>
         <li>Score: ${winner.score}</li>
         <li>Voucher: <strong>${code}</strong> (gültig ${validDays} Tage, ${value} €)</li>
+        <li>Winner-Mail-Status: ${winnerMailResult.ok ? 'gesendet' : 'FEHLGESCHLAGEN — manuell kontaktieren!'}</li>
       </ul>
-      <p>Voucher-Mail wurde gerade an Gewinner versendet.</p>
+      <p>${winnerMailResult.ok ? 'Voucher-Mail wurde gerade an Gewinner versendet.' : 'Voucher-Mail FEHLGESCHLAGEN — Gewinner manuell informieren.'}</p>
     `,
   });
+  // P1 fix Run-12: log crew-mail failure separately
+  if (!crewMailResult.ok) {
+    console.error('weekly-voucher: CREW MAIL FAILED', { wk, code, result: crewMailResult });
+  }
 
   console.log('weekly-voucher issued', { wk, code, score: winner.score });
 }
