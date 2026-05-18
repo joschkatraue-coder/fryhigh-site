@@ -131,6 +131,30 @@ async function subscribeMailerlite(env, email) {
   return { ok: true };
 }
 
+// Reusable winner-mail HTML template — used by runWeeklyVoucher AND retryWinnerMail (Run-13)
+function winnerMailHtml(winnerName, winnerScore, code, value, validDays, opsEmail) {
+  return `
+    <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1A1A1A">
+      <h2 style="font-family:'Impact',Arial,sans-serif;letter-spacing:1px;color:#1A2A4E">
+        Du hast die Woche gewonnen.</h2>
+      <p>Hi ${escape(winnerName)},</p>
+      <p>Dein Score von <strong>${winnerScore} Punkten</strong> bei Pilot Flight ist diese Woche
+         die Nummer eins. Glückwunsch.</p>
+      <p>Hier ist dein Gutschein:</p>
+      <div style="background:#1A2A4E;color:#F5F0E1;padding:24px;text-align:center;margin:24px 0">
+        <div style="font-family:Arial,sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;opacity:0.7">Voucher · ${value} €</div>
+        <div style="font-family:'Impact',Arial,sans-serif;font-size:2.2rem;letter-spacing:4px;margin:8px 0">${code}</div>
+        <div style="font-family:Arial,sans-serif;font-size:12px;opacity:0.7">Gültig ${validDays} Tage · einlösbar im Truck oder Zoo am Meer</div>
+      </div>
+      <p>Einfach im Truck zeigen — Crew checkt den Code und du kriegst <strong>${value} €</strong> rabattiert.
+         Nicht kombinierbar mit anderen Aktionen, nicht in bar auszahlbar.</p>
+      <p>Nächste Woche läuft das Spiel weiter — also: dranbleiben.</p>
+      <p style="font-size:11px;color:#888;border-top:1px solid #eee;padding-top:12px;margin-top:24px">
+        Fragen? Schreib uns an <a href="mailto:${escape(opsEmail)}">${escape(opsEmail)}</a>.</p>
+    </div>
+  `;
+}
+
 // ─── Route-Handlers ───────────────────────────────────────────────────────
 
 async function sessionStart(request, env, origin) {
@@ -270,9 +294,23 @@ async function verify(request, env) {
     return html(verifyPage('Bestätigungs-Link abgelaufen (7 Tage). Spiel nochmal für einen frischen Link.', false, publicBase), 410);
   }
 
-  await env.DB.prepare(
-    'UPDATE scores SET verified = 1, verified_at = ? WHERE id = ?'
-  ).bind(now(), row.id).run();
+  // P0 fix Run-13 (patch): atomic UPDATE only if week is still 'open' (or no weeks-row exists = fresh-week default).
+  // SQLite single-statement guarantees no interleaving between WHERE-condition check and SET. Race ELIMINATED.
+  const verifyResult = await env.DB.prepare(`
+    UPDATE scores SET verified = 1, verified_at = ?
+    WHERE id = ?
+      AND NOT EXISTS (
+        SELECT 1 FROM weeks WHERE week_key = scores.week_key AND status != 'open'
+      )
+  `).bind(now(), row.id).run();
+
+  if (!verifyResult.meta || verifyResult.meta.changes !== 1) {
+    // Race-loss: cron froze the week between our row-fetch and this update.
+    return html(verifyPage(
+      'Diese Woche ist bereits abgeschlossen. Spiel nochmal — dein Score zählt dann für die nächste Woche.',
+      false, publicBase
+    ), 410);
+  }
 
   // Mailerlite-Opt-In (fire-and-forget — Score-Verify ist Vorrang)
   try { await subscribeMailerlite(env, row.email); } catch (e) { console.error('ml subscribe error', e); }
@@ -401,15 +439,76 @@ async function voucherRedeem(request, env, origin) {
   return json({ ok: true, redeemed_at: ts }, 200, origin);
 }
 
+async function retryWinnerMail(request, env, origin) {
+  if (!env.CREW_PIN) {
+    return json({ ok: false, error: 'crew pin not configured' }, 503, origin);
+  }
+  let data;
+  try { data = await request.json(); } catch {
+    return json({ ok: false, error: 'invalid json' }, 400, origin);
+  }
+  const pin = String(data.pin ?? '').trim();
+  const wk = String(data.wk ?? '').trim();
+
+  if (pin !== env.CREW_PIN) return json({ ok: false, error: 'wrong pin' }, 401, origin);
+  if (!wk) return json({ ok: false, error: 'no wk' }, 400, origin);
+
+  // Fetch voucher for that week
+  const voucher = await env.DB.prepare(
+    'SELECT code, email, score_id, score, expires_at FROM vouchers WHERE week_key = ?'
+  ).bind(wk).first();
+  if (!voucher) return json({ ok: false, error: 'no voucher for week' }, 404, origin);
+
+  // Get display name from scores
+  const scoreRow = await env.DB.prepare(
+    'SELECT display_name FROM scores WHERE id = ?'
+  ).bind(voucher.score_id).first();
+
+  const winnerName = (scoreRow && scoreRow.display_name) || 'Pilotin · Pilot';
+  const value = env.VOUCHER_VALUE_EUR ?? '20';
+  const opsEmail = env.TO_EMAIL_OPS ?? 'info@fryhigh.de';
+  const validDays = Math.max(0, Math.ceil((voucher.expires_at - now()) / (24 * 60 * 60 * 1000)));
+
+  const html = winnerMailHtml(winnerName, voucher.score, voucher.code, value, validDays, opsEmail);
+  const mailResult = await sendMail(env, {
+    to: voucher.email,
+    subject: `Du hast gewonnen · ${value} € Gutschein · ${voucher.code}`,
+    html,
+  });
+
+  return json({
+    ok: mailResult.ok,
+    code: voucher.code,
+    masked_email: maskEmail(voucher.email),
+    mail_result: mailResult,
+  }, mailResult.ok ? 200 : 502, origin);
+}
+
 // ─── Scheduled (Cron) ─────────────────────────────────────────────────────
 
 async function runWeeklyVoucher(env) {
   // P1 fix Run-11/2026-05-18j: 5-min offset prevents week-boundary drift if cron fires just past midnight Sunday
   const wk = weekKey(new Date(Date.now() - 5 * 60 * 1000));
+
+  // P0 fix Run-13: atomic week-freeze BEFORE selecting winner — eliminates cron-vs-verify TOCTOU
+  await env.DB.prepare(
+    "INSERT INTO weeks (week_key, status) VALUES (?, 'open') ON CONFLICT(week_key) DO NOTHING"
+  ).bind(wk).run();
+  const freezeResult = await env.DB.prepare(
+    "UPDATE weeks SET status = 'frozen', frozen_at = ? WHERE week_key = ? AND status = 'open'"
+  ).bind(now(), wk).run();
+  if (!freezeResult.meta || freezeResult.meta.changes !== 1) {
+    console.log('weekly-voucher: week already frozen/closed, skip', wk);
+    return;
+  }
+  // NOTE: from this point onward, the week is 'frozen'. The 'closed' transition only happens
+  // after a voucher is successfully issued (Edit 5 path). No-winner-weeks and parallel-cron-
+  // conflict-weeks intentionally STAY 'frozen' — equivalent to closed for /verify-deferral
+  // purposes (both states reject late verifies). Semantic distinction only matters for ops audit.
   const winner = await env.DB.prepare(
     `SELECT id, email, display_name, score FROM scores
      WHERE week_key = ? AND verified = 1
-     ORDER BY score DESC, created_at ASC
+     ORDER BY score DESC, created_at ASC, id ASC
      LIMIT 1`
   ).bind(wk).first();
 
@@ -438,26 +537,8 @@ async function runWeeklyVoucher(env) {
   }
 
   const winnerName = winner.display_name || 'Pilotin · Pilot';
-  const winnerHtml = `
-    <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1A1A1A">
-      <h2 style="font-family:'Impact',Arial,sans-serif;letter-spacing:1px;color:#1A2A4E">
-        Du hast die Woche gewonnen.</h2>
-      <p>Hi ${escape(winnerName)},</p>
-      <p>Dein Score von <strong>${winner.score} Punkten</strong> bei Pilot Flight ist diese Woche
-         die Nummer eins. Glückwunsch.</p>
-      <p>Hier ist dein Gutschein:</p>
-      <div style="background:#1A2A4E;color:#F5F0E1;padding:24px;text-align:center;margin:24px 0">
-        <div style="font-family:Arial,sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;opacity:0.7">Voucher · ${value} €</div>
-        <div style="font-family:'Impact',Arial,sans-serif;font-size:2.2rem;letter-spacing:4px;margin:8px 0">${code}</div>
-        <div style="font-family:Arial,sans-serif;font-size:12px;opacity:0.7">Gültig ${validDays} Tage · einlösbar im Truck oder Zoo am Meer</div>
-      </div>
-      <p>Einfach im Truck zeigen — Crew checkt den Code und du kriegst <strong>${value} €</strong> rabattiert.
-         Nicht kombinierbar mit anderen Aktionen, nicht in bar auszahlbar.</p>
-      <p>Nächste Woche läuft das Spiel weiter — also: dranbleiben.</p>
-      <p style="font-size:11px;color:#888;border-top:1px solid #eee;padding-top:12px;margin-top:24px">
-        Fragen? Schreib uns an <a href="mailto:${escape(env.TO_EMAIL_OPS ?? 'info@fryhigh.de')}">${escape(env.TO_EMAIL_OPS ?? 'info@fryhigh.de')}</a>.</p>
-    </div>
-  `;
+  const opsEmail = env.TO_EMAIL_OPS ?? 'info@fryhigh.de';
+  const winnerHtml = winnerMailHtml(winnerName, winner.score, code, value, validDays, opsEmail);
 
   const winnerMailResult = await sendMail(env, {
     to: winner.email,
@@ -490,6 +571,11 @@ async function runWeeklyVoucher(env) {
     console.error('weekly-voucher: CREW MAIL FAILED', { wk, code, result: crewMailResult });
   }
 
+  // P0 fix Run-13: mark week as closed after voucher issuance + mails sent
+  await env.DB.prepare(
+    "UPDATE weeks SET status = 'closed', closed_at = ? WHERE week_key = ?"
+  ).bind(now(), wk).run();
+
   console.log('weekly-voucher issued', { wk, code, score: winner.score });
 }
 
@@ -512,6 +598,7 @@ export default {
       if (path === '/leaderboard' && request.method === 'GET')    return leaderboard(request, env, origin);
       if (path === '/vouchers/check' && request.method === 'GET') return voucherCheck(request, env, origin);
       if (path === '/vouchers/redeem' && request.method === 'POST') return voucherRedeem(request, env, origin);
+      if (path === '/admin/retry-winner-mail' && request.method === 'POST') return retryWinnerMail(request, env, origin);
     } catch (err) {
       console.error('handler error', path, err);
       return json({ error: 'internal' }, 500, origin);

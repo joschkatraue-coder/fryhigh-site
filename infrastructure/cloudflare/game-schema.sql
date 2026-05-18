@@ -49,6 +49,14 @@ CREATE INDEX IF NOT EXISTS idx_vouchers_week ON vouchers(week_key);
 -- P1 fix 2026-05-18: UNIQUE constraint ensures idempotent weekly voucher issuance under cron-retry
 CREATE UNIQUE INDEX IF NOT EXISTS idx_vouchers_week_unique ON vouchers(week_key);
 
+-- P0 fix Run-13: weeks-metadata for cron-verify TOCTOU elimination
+CREATE TABLE IF NOT EXISTS weeks (
+  week_key TEXT PRIMARY KEY,
+  status TEXT NOT NULL DEFAULT 'open',  -- 'open' | 'frozen' | 'closed'
+  frozen_at INTEGER,
+  closed_at INTEGER
+);
+
 -- Migration (apply manually if upgrading from earlier schema):
 --   ALTER TABLE scores ADD COLUMN verify_expires_at INTEGER;
 --   UPDATE scores SET verify_expires_at = created_at + (7 * 24 * 60 * 60 * 1000) WHERE verify_expires_at IS NULL;
@@ -56,3 +64,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_vouchers_week_unique ON vouchers(week_key)
 -- Migration Run-12 (apply manually if upgrading):
 --   ALTER TABLE scores ADD COLUMN mail_status TEXT DEFAULT 'pending';
 --   UPDATE scores SET mail_status = 'sent' WHERE mail_status IS NULL;  -- assume legacy rows had successful mails
+-- Migration Run-13:
+--   CREATE TABLE IF NOT EXISTS weeks (week_key TEXT PRIMARY KEY, status TEXT NOT NULL DEFAULT 'open', frozen_at INTEGER, closed_at INTEGER);
+--   -- Backfill: mark all weeks that already issued vouchers as 'closed'
+--   INSERT OR IGNORE INTO weeks (week_key, status, closed_at)
+--     SELECT DISTINCT week_key, 'closed', issued_at FROM vouchers;
