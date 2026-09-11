@@ -239,9 +239,10 @@ const kids: KidsItem[] = kidsProp ?? karte?.data.kids.items ?? [];
   }
   .step {
     position: relative;
-    padding: 22px 22px 22px 24px;
+    padding: 22px;
     background: color-mix(in oklab, var(--cream) 92%, var(--navy));
-    border-left: 4px solid var(--orange);
+    /* Hausform ist der Hairline-Rahmen wie bei Winter und der Karte-Tafel, keine Akzentkante. */
+    border: 1px solid var(--cream-hairline);
     display: flex;
     flex-direction: column;
     gap: 8px;
