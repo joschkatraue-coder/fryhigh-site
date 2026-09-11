@@ -7,13 +7,13 @@ main = "catering-form-worker.js"
 compatibility_date = "2026-05-17"
 
 # Route — wird beim ersten Deploy in CF-Dashboard gesetzt.
-# Standard: catering-form.fryhigh.workers.dev (workers.dev subdomain, kein eigenes Cert nötig)
+# Standard: catering-form.fryhigh-bhv.workers.dev (workers.dev subdomain, kein eigenes Cert nötig)
 # Wenn fryhigh.de in CF DNS liegt: custom-route /api/catering* möglich.
 
 [vars]
 FROM_EMAIL   = "catering-form@fryhigh.de"   # TBD: in Resend als verified-domain eintragen
 TO_EMAIL     = "info@fryhigh.de"
-ALLOW_ORIGIN = "https://fryhigh.de"
+ALLOW_ORIGIN = "https://fryhigh.de,https://www.fryhigh.de,https://fryhigh.pages.dev"   # Liste; Origin-Echo nur bei Treffer
 
 # Secrets (NICHT hier eintragen — via `wrangler secret put NAME`):
 #   RESEND_API_KEY   — TBD: Resend-Konto anlegen, API-Key generieren, eintragen

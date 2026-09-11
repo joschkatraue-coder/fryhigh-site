@@ -1,0 +1,266 @@
+---
+import FloatingMascot from "./FloatingMascot.astro";
+
+interface Card {
+  title: string;
+  body: string;
+  tags: string[];
+  cta_label: string;
+  cta_anlass: string;
+}
+interface Props {
+  eyebrow: string;
+  headline: string;
+  headline_accent?: string;
+  intro: string;
+  cards: Card[];
+  note: string;
+  cta_label: string;
+  cta_href: string;
+}
+
+const { eyebrow, headline, headline_accent, intro, cards, note, cta_label, cta_href } = Astro.props;
+---
+<section id="winter" class="winter has-mascot" aria-label="Winter: Weihnachtsfeiern und Grünkohl">
+  <FloatingMascot
+    image="13_Nordsee_Fries_Gruenkohl.png"
+    size={150}
+    rotate={6}
+    top="7%"
+    right="2%"
+  />
+
+  <div class="wrap">
+    <header class="lead">
+      <span class="eyebrow">{eyebrow}</span>
+      <h2>
+        {headline}
+        {headline_accent && (<><br /><span class="acc">{headline_accent}</span></>)}
+      </h2>
+      <p class="intro">{intro}</p>
+    </header>
+
+    <span class="badge">Anfragen ab sofort</span>
+
+    <ul class="cards" role="list">
+      {cards.map((card) => (
+        <li class="card">
+          <h3>{card.title}</h3>
+          <p>{card.body}</p>
+          {card.tags.length > 0 && (
+            <ul class="tags" role="list">
+              {card.tags.map((t) => <li>{t}</li>)}
+            </ul>
+          )}
+          <a
+            href="#catering"
+            class="fh-btn"
+            data-winter-cta
+            data-anlass={card.cta_anlass}
+          >
+            <span>{card.cta_label}</span>
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          </a>
+        </li>
+      ))}
+    </ul>
+
+    <div class="note">
+      <p>{note}</p>
+      <a href={cta_href} class="fh-btn fh-btn--ghost">{cta_label}</a>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Karten-CTA: Anlass im Catering-Formular vorwählen, dann zu #catering scrollen.
+  document.querySelectorAll<HTMLAnchorElement>("[data-winter-cta]").forEach((cta) => {
+    cta.addEventListener("click", (e) => {
+      const target = document.getElementById("catering");
+      if (!target) return; // ohne Ziel greift der normale Anker
+      e.preventDefault();
+      const anlass = cta.dataset.anlass ?? "";
+      if (anlass) document.dispatchEvent(new CustomEvent("catering:preset", { detail: { anlass } }));
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      target.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    });
+  });
+</script>
+
+<style>
+  /* Dusk-Modus (CI §3.5): Navy-Deep → Orange → Gelb, Cream-Type.
+     Karten und Note liegen auf Navy-Deep-Halbtransparenz, damit Cream auch über
+     der Orange- und Gelb-Zone ≥ 10:1 bleibt. */
+  .winter {
+    --mono-min: 0.72rem;
+    --panel: color-mix(in oklab, var(--navy-deep) 82%, transparent);
+    --panel-line: color-mix(in oklab, var(--cream) 18%, transparent);
+    position: relative;
+    padding: clamp(64px, 9vw, 110px) clamp(20px, 6vw, 80px);
+    background: linear-gradient(
+      180deg,
+      var(--navy-deep) 0%,
+      var(--navy-deep) 22%,
+      var(--orange) 70%,
+      var(--yellow) 100%
+    );
+    color: var(--cream);
+    overflow: hidden;
+  }
+
+  .wrap {
+    max-width: var(--container-wide);
+    margin: 0 auto;
+    display: grid;
+    gap: 22px;
+  }
+
+  .lead {
+    max-width: 62ch;
+    /* global.css .lead setzt italic; Anton hat keinen Kursivschnitt und würde synthetisch schräg
+       gerendert (CI §4.1). Der Fließtext darunter setzt sein Kursiv selbst. */
+    font-style: normal;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--cream);
+    opacity: 0.85;
+    display: inline-block;
+    margin-bottom: 12px;
+  }
+
+  h2 {
+    font-family: var(--font-display);
+    font-size: clamp(2.25rem, 5.5vw, 4rem);
+    line-height: 0.96;
+    letter-spacing: -0.5px;
+    text-transform: uppercase;
+    color: var(--cream);
+    margin: 0 0 18px;
+  }
+  h2 .acc { color: var(--yellow); }
+
+  .intro {
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    font-style: italic;
+    line-height: 1.6;
+    color: var(--cream);
+    margin: 0;
+  }
+
+  .badge {
+    justify-self: start;
+    font-family: var(--font-mono);
+    font-size: var(--mono-min);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--cream);
+    border: 1.5px solid color-mix(in oklab, var(--cream) 55%, transparent);
+    padding: 6px 12px;
+  }
+
+  /* ── Karten ── */
+  .cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 18px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    padding: 26px 26px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+  }
+  .card h3 {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 2.6vw, 2rem);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    line-height: 1;
+    color: var(--cream);
+    margin: 0;
+  }
+  .card p {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.55;
+    color: var(--cream);
+    margin: 0;
+  }
+
+  .tags {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tags li {
+    font-family: var(--font-mono);
+    font-size: var(--mono-min);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--cream);
+    border: 1px solid color-mix(in oklab, var(--cream) 50%, transparent);
+    padding: 4px 9px;
+    line-height: 1.3;
+  }
+
+  .card .fh-btn {
+    align-self: flex-start;
+    margin-top: auto;
+    gap: 10px;
+  }
+  .card .ico {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+  .card .fh-btn:hover .ico { transform: translateX(4px); }
+
+  /* ── Ehrlichkeits-Note ── */
+  .note {
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    padding: 18px 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .note p {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+    line-height: 1.55;
+    color: var(--cream);
+    margin: 0;
+    max-width: 70ch;
+  }
+
+  @media (max-width: 720px) {
+    .winter :global([data-mascot]) { display: none; }
+    .card { padding: 22px 20px 24px; }
+    .note { flex-direction: column; align-items: flex-start; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card .ico { transition: none; }
+    .card .fh-btn:hover .ico { transform: none; }
+  }
+</style>

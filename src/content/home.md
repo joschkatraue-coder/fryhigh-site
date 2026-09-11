@@ -1,26 +1,27 @@
 ---
 hero:
-  eyebrow: "First Class Fritten · seit 2020"
+  eyebrow: "First Class Fritten · Zoo am Meer"
   headline_lines:
     - "Loaded Fries."
     - "Smashburger."
     - text: "Bremerhaven."
       accent: true
-  lead: "Eigene Kreationen aus dem Foodtruck und vom Zoo am Meer. Catering für eure Events. Im Anflug: drei Sorten Pommesgewürz für daheim."
+  lead: "Pommes nicht als Beilage, sondern als Hauptsache. Loaded Fries mit eigenen Saucen, Smashburger und Pommes pur. Seit April 2026 im Restaurant im Zoo am Meer, Saison April bis Oktober."
+  location_line: "Restaurant im Zoo am Meer · H.-H.-Meier-Straße 7, 27568 Bremerhaven · Zugang über den Zoo-Eintritt"
   ctas:
-    - label: "Pommes-Kreationen ansehen"
-      href: "/#menu"
+    - label: "Zur Karte"
+      href: "#karte"
       style: "primary"
-    - label: "Catering anfragen"
-      href: "/#catering"
+    - label: "Tisch anfragen"
+      href: "#tisch"
       style: "secondary"
   image: "hero/loaded-fries-hero.jpg"
 stats:
-  - { value: "2020", label: "Gegründet" }
-  - { value: "83K+", label: "@fry_high2020" }
-  - { value: "100+", label: "Pommes-Kreationen" }
-  - { value: "3", label: "Standorte" }
+  - { value: "Seit 2020", label: "Fritten aus Bremerhaven" }
+  - { value: "Über 100", label: "Kreationen entwickelt" }
+  - { value: "Apr–Okt", label: "Saison im Zoo am Meer" }
+  - { value: "Ab 50", label: "Personen fürs Catering" }
 newsletter:
-  headline: "Newsletter."
-  lead: "Saison-Specials, Catering-Slots, Pommesgewürz-Drop-Status. Kein Spam."
+  headline: "Trag dich ein."
+  lead: "Neue Specials, Abende, Catering-Termine und der Start vom Pommesgewürz stehen zuerst hier. Wir schreiben, wenn es was zu sagen gibt."
 ---

@@ -1,59 +1,141 @@
 ---
+/* Footer auf Navy-Deep, ohne margin-top (Design-Audit §2.6). Spalten: Standort (mit Saisonzeile),
+   Kontakt, Kanäle, Rechtliches; „Liebe geht raus.“ genau hier, einmal. Texte aus copy-master.md §14;
+   Kontaktnummer nur per WhatsApp (F10). Mobil zwei Spalten. Statt des Stamps steht die Wortmarke
+   als Text: 02-stamp-flat.svg ist ein Scaffold, dessen Bogentext im Browser mit dem
+   SINCE-2020-Banner kollidiert (Render-Test 2026-09-11). */
+import { getEntry } from "astro:content";
+
 const year = new Date().getFullYear();
+
+// Teilnahmebedingungen erst verlinken, wenn die Wochenwertung scharf ist (contest_live, F33).
+let contestLive = false;
+try {
+  const spiel = await getEntry("spiel", "spiel");
+  contestLive = Boolean(spiel?.data?.contest_live);
+} catch {
+  contestLive = false;
+}
 ---
 <footer class="footer">
-  <div class="cols">
-    <div class="col">
-      <span class="eyebrow">Standort</span>
-      <p>Zoo am Meer<br />H.-H.-Meier-Straße 7<br />27568 Bremerhaven</p>
-    </div>
-    <div class="col">
-      <span class="eyebrow">Kontakt</span>
-      <p>
-        <a href="mailto:info@fryhigh.de">info@fryhigh.de</a><br />
-        <a href="tel:+4915773814964">+49 157 73814964</a>
-      </p>
-    </div>
-    <div class="col">
-      <span class="eyebrow">Social</span>
-      <p>
-        <a href="https://instagram.com/fry_high2020" rel="me" target="_blank">@fry_high2020</a><br />
-        <a href="https://facebook.com/FryHighBHV" rel="me" target="_blank">Facebook</a><br />
-        <a href="https://www.tiktok.com/@fryhigh" rel="me" target="_blank">TikTok</a>
-      </p>
-    </div>
-    <div class="col">
-      <span class="eyebrow">Rechtliches</span>
-      <p>
-        <a href="/impressum">Impressum</a><br />
-        <a href="/datenschutz">Datenschutz</a>
-      </p>
+  <div class="inner">
+    <a href="/" class="brand" aria-label="Fry High, First Class Fritten, zur Startseite">
+      <span class="brand-mark">FRY HIGH</span>
+      <span class="brand-sub">First Class Fritten</span>
+    </a>
+
+    <div class="cols">
+      <div class="col">
+        <span class="eyebrow">Standort</span>
+        <p>Restaurant im Zoo am Meer<br />H.-H.-Meier-Straße 7<br />27568 Bremerhaven</p>
+        <p class="season">Saison April bis Oktober · 9 bis 19 Uhr · Zugang über den Zoo-Eintritt</p>
+      </div>
+      <div class="col">
+        <span class="eyebrow">Kontakt</span>
+        <p>
+          <a href="mailto:info@fryhigh.de">info@fryhigh.de</a><br />
+          <a href="https://wa.me/4916096477823" target="_blank" rel="noopener" aria-label="Fry High per WhatsApp schreiben">WhatsApp:&nbsp;<span class="nowrap">0160&nbsp;96&nbsp;47&nbsp;78&nbsp;23</span></a>
+        </p>
+      </div>
+      <div class="col">
+        <span class="eyebrow">Kanäle</span>
+        <p>
+          <a href="https://instagram.com/fry_high2020" rel="me noopener" target="_blank">Instagram&nbsp;<span class="nowrap">@fry_high2020</span></a><br />
+          <a href="https://www.tiktok.com/@fry_high2020" rel="me noopener" target="_blank">TikTok&nbsp;<span class="nowrap">@fry_high2020</span></a><br />
+          <a href="https://facebook.com/FryHighBHV" rel="me noopener" target="_blank">Facebook&nbsp;<span class="nowrap">FryHighBHV</span></a>
+        </p>
+      </div>
+      <div class="col">
+        <span class="eyebrow">Rechtliches</span>
+        <p>
+          <a href="/impressum">Impressum</a><br />
+          <a href="/datenschutz">Datenschutz</a>
+          {contestLive && (
+            <>
+              <br />
+              <a href="/spiel/teilnahmebedingungen">Teilnahmebedingungen</a>
+            </>
+          )}
+        </p>
+      </div>
     </div>
   </div>
+
   <div class="bottom">
-    <span class="mono">Fry High GbR · seit 2020 · First Class Fritten · &copy; {year}</span>
+    <p class="signoff">Liebe geht raus.</p>
+    <span class="mono">Fry High GbR · Bremerhaven · First Class Fritten · &copy; {year}</span>
   </div>
 </footer>
 
 <style>
   .footer {
-    background: var(--bg-deep);
-    color: var(--ink-on-dark);
-    padding: var(--space-8) var(--space-6) var(--space-5);
-    margin-top: var(--space-9);
+    background: var(--navy-deep);
+    color: var(--cream);
+    padding: var(--space-7) clamp(20px, 5vw, 64px) var(--space-5);
+    margin-top: 0;
+  }
+
+  .inner {
+    max-width: var(--container-grid);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--space-6);
+    align-items: start;
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+    color: var(--cream);
+    padding-right: var(--space-4);
+  }
+
+  .brand:focus-visible {
+    outline: 3px solid var(--orange);
+    outline-offset: 4px;
+  }
+
+  .brand-mark {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .brand-sub {
+    font-family: var(--font-mono);
+    font-size: var(--t-mono-min);
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: 0.82;
+    margin-top: 4px;
   }
 
   .cols {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: var(--space-6);
-    max-width: var(--container-wide);
-    margin: 0 auto;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-5) var(--space-5);
   }
 
   .col p {
     margin-top: var(--space-2);
     line-height: 1.7;
+  }
+
+  /* D-17: Nummer und Handles brechen mobil sonst mitten im Wert. */
+  .nowrap { white-space: nowrap; }
+
+  .col .season {
+    margin-top: var(--space-3);
+    font-family: var(--font-mono);
+    font-size: var(--t-mono-min);
+    letter-spacing: 0.04em;
+    line-height: 1.6;
+    color: var(--cream);
+    opacity: 0.78;
   }
 
   .col a {
@@ -64,7 +146,12 @@ const year = new Date().getFullYear();
 
   .col a:hover,
   .col a:focus-visible {
-    border-bottom-color: var(--accent);
+    border-bottom-color: var(--orange);
+  }
+
+  .col a:focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: 4px;
   }
 
   .footer .eyebrow {
@@ -73,16 +160,45 @@ const year = new Date().getFullYear();
   }
 
   .bottom {
-    max-width: var(--container-wide);
-    margin: var(--space-7) auto 0;
+    max-width: var(--container-grid);
+    margin: var(--space-6) auto 0;
     padding-top: var(--space-5);
     border-top: 1px solid color-mix(in oklab, var(--cream) 12%, transparent);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--space-3) var(--space-5);
+  }
+
+  .signoff {
+    font-family: var(--font-body);
+    font-style: italic;
+    font-size: 1.25rem;
+    color: var(--cream);
   }
 
   .mono {
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: var(--t-mono-min);
     letter-spacing: 0.08em;
-    opacity: 0.5;
+    opacity: 0.6;
+  }
+
+  @media (max-width: 860px) {
+    .inner {
+      grid-template-columns: 1fr;
+      gap: var(--space-5);
+    }
+
+    .cols {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 720px) {
+    .footer {
+      padding: var(--space-6) 20px var(--space-4);
+    }
   }
 </style>

@@ -6,12 +6,12 @@ name = "table-reservation"
 main = "table-reservation-worker.js"
 compatibility_date = "2026-05-17"
 
-# Standard-URL nach Deploy: table-reservation.fryhigh.workers.dev
+# Standard-URL nach Deploy: table-reservation.fryhigh-bhv.workers.dev
 
 [vars]
 FROM_EMAIL   = "tisch-form@fryhigh.de"      # TBD: in Resend als verified-from-address eintragen
 TO_EMAIL     = "info@fryhigh.de"
-ALLOW_ORIGIN = "https://fryhigh.de"
+ALLOW_ORIGIN = "https://fryhigh.de,https://www.fryhigh.de,https://fryhigh.pages.dev"   # Liste; Origin-Echo nur bei Treffer
 
 # Secrets (NICHT hier eintragen — via wrangler secret put NAME --config wrangler-table.toml):
 #   RESEND_API_KEY   — gleicher Key wie für catering-form (Resend-Account ist account-weit)

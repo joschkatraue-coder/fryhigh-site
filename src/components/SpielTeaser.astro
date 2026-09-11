@@ -1,0 +1,260 @@
+---
+// Spiel-Teaser für die Startseite (#spiel-teaser). Texte aus src/content/spiel.md (P1),
+// Fallback-Defaults, wenn die Datei fehlt. Illustration: statische Inline-SVG des Pommespiloten
+// mit leiser CSS-Bewegung (Propeller, Schweben, Möwe), bei reduced-motion still.
+import { getEntry } from "astro:content";
+
+interface TeaserData {
+  teaser_eyebrow: string;
+  teaser_headline: string;
+  teaser_body: string;
+  teaser_cta: string;
+}
+
+const DEFAULTS: TeaserData = {
+  teaser_eyebrow: "Pommespilot · Mini-Spiel",
+  teaser_headline: "Flieg. Sammel. Schmier nicht ab.",
+  teaser_body: "Zutaten einsammeln, Möwen und Ketchup ausweichen, nicht ins Wasser fallen. Ein Tipp reicht.",
+  teaser_cta: "Spielen",
+};
+
+let teaser: TeaserData = DEFAULTS;
+try {
+  // @ts-ignore Collection „spiel“ kommt aus P1; fehlt sie, bleibt der Fallback.
+  const entry = await getEntry("spiel", "spiel");
+  if (entry && entry.data) teaser = { ...DEFAULTS, ...(entry.data as Partial<TeaserData>) };
+} catch {
+  teaser = DEFAULTS;
+}
+---
+<section id="spiel-teaser" class="spiel-teaser" aria-labelledby="spiel-teaser-title">
+  <div class="st-inner">
+    <div class="st-copy">
+      <span class="st-eyebrow">{teaser.teaser_eyebrow}</span>
+      <h2 id="spiel-teaser-title">{teaser.teaser_headline}</h2>
+      <p>{teaser.teaser_body}</p>
+      <a class="fh-btn" href="/spiel">{teaser.teaser_cta}</a>
+    </div>
+
+    <div class="st-art" aria-hidden="true">
+      <svg viewBox="0 0 360 220" role="img" focusable="false">
+        <defs>
+          <linearGradient id="st-sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#0E1825" />
+            <stop offset="0.5" stop-color="#1A2A4E" />
+            <stop offset="0.86" stop-color="#E94F0E" />
+            <stop offset="1" stop-color="#F5C518" />
+          </linearGradient>
+          <clipPath id="st-clip"><rect x="0" y="0" width="360" height="220" /></clipPath>
+        </defs>
+        <g clip-path="url(#st-clip)">
+          <rect width="360" height="220" fill="url(#st-sky)" />
+          <circle cx="270" cy="168" r="26" fill="#F5C518" opacity="0.9" />
+          <!-- Silhouette Bremerhaven, Cream 10 % -->
+          <g fill="#F5F0E1" opacity="0.1">
+            <rect x="0" y="150" width="30" height="36" />
+            <rect x="34" y="162" width="18" height="24" />
+            <path d="M70 186 V138 L78 124 L86 138 V186 Z" />
+            <path d="M100 186 C104 158 156 158 160 186 Z" />
+            <rect x="200" y="160" width="26" height="26" />
+            <path d="M250 186 a16 16 0 0 1 32 0 Z" />
+            <rect x="300" y="150" width="3" height="36" />
+            <path d="M303 150 h24 M303 160 l24 -10 M322 150 v14" stroke="#F5F0E1" stroke-width="2" fill="none" />
+          </g>
+          <!-- Wolkendecke -->
+          <g fill="#F5F0E1" opacity="0.94">
+            <rect x="0" y="0" width="360" height="14" />
+            <circle cx="30" cy="14" r="14" /><circle cx="70" cy="10" r="11" /><circle cx="120" cy="15" r="13" />
+            <circle cx="175" cy="11" r="12" /><circle cx="225" cy="15" r="14" /><circle cx="280" cy="10" r="11" />
+            <circle cx="330" cy="14" r="13" />
+          </g>
+          <!-- Möwe -->
+          <g class="st-gull" fill="none" stroke="#F5F0E1" stroke-width="3" stroke-linecap="round">
+            <path class="st-wing" d="M250 62 Q262 50 274 62" />
+            <path class="st-wing st-wing--r" d="M274 62 Q286 50 298 62" />
+            <ellipse cx="274" cy="64" rx="7" ry="3" fill="#F5F0E1" stroke="none" />
+          </g>
+          <!-- Zutaten-Badge -->
+          <g transform="translate(206 112)">
+            <circle r="16" fill="#0E1825" opacity="0.85" stroke="#1B7E4B" stroke-width="2.5" />
+            <path d="M-8 -5 Q9 -9 8 4 Q5 9 -2 5 Q-7 2 -8 -5 Z" fill="#1B7E4B" />
+            <rect x="-10" y="-8" width="4" height="3" fill="#F5F0E1" />
+            <rect x="-11" y="19" width="22" height="13" fill="#0E1825" opacity="0.85" />
+            <text y="29" text-anchor="middle" font-family="'JetBrains Mono', Consolas, monospace" font-size="10" font-weight="700" fill="#F5F0E1">JA</text>
+          </g>
+          <!-- Flieger mit Pommestüte als Pilot. Position auf einer äußeren Gruppe, weil die
+               CSS-Animation (st-float) das transform-Attribut der animierten Gruppe überschreibt. -->
+          <g transform="translate(110 108)">
+          <g class="st-plane" transform="rotate(-6)">
+            <ellipse cx="-2" cy="8" rx="15" ry="5" fill="#1A2A4E" />
+            <path d="M-30 -2 L-22 -18 L-14 -2 Z" fill="#1A2A4E" />
+            <path d="M-32 -4 Q-10 -14 22 -9 Q34 -6 34 0 Q34 8 22 9 Q-10 12 -32 6 Z" fill="#F5F0E1" stroke="#1A2A4E" stroke-width="2.5" />
+            <rect x="-14" y="1" width="30" height="3" fill="#E94F0E" />
+            <path d="M-6 -8 L16 -9 L16 -2 L-6 -2 Z" fill="#1A2A4E" />
+            <path d="M-1 -8 L11 -8 L9 -1 L1 -1 Z" fill="#F5F0E1" />
+            <rect x="1" y="-6" width="2" height="4" fill="#E94F0E" /><rect x="5" y="-6" width="2" height="4" fill="#E94F0E" />
+            <rect x="1" y="-19" width="2.4" height="11" fill="#F5C518" /><rect x="4" y="-22" width="2.4" height="14" fill="#F5C518" /><rect x="7" y="-20" width="2.4" height="12" fill="#F5C518" />
+            <rect x="-2" y="-24" width="14" height="4" fill="#1A2A4E" /><rect x="0" y="-27" width="10" height="4" fill="#1A2A4E" /><rect x="4" y="-25" width="3" height="2" fill="#F5C518" />
+            <path d="M14 -9 L20 -18" stroke="#1A2A4E" stroke-width="2" />
+            <ellipse cx="2" cy="5" rx="17" ry="5" fill="#1A2A4E" />
+            <circle cx="35" cy="0" r="4" fill="#E94F0E" />
+            <line class="st-prop" x1="36" y1="-20" x2="36" y2="20" stroke="#E94F0E" stroke-width="3" opacity="0.85" />
+          </g>
+          </g>
+          <!-- Wasser -->
+          <rect x="0" y="186" width="360" height="34" fill="#0E1825" />
+          <rect x="0" y="185" width="360" height="1.5" fill="#E94F0E" opacity="0.6" />
+          <path class="st-wave" d="M-10 196 q10 -3 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0" fill="none" stroke="#F5F0E1" stroke-width="2" opacity="0.5" />
+          <path class="st-wave st-wave--2" d="M-30 210 q10 -3 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0" fill="none" stroke="#F5F0E1" stroke-width="2" opacity="0.25" />
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<style>
+  .spiel-teaser {
+    background: var(--navy-deep);
+    color: var(--cream);
+    padding: clamp(48px, 7vw, 84px) clamp(20px, 6vw, 56px);
+  }
+
+  .st-inner {
+    max-width: var(--container-wide);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: clamp(24px, 5vw, 64px);
+    align-items: center;
+  }
+
+  .st-copy {
+    display: grid;
+    gap: var(--space-4);
+    max-width: 52ch;
+  }
+
+  .st-eyebrow {
+    font-family: var(--font-mono);
+    font-size: var(--t-eyebrow);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--orange);
+  }
+
+  .st-copy h2 {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4.5vw, 3.5rem);
+    line-height: 0.98;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    color: var(--cream);
+    margin: 0;
+  }
+
+  .st-copy p {
+    font-family: var(--font-body);
+    font-size: var(--t-lead);
+    line-height: 1.5;
+    color: color-mix(in oklab, var(--cream) 88%, transparent);
+    margin: 0;
+  }
+
+  .st-copy .fh-btn {
+    justify-self: start;
+    margin-top: var(--space-2);
+  }
+
+  .st-art {
+    border: 2px solid var(--cream);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+    background: var(--navy-deep);
+    max-width: 480px;
+    width: 100%;
+    justify-self: end;
+  }
+
+  .st-art svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .st-plane {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: st-float 4s ease-in-out infinite;
+  }
+
+  .st-prop {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: st-prop 0.35s linear infinite;
+  }
+
+  .st-wing {
+    transform-box: fill-box;
+    transform-origin: 100% 100%;
+    animation: st-flap 0.7s ease-in-out infinite alternate;
+  }
+
+  .st-wing--r {
+    transform-origin: 0% 100%;
+    animation-name: st-flap-r;
+  }
+
+  .st-gull {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: st-drift 6s ease-in-out infinite alternate;
+  }
+
+  .st-wave {
+    animation: st-wave 3s linear infinite;
+  }
+
+  .st-wave--2 {
+    animation-duration: 4.5s;
+    animation-direction: reverse;
+  }
+
+  @keyframes st-float {
+    0%, 100% { transform: translateY(0) rotate(-6deg); }
+    50% { transform: translateY(-7px) rotate(-3deg); }
+  }
+
+  @keyframes st-prop {
+    from { transform: scaleY(1); }
+    50% { transform: scaleY(0.15); }
+    to { transform: scaleY(1); }
+  }
+
+  @keyframes st-flap {
+    from { transform: rotate(-18deg); }
+    to { transform: rotate(14deg); }
+  }
+
+  @keyframes st-flap-r {
+    from { transform: rotate(18deg); }
+    to { transform: rotate(-14deg); }
+  }
+
+  @keyframes st-drift {
+    from { transform: translateX(0); }
+    to { transform: translateX(-24px); }
+  }
+
+  @keyframes st-wave {
+    from { transform: translateX(0); }
+    to { transform: translateX(-20px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .st-plane, .st-prop, .st-wing, .st-gull, .st-wave { animation: none; }
+  }
+
+  @media (max-width: 900px) {
+    .st-inner { grid-template-columns: 1fr; }
+    .st-art { justify-self: stretch; max-width: none; }
+  }
+</style>

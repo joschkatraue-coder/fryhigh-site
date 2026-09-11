@@ -1,7 +1,6 @@
 ---
 name: "Georg Vollenbruck"
-role: "Captain · Standort"
-quote: "Wenn der Schornstein raucht, läuft's. Bremerhavener Logik."
-bio: "Geschäftspartner, Mitgründer am Zoo am Meer. Operative Excellence vor Ort, hält den Laden am Laufen. Sorgt dafür, dass die Karte jeden Tag steht."
+role: "Hält den Standort am Laufen"
+bio: "Die zweite Hälfte von Fry High. Sorgt dafür, dass im Zoo am Meer alles steht, bevor die erste Portion rausgeht."
 order: 2
 ---

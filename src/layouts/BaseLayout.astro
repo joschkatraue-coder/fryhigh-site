@@ -8,15 +8,23 @@ interface Props {
   noindex?: boolean;
 }
 
+// Default-Description für Unterseiten ohne eigene (copy-master.md §0.1).
+const DEFAULT_DESCRIPTION =
+  "Fry High, First Class Fritten aus Bremerhaven. Loaded Fries, Smashburger und Catering, Restaurant im Zoo am Meer.";
+
 const {
   title,
-  description = "First Class Fritten aus Bremerhaven. Loaded Fries, Smashburger, Catering, Pommesgewürz.",
+  description = DEFAULT_DESCRIPTION,
   ogImage = "/og-default.jpg",
   noindex = false,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site).toString();
 const isHome = Astro.url.pathname === "/" || Astro.url.pathname === "";
+
+// Geo: Nominatim-Abfrage „H.-H.-Meier-Straße 7, 27568 Bremerhaven“ am 2026-09-11
+// (OSM way 31349775 „Zoo am Meer“, lat 53.5447835 / lon 8.5701615, ODbL).
+const GEO = { latitude: 53.54478, longitude: 8.57016 };
 
 const localBusinessJsonLd = {
   "@context": "https://schema.org",
@@ -25,9 +33,9 @@ const localBusinessJsonLd = {
   name: "Fry High — First Class Fritten",
   url: "https://fryhigh.de",
   image: new URL("/og-default.jpg", Astro.site).toString(),
-  description:
-    "First Class Fritten aus Bremerhaven. Loaded Fries, Smashburger, Catering, Pommesgewürz.",
-  telephone: "+4915773814964",
+  description: DEFAULT_DESCRIPTION,
+  // Öffentliche Nummer nur per WhatsApp (F10, Joschka 2026-09-11).
+  telephone: "+49 160 96477823",
   email: "info@fryhigh.de",
   servesCuisine: ["Loaded Fries", "Smashburger", "Streetfood"],
   priceRange: "€",
@@ -40,13 +48,33 @@ const localBusinessJsonLd = {
   },
   geo: {
     "@type": "GeoCoordinates",
-    latitude: 53.5466,
-    longitude: 8.5732,
+    latitude: GEO.latitude,
+    longitude: GEO.longitude,
   },
+  // Saison im Zoo am Meer: „Wir haben auf, wenn der Zoo auf hat: April bis Oktober, 9 bis 19 Uhr.“
+  // Eigene Restaurant-Zeiten erst nach F07.
+  openingHoursSpecification: [
+    {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ],
+      opens: "09:00",
+      closes: "19:00",
+      validFrom: "2026-04-01",
+      validThrough: "2026-10-31",
+    },
+  ],
   sameAs: [
     "https://instagram.com/fry_high2020",
+    "https://www.tiktok.com/@fry_high2020",
     "https://facebook.com/FryHighBHV",
-    "https://www.tiktok.com/@fryhigh",
   ],
   foundingDate: "2020",
 };
@@ -68,6 +96,8 @@ const localBusinessJsonLd = {
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={new URL(ogImage, Astro.site).toString()} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -79,6 +109,29 @@ const localBusinessJsonLd = {
     <slot name="head" />
   </head>
   <body>
+    <a href="#main" class="skip-link">Zum Inhalt springen</a>
     <slot />
+    <style is:global>
+      .skip-link {
+        position: absolute;
+        top: -100px;
+        left: 0;
+        z-index: 100;
+        background: var(--accent);
+        color: var(--cream);
+        padding: 12px 18px;
+        font-family: var(--font-mono);
+        font-size: 0.85rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        text-decoration: none;
+        transition: top 180ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .skip-link:focus {
+        top: 0;
+        outline: 3px solid var(--cream);
+        outline-offset: -3px;
+      }
+    </style>
   </body>
 </html>

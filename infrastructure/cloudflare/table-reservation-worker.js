@@ -7,8 +7,9 @@
 // Env-Vars (in wrangler-table.toml [vars]):
 //   FROM_EMAIL   = "tisch-form@fryhigh.de"
 //   TO_EMAIL     = "info@fryhigh.de"
-//   ALLOW_ORIGIN = "https://fryhigh.de"
+//   ALLOW_ORIGIN = "https://fryhigh.de,https://www.fryhigh.de,https://fryhigh-site.pages.dev"  (Liste; Origin-Echo nur bei Treffer)
 //
+// Ohne RESEND_API_KEY antwortet der Worker 503 { ok:false, error:'mail not configured' }; kein Scheinerfolg.
 // Caveman: ein File, eine Function. Gleiches Muster wie catering-form-worker.js.
 
 const CORS = (origin) => ({
@@ -16,7 +17,16 @@ const CORS = (origin) => ({
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Max-Age': '86400',
+  Vary: 'Origin',
 });
+
+// ALLOW_ORIGIN ist eine kommagetrennte Liste. Origin-Echo nur bei Treffer, sonst erster Eintrag
+// (der Browser blockt die Antwort dann korrekt).
+function resolveOrigin(request, env) {
+  const list = String(env.ALLOW_ORIGIN ?? 'https://fryhigh.de').split(',').map((s) => s.trim()).filter(Boolean);
+  const reqOrigin = request.headers.get('Origin');
+  return reqOrigin && list.includes(reqOrigin) ? reqOrigin : list[0];
+}
 
 const json = (body, status, origin) =>
   new Response(JSON.stringify(body), {
@@ -40,7 +50,7 @@ const ZONE_LABELS = {
 
 export default {
   async fetch(request, env) {
-    const origin = env.ALLOW_ORIGIN ?? 'https://fryhigh.de';
+    const origin = resolveOrigin(request, env);
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS(origin) });
@@ -106,9 +116,10 @@ export default {
       <p style="color:#888;font-size:12px">Source: ${escape(data.source || '')} · Submitted: ${escape(data.ts || '')}</p>
     `;
 
+    // Ohne Resend-Key kein Scheinerfolg: 503, das Frontend zeigt den Mail-Link auf info@fryhigh.de.
     if (!env.RESEND_API_KEY) {
-      console.warn('RESEND_API_KEY missing — echo-only mode');
-      return json({ ok: true, mode: 'echo', subject }, 200, origin);
+      console.error('RESEND_API_KEY missing — mail not configured', { subject });
+      return json({ ok: false, error: 'mail not configured' }, 503, origin);
     }
 
     const resend = await fetch('https://api.resend.com/emails', {

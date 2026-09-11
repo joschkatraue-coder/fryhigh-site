@@ -5,5 +5,13 @@ import mdx from '@astrojs/mdx';
 
 export default defineConfig({
   site: 'https://fryhigh.de',
-  integrations: [sitemap(), mdx()],
+  integrations: [
+    sitemap({
+      filter: (page) =>
+        !page.includes('/impressum') &&
+        !page.includes('/datenschutz') &&
+        !page.includes('/crew/'),
+    }),
+    mdx(),
+  ],
 });

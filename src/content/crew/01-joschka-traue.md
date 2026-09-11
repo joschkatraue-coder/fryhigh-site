@@ -1,7 +1,7 @@
 ---
 name: "Joschka Traue"
-role: "Captain · Vision"
+role: "Entwickelt die Karte"
 quote: "Pommes verdienen mehr als nur Paprika."
-bio: "Hat 2020 die Idee zur Fryheit geboren. Verantwortlich für Brand, Produktentwicklung, Catering. Probiert täglich neu. Entwickelt die Loaded-Fries-Kreationen, die der Pilot von seinen Reisen mitbringt."
+bio: "Seit 2020 dabei, erst im Foodtruck, jetzt im Zoo. Entwickelt die Kreationen, die der Pilot von seinen Reisen mitbringt, und probiert täglich neu. Karte, Catering, Saucen: sein Ding."
 order: 1
 ---

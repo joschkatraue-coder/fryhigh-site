@@ -8,118 +8,169 @@ interface Props {
 
 const { headline, lead } = Astro.props;
 
-// Mailerlite Embed-Endpoint (Decision 2026-05-17 — siehe launch-readiness).
-// TBD: echte Form-ID + Account-ID einsetzen sobald Mailerlite-Account live ist.
-// Aktueller Placeholder läuft als Optimistic-UI ohne echten POST.
-const MAILERLITE_ACTION = "https://assets.mailerlite.com/jsonp/TBD-ACCOUNT-ID/forms/TBD-FORM-ID/subscribe";
+// MailerLite-Embed-Endpoint. Sind beide ENV-Variablen gesetzt, läuft der POST live und unverändert;
+// sonst geht der Klick als Mail an info@fryhigh.de (kein Scheinerfolg, Hinweis steht sichtbar am Formular).
+const MAILERLITE_ACCOUNT = import.meta.env.PUBLIC_MAILERLITE_ACCOUNT_ID;
+const MAILERLITE_FORM = import.meta.env.PUBLIC_MAILERLITE_FORM_ID;
+const MAILERLITE_READY = Boolean(MAILERLITE_ACCOUNT && MAILERLITE_FORM);
+
+const MAILTO_SUBJECT = "Newsletter-Anmeldung";
+const MAILTO_BODY = "Trag mich bitte in den Fry-High-Newsletter ein.";
+const MAILTO = `mailto:info@fryhigh.de?subject=${encodeURIComponent(MAILTO_SUBJECT)}&body=${encodeURIComponent(MAILTO_BODY)}`;
+
+const ACTION = MAILERLITE_READY
+  ? `https://assets.mailerlite.com/jsonp/${MAILERLITE_ACCOUNT}/forms/${MAILERLITE_FORM}/subscribe`
+  : MAILTO;
 ---
 <section id="newsletter" class="newsletter has-mascot">
   <FloatingMascot
     image="16_Gyoza_Fusion.png"
-    size={130}
+    size={120}
     rotate={-14}
-    bottom="14%"
-    left="5%"
+    top="8%"
+    right="2%"
   />
+
   <div class="lead-block">
     <span class="eyebrow">Newsletter</span>
     <h2>{headline}</h2>
     <p class="lead">{lead}</p>
   </div>
-  <form class="signup" data-newsletter action={MAILERLITE_ACTION} method="post">
+
+  <form
+    class="signup"
+    data-newsletter
+    data-mode={MAILERLITE_READY ? "mailerlite" : "mailto"}
+    action={ACTION}
+    method={MAILERLITE_READY ? "post" : "get"}
+  >
     <label class="sr-only" for="newsletter-email">E-Mail-Adresse</label>
     <input
       id="newsletter-email"
       type="email"
-      name="fields[email]"
-      placeholder="dein@email.de"
+      name={MAILERLITE_READY ? "fields[email]" : "body"}
+      placeholder="deine@mail.de"
       required
       autocomplete="email"
     />
-    <input type="hidden" name="ml-submit" value="1" />
-    <input type="text" name="anticsrf" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;" />
-    <button type="submit">Eintragen</button>
-    <p class="hint" data-status></p>
+    {MAILERLITE_READY && <input type="hidden" name="ml-submit" value="1" />}
+    {MAILERLITE_READY && (
+      <input type="text" name="anticsrf" tabindex="-1" autocomplete="off" aria-hidden="true" class="honey" />
+    )}
+    {!MAILERLITE_READY && <input type="hidden" name="subject" value={MAILTO_SUBJECT} />}
+    <button type="submit" class="fh-btn">Eintragen</button>
+    <p class="hint" data-status>
+      {MAILERLITE_READY ? "" : "Der Klick öffnet dein Mailprogramm mit einer Mail an uns. Wir tragen dich ein."}
+    </p>
   </form>
 </section>
 
+<script>
+  // Nur im mailto-Modus: Mail mit Betreff, freundlichem Text und der eingetragenen Adresse öffnen.
+  // Ohne JS greift das GET-Formular auf die mailto-Action (Adresse im Body, Betreff als Feld).
+  document.querySelectorAll<HTMLFormElement>("[data-newsletter]").forEach((form) => {
+    if (form.dataset.mode !== "mailto") return;
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = form.querySelector<HTMLInputElement>('input[type="email"]')?.value.trim() ?? "";
+      const body = `Trag mich bitte in den Fry-High-Newsletter ein.\n\nMeine Adresse: ${email}`;
+      window.location.href = `mailto:info@fryhigh.de?subject=${encodeURIComponent("Newsletter-Anmeldung")}&body=${encodeURIComponent(body)}`;
+    });
+  });
+</script>
+
 <style>
   .newsletter {
-    background: var(--ink);
-    color: var(--ink-on-dark);
-    padding: var(--space-9) var(--space-6);
+    --mono-min: 0.72rem;
+    background: var(--navy);
+    color: var(--cream);
+    padding: clamp(64px, 9vw, 110px) clamp(20px, 6vw, 80px);
     display: grid;
     gap: var(--space-7);
     grid-template-columns: 1fr 1fr;
     align-items: center;
   }
 
+  .lead-block {
+    max-width: 56ch;
+  }
+
   .newsletter .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
     color: var(--cream);
-    opacity: 0.6;
+    opacity: 0.85;
   }
 
   .newsletter h2 {
     margin-top: var(--space-2);
+    font-family: var(--font-display);
+    font-size: var(--t-h2);
+    line-height: 1.02;
+    text-transform: uppercase;
     color: var(--cream);
   }
 
   .newsletter .lead {
     margin-top: var(--space-3);
+    font-family: var(--font-body);
+    font-size: var(--t-lead);
+    font-style: italic;
+    line-height: 1.5;
     color: var(--cream);
-    opacity: 0.85;
   }
 
   .signup {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: var(--space-3);
-    align-items: center;
+    align-items: end;
   }
 
-  .signup input {
+  .signup input[type="email"] {
     background: transparent;
     color: var(--cream);
     border: 0;
-    border-bottom: 2px solid color-mix(in oklab, var(--cream) 30%, transparent);
-    padding: var(--space-4) 0;
+    border-bottom: 2px solid color-mix(in oklab, var(--cream) 40%, transparent);
+    padding: var(--space-3) 0;
+    min-height: 48px;
     font-family: var(--font-body);
     font-size: var(--t-lead);
+    border-radius: 0;
     transition: border-color var(--duration-fast) var(--ease-out);
   }
-
-  .signup input::placeholder {
-    color: color-mix(in oklab, var(--cream) 45%, transparent);
+  .signup input[type="email"]::placeholder {
+    color: color-mix(in oklab, var(--cream) 55%, transparent);
   }
-
-  .signup input:focus {
+  .signup input[type="email"]:focus {
     outline: none;
-    border-bottom-color: var(--accent);
+    border-bottom-color: var(--orange);
+  }
+  .signup input[type="email"]:focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: 4px;
   }
 
-  .signup button {
-    background: var(--accent);
-    color: var(--cream);
-    padding: var(--space-4) var(--space-6);
-    border-radius: var(--r-md);
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    transition: transform var(--duration-fast) var(--ease-out);
-  }
-
-  .signup button:hover,
-  .signup button:focus-visible {
-    transform: translateY(-2px);
+  .honey {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
   }
 
   .hint {
     grid-column: 1 / -1;
     font-family: var(--font-mono);
     font-size: 0.75rem;
-    opacity: 0.7;
+    letter-spacing: 0.02em;
+    line-height: 1.5;
+    color: color-mix(in oklab, var(--cream) 82%, transparent);
     min-height: 1em;
+    margin: 0;
   }
 
   .sr-only {
@@ -133,7 +184,9 @@ const MAILERLITE_ACTION = "https://assets.mailerlite.com/jsonp/TBD-ACCOUNT-ID/fo
   }
 
   @media (max-width: 720px) {
-    .newsletter { grid-template-columns: 1fr; padding: var(--space-8) var(--space-5); }
+    .newsletter { grid-template-columns: 1fr; gap: var(--space-6); }
+    .newsletter :global([data-mascot]) { display: none; }
     .signup { grid-template-columns: 1fr; }
+    .signup .fh-btn { width: 100%; justify-content: center; }
   }
 </style>

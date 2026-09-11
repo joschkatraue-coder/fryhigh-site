@@ -1,13 +1,21 @@
 ---
+/* Floating Mascot — Loaded-Fries-Cutout am Sektionsrand.
+   Seit 2026-09-11 position:absolute innerhalb der .has-mascot-Sektion (Design-Audit §2.1):
+   Cutouts scrollen mit ihrer Sektion und können keine Nachbarsektion überlagern.
+   Positionen gehören an die Ränder außerhalb der Textspalte; ein Mascot darf nie Text überdecken.
+   Mobil (≤ 720 px) ist ein Mascot standardmäßig ausgeblendet (mobile="hide");
+   mobile="show" zeigt es mit höchstens 90 px. Reveal läuft weiter über den
+   IntersectionObserver in scripts/mascot.ts (.in-view auf der Sektion). */
 interface Props {
-  image: string;                       // dateiname in public/cutouts/
-  size?: number;                       // px, default 130
-  rotate?: number;                     // base rotation in deg
-  top?: string;                        // CSS value, e.g. "20%" or "-30px"
+  image: string;                 // Dateiname in public/cutouts/
+  size?: number;                 // px auf Desktop, default 130
+  rotate?: number;               // Grundrotation in Grad
+  top?: string;                  // CSS-Wert, z. B. "8%" oder "-24px"
   bottom?: string;
   left?: string;
   right?: string;
-  z?: number;                          // z-index, default 2
+  z?: number;                    // z-index, default 2
+  mobile?: "hide" | "show";      // default "hide"
   alt?: string;
 }
 
@@ -20,8 +28,11 @@ const {
   left,
   right,
   z = 2,
+  mobile = "hide",
   alt = "",
 } = Astro.props;
+
+const mobileSize = Math.min(90, Math.round(size * 0.6));
 
 const positionStyle = [
   top !== undefined && `top:${top}`,
@@ -29,29 +40,26 @@ const positionStyle = [
   left !== undefined && `left:${left}`,
   right !== undefined && `right:${right}`,
   `--mascot-size:${size}px`,
+  `--mascot-size-mobile:${mobileSize}px`,
   `--mascot-base-rotate:${rotate}deg`,
   `z-index:${z}`,
 ].filter(Boolean).join(";");
 ---
-<div class="mascot" data-mascot style={positionStyle} aria-hidden="true">
+<div class="mascot" data-mascot data-mobile={mobile} style={positionStyle} aria-hidden="true">
   <img src={`/cutouts/${image}`} alt={alt} loading="lazy" decoding="async" />
 </div>
 
 <style>
   .mascot {
-    position: fixed;
+    position: absolute;
     width: var(--mascot-size, 130px);
     height: var(--mascot-size, 130px);
-    pointer-events: auto;
+    pointer-events: none;
     opacity: 0;
-    z-index: 5;
-    --evasion-x: 0px;
-    --evasion-y: 0px;
-    --evasion-rotate: 0deg;
     --reveal-translate: 12px;
     transform:
-      translate(var(--evasion-x), calc(var(--reveal-translate) + var(--evasion-y)))
-      rotate(calc(var(--mascot-base-rotate, 0deg) + var(--evasion-rotate)));
+      translate(0, var(--reveal-translate))
+      rotate(var(--mascot-base-rotate, 0deg));
     transition:
       opacity var(--duration-slow) var(--ease-out),
       transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -61,10 +69,6 @@ const positionStyle = [
   .mascot.in-view {
     opacity: 1;
     --reveal-translate: 0px;
-  }
-
-  .mascot.fleeing {
-    transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   .mascot img {
@@ -91,10 +95,16 @@ const positionStyle = [
       --reveal-translate: 0px;
       transition: opacity var(--duration-slow) ease;
     }
-    .mascot.fleeing { transition: none; }
   }
 
   @media (max-width: 720px) {
-    .mascot { transform: scale(0.7) translate(var(--evasion-x), var(--evasion-y)) rotate(calc(var(--mascot-base-rotate, 0deg) + var(--evasion-rotate))); }
+    .mascot {
+      width: var(--mascot-size-mobile, 78px);
+      height: var(--mascot-size-mobile, 78px);
+    }
+
+    .mascot[data-mobile="hide"] {
+      display: none;
+    }
   }
 </style>

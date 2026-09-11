@@ -1,10 +1,11 @@
 /* Fry High Brand Tokens — Variant B (locked 2026-05-15)
  * Canonical reference: 10_businesses/fry-high/code/CLAUDE.md <fryhigh_brand>
  * Direction doc:       10_businesses/fry-high/2026-05-15_brand-direction_v1.md
+ * CI v1 §3.2 (Extended Tokens) und §9.2 (Spacing) nachgezogen am 2026-09-11 (Launch-Umbau, Layout A).
  */
 
 :root {
-  /* Colors — 70% navy+cream / 15% orange / 15% pink+green+yellow */
+  /* Colors — 70% navy+cream / 20% orange / 10% pink+green+yellow (CI v1 §3.1) */
   --navy: #1A2A4E;
   --navy-deep: #0E1825;
   --cream: #F5F0E1;
@@ -14,10 +15,24 @@
   --green: #1B7E4B;
   --yellow: #F5C518;
 
+  /* Extended tokens (CI v1 §3.2) */
+  --ink-text: #1A1A1A;        /* CI-"--ink": Body-Text auf Cream. Siehe Hinweis bei --ink. */
+  --ink-soft: #4A4A4A;        /* Captions, Meta, Labels */
+  --white: #FFFFFF;           /* Reverse-Type auf Navy, Banner-Type */
+  --orange-deep: #A53408;     /* CTA-Hover/Active, Banner-Schatten */
+  --cream-hairline: #E5DDC4;  /* Subtile Dividers, Card-Borders */
+  --state-success: var(--green);
+  --state-warn: var(--yellow);
+  --state-error: var(--pink);
+
   /* Semantic aliases */
   --bg: var(--cream);
   --bg-deep: var(--navy-deep);
   --surface: var(--cream-warm);
+  /* --ink bleibt der Navy-Alias: 75 Stellen in 16 Komponenten nutzen ihn als Fläche, Rahmen
+     und Pill-Grund (u. a. NewsletterCTA-Sektion, Catering-Pills, StatsStrip). Der CI-Wert
+     #1A1A1A liegt als --ink-text bereit; das Umhängen von --ink auf #1A1A1A braucht vorher
+     eine Sichtung dieser Stellen, sonst werden Navy-Flächen schwarz. */
   --ink: var(--navy);
   --ink-on-dark: var(--cream);
   --accent: var(--orange);
@@ -33,11 +48,12 @@
   --surface-cream-warm: var(--cream-warm);
 
   /* Typography */
-  --font-display: "Anton", "Impact", system-ui, sans-serif;
-  --font-body: "Crimson Pro", "Iowan Old Style", Georgia, serif;
-  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  --font-display: "Anton", "Bebas Neue", "Oswald", "Impact", sans-serif;
+  --font-body: "Crimson Pro", "Crimson Text", "Iowan Old Style", Georgia, serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, monospace;
 
   /* Type scale — bold jumps, not 1.5x increments */
+  --t-mono-min: 0.72rem;      /* 11,5 px: kleinste Mono-Größe (CI v1 §4.2, Design-Audit §2.4) */
   --t-eyebrow: 0.75rem;
   --t-body: 1.0625rem;
   --t-lead: 1.25rem;
@@ -45,17 +61,19 @@
   --t-h2: clamp(2.25rem, 5vw, 4.5rem);
   --t-h1: clamp(3rem, 9vw, 8rem);
 
-  /* Spacing */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.5rem;
-  --space-6: 2rem;
-  --space-7: 3rem;
-  --space-8: 4.5rem;
-  --space-9: 6rem;
-  --space-10: 9rem;
+  /* Spacing — CI v1 §9.2 ab --space-6 (Sektionsmaße), darunter die feinere 4-px-Reihe der Site.
+   * --space-6 Sektion-Gap · --space-7 Sektion-Padding vertikal (Desktop) · --space-8 Hero/Major-Break.
+   * --space-9/--space-10 sind Legacy-Aliase für Komponenten, die noch die alte Skala nutzen. */
+  --space-1: 0.25rem;   /* 4 px */
+  --space-2: 0.5rem;    /* 8 px */
+  --space-3: 0.75rem;   /* 12 px */
+  --space-4: 1rem;      /* 16 px */
+  --space-5: 1.5rem;    /* 24 px */
+  --space-6: 4rem;      /* 64 px */
+  --space-7: 6rem;      /* 96 px */
+  --space-8: 8rem;      /* 128 px */
+  --space-9: var(--space-7);
+  --space-10: var(--space-8);
 
   /* Radii */
   --r-sm: 4px;
@@ -70,6 +88,7 @@
 
   /* Container */
   --container-wide: 1440px;
+  --container-grid: 1280px;   /* CI v1 §9.1: 12-column, max-width 1280 px */
   --container-text: 72ch;
 }
 

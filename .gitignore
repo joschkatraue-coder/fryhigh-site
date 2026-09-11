@@ -23,3 +23,12 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# lokale Arbeitsartefakte, nicht ins oeffentliche Repo (2026-09-11)
+.review-shots/
+.claude/
+**/.claude/
+*.bak
+dev-server.log
+HANDOFF-2026-05-20.md
+2026-05-25_deploy-status-audit_DRAFT.md

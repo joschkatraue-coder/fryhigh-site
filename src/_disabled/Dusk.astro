@@ -1,4 +1,5 @@
 ---
+// @ts-nocheck — deaktivierte Komponente (dusk-Collection existiert nicht mehr); nicht importiert.
 import FloatingMascot from "./FloatingMascot.astro";
 import type { CollectionEntry } from "astro:content";
 
@@ -473,5 +474,10 @@ const sorted = [...programs].sort((a, b) => a.data.order - b.data.order);
 
   @media (prefers-reduced-motion: reduce) {
     .tonight-pulse { animation: none; }
+    .dusk-card,
+    .dusk-card:hover {
+      transform: none !important;
+      transition: none !important;
+    }
   }
 </style>

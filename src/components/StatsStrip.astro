@@ -1,7 +1,10 @@
 ---
+/* Stats-Band auf Navy (CI v1 §3.5 Reverse). Werte und Labels kommen aus home.md `stats`;
+   ein Stat mit `href` wird zum Link (z. B. „Apr–Okt“ → #standorte). Mobil 2×2, Zahl 36 px. */
 interface Stat {
   value: string;
   label: string;
+  href?: string;
 }
 
 interface Props {
@@ -10,29 +13,65 @@ interface Props {
 
 const { stats } = Astro.props;
 ---
-<aside class="stats">
-  {stats.map((stat) => (
-    <div class="stat">
-      <b>{stat.value}</b>
-      <span class="eyebrow">{stat.label}</span>
-    </div>
-  ))}
+<aside class="stats" aria-label="Fry High in Zahlen">
+  <ul class="stats-list">
+    {stats.map((stat) => (
+      <li class="stat">
+        {stat.href ? (
+          <a class="stat-link" href={stat.href}>
+            <b>{stat.value}</b>
+            <span class="stat-label">{stat.label}</span>
+          </a>
+        ) : (
+          <>
+            <b>{stat.value}</b>
+            <span class="stat-label">{stat.label}</span>
+          </>
+        )}
+      </li>
+    ))}
+  </ul>
 </aside>
 
 <style>
   .stats {
-    background: var(--ink);
-    color: var(--ink-on-dark);
-    padding: var(--space-7) var(--space-6);
+    background: var(--navy);
+    color: var(--cream);
+    padding: var(--space-6) clamp(20px, 5vw, 64px);
+  }
+
+  .stats-list {
+    max-width: var(--container-grid);
+    margin: 0 auto;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: var(--space-6);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-5) var(--space-6);
     text-align: center;
   }
 
-  .stat {
+  .stat,
+  .stat-link {
     display: grid;
     gap: var(--space-2);
+    justify-items: center;
+  }
+
+  .stat-link {
+    color: inherit;
+    text-decoration: none;
+    padding: var(--space-2) var(--space-3);
+    margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-3));
+  }
+
+  .stat-link:hover .stat-label,
+  .stat-link:focus-visible .stat-label {
+    color: var(--orange);
+    opacity: 1;
+  }
+
+  .stat-link:focus-visible {
+    outline: 3px solid var(--orange);
+    outline-offset: 4px;
   }
 
   .stat b {
@@ -40,10 +79,38 @@ const { stats } = Astro.props;
     font-size: clamp(2.25rem, 5vw, 4rem);
     font-weight: 400;
     line-height: 1;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    color: var(--cream);
   }
 
-  .stats .eyebrow {
+  .stat-label {
+    font-family: var(--font-mono);
+    font-size: var(--t-eyebrow);
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
     color: var(--cream);
-    opacity: 0.65;
+    opacity: 0.72;
+    transition: color var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out);
+  }
+
+  @media (max-width: 720px) {
+    .stats {
+      padding: var(--space-6) 20px;
+    }
+
+    .stats-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-5) var(--space-4);
+    }
+
+    .stat b {
+      font-size: 2.25rem; /* 36 px */
+    }
+
+    .stat-label {
+      font-size: var(--t-mono-min);
+    }
   }
 </style>

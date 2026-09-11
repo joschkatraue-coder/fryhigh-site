@@ -1,4 +1,10 @@
 ---
+/* Hero. Inhalte aus src/content/home.md (`hero`): Eyebrow, dreizeilige Headline, Lead,
+   Ortszeile (Mono) und zwei CTAs (.fh-btn / .fh-btn--ghost). Page-Reveal-Stagger per CSS
+   (CI v1 §8.1/§8.2: 600 ms gesamt, 60 ms Stagger; reduced-motion: Snap). Mascot nur ab
+   1024 px, rechts unten außerhalb der Textspalte. Kein Stamp im Cream-Container (CI §7.3):
+   02-stamp-flat.svg ist ein Scaffold, dessen Bogentext im Browser mit dem SINCE-2020-Banner
+   kollidiert (Render-Test 2026-09-11); nachziehen, sobald die finale Marke vorliegt. */
 import { Picture } from "astro:assets";
 import FloatingMascot from "./FloatingMascot.astro";
 import loadedFries from "../assets/hero/loaded-fries-hero.jpg";
@@ -18,29 +24,31 @@ interface Props {
   eyebrow: string;
   headline_lines: (string | HeadlinePart)[];
   lead: string;
+  location_line?: string;
   ctas: CTA[];
 }
 
-const { eyebrow, headline_lines, lead, ctas } = Astro.props;
+const { eyebrow, headline_lines, lead, location_line, ctas } = Astro.props;
 
 const normalizedLines = headline_lines.map((line) =>
   typeof line === "string" ? { text: line, accent: false } : { accent: false, ...line }
 );
 ---
-<section class="hero has-mascot">
+<section class="hero has-mascot" aria-labelledby="hero-title">
   <FloatingMascot
     image="02_Tropical_Drachenfrucht.png"
     size={180}
     rotate={-8}
-    top="22%"
-    right="8%"
+    bottom="9%"
+    right="5%"
     z={2}
   />
+
   <div class="hero-photo" aria-hidden="true">
     <Picture
       src={loadedFries}
       alt=""
-      widths={[640, 1280, 1920, 2560]}
+      widths={[640, 1280, 1920, 2560, 3840]}
       sizes="100vw"
       formats={["avif", "webp"]}
       quality={82}
@@ -49,9 +57,10 @@ const normalizedLines = headline_lines.map((line) =>
     />
     <div class="overlay"></div>
   </div>
+
   <div class="hero-content">
-    <span class="eyebrow">{eyebrow}</span>
-    <h1>
+    <span class="eyebrow reveal" style="--i:0">{eyebrow}</span>
+    <h1 id="hero-title" class="reveal" style="--i:1">
       {normalizedLines.map((line, i) => (
         <>
           <span class:list={[{ accent: line.accent }]}>{line.text}</span>
@@ -59,12 +68,13 @@ const normalizedLines = headline_lines.map((line) =>
         </>
       ))}
     </h1>
-    <p class="lead">{lead}</p>
-    <div class="ctas">
+    <p class="lead reveal" style="--i:2">{lead}</p>
+    {location_line && <p class="location reveal" style="--i:3">{location_line}</p>}
+    <div class="ctas reveal" style="--i:4">
       {ctas.map((cta) => (
         <a
           href={cta.href}
-          class:list={["btn", `btn-${cta.style}`]}
+          class:list={["fh-btn", { "fh-btn--ghost": cta.style === "secondary" }]}
         >
           {cta.label}
         </a>
@@ -120,15 +130,15 @@ const normalizedLines = headline_lines.map((line) =>
 
   .eyebrow {
     display: inline-block;
-    background: var(--accent);
-    color: var(--cream);
-    padding: 5px 11px;
+    justify-self: start;
     font-family: var(--font-mono);
-    font-size: 0.72rem;
+    font-size: 0.78rem;
+    font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    justify-self: start;
-    margin-bottom: 6px;
+    color: var(--cream);
+    opacity: 1;
+    margin-bottom: 2px;
   }
 
   h1 {
@@ -142,7 +152,7 @@ const normalizedLines = headline_lines.map((line) =>
   }
 
   h1 .accent {
-    color: var(--accent);
+    color: var(--orange);
   }
 
   .lead {
@@ -155,6 +165,16 @@ const normalizedLines = headline_lines.map((line) =>
     opacity: 0.95;
   }
 
+  .location {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    line-height: 1.6;
+    color: var(--cream);
+    opacity: 0.9;
+    max-width: 580px;
+  }
+
   .ctas {
     display: flex;
     gap: 14px;
@@ -162,43 +182,49 @@ const normalizedLines = headline_lines.map((line) =>
     margin-top: var(--space-3);
   }
 
-  .btn {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    font-weight: 700;
-    padding: 14px 24px;
-    border-radius: 3px;
-    transition: transform var(--duration-fast) var(--ease-out),
-                background var(--duration-fast) var(--ease-out);
+  /* Page-Reveal: 5 Gruppen à 360 ms, 60 ms Stagger → 600 ms gesamt (CI v1 §8.2). */
+  .reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    animation: hero-reveal 360ms var(--ease-out) forwards;
+    animation-delay: calc(var(--i, 0) * 60ms);
   }
 
-  .btn-primary {
-    background: var(--accent);
-    color: var(--cream);
+  @keyframes hero-reveal {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
-  .btn-primary:hover,
-  .btn-primary:focus-visible {
-    transform: translateY(-2px);
-    background: color-mix(in oklab, var(--accent) 88%, black);
+  @media (prefers-reduced-motion: reduce) {
+    .reveal {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
   }
 
-  .btn-secondary {
-    background: transparent;
-    color: var(--cream);
-    border: 2px solid var(--cream);
-  }
-
-  .btn-secondary:hover,
-  .btn-secondary:focus-visible {
-    background: var(--cream);
-    color: var(--ink);
+  /* Mascot nur ab 1024 px: darunter reicht der Platz rechts neben der Textspalte nicht. */
+  @media (max-width: 1023px) {
+    .hero > :global(.mascot) {
+      display: none;
+    }
   }
 
   @media (max-width: 720px) {
-    .hero { min-height: 76vh; padding: 40px clamp(16px, 5vw, 32px); }
-    .hero-content { padding-bottom: 40px; }
+    .hero {
+      min-height: 76vh;
+      padding: 40px clamp(16px, 5vw, 32px);
+    }
+
+    .hero-content {
+      padding-bottom: 40px;
+    }
+
+    .eyebrow,
+    .location {
+      font-size: var(--t-mono-min);
+    }
   }
 </style>

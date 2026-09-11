@@ -1,35 +1,49 @@
 ---
+// Wochenwertung und Allzeit-Liste („Hall of Pommespiloten“). Rendert nur, wenn die
+// Wochenwertung scharf ist (contestLive). Eigener Eintrag wird aus sessionStorage
+// (pp_last_entry, gesetzt vom Spiel nach dem Eintragen) hervorgehoben.
+
 interface Props {
   apiBase?: string;
+  contestLive?: boolean;
+  prizeLabel?: string;
 }
-const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
+
+const {
+  apiBase = "https://fryhigh-game.fryhigh-bhv.workers.dev",
+  contestLive = false,
+  prizeLabel = "Wer am Sonntag oben steht, bekommt einen 15-€-Gutschein für Fry High.",
+} = Astro.props;
 ---
-<section class="leaderboard" data-api-base={apiBase}>
-  <div class="lb-head">
-    <div class="lb-eyebrow" data-lb-eyebrow>Diese Woche · Top 10</div>
-    <h3 data-lb-title>Wochen-Leaderboard.</h3>
-    <p data-lb-sub>Top-1 am Sonntag-Abend → 20 € Gutschein per Mail. Reset jeden Sonntag.</p>
-  </div>
+{contestLive && (
+  <section class="leaderboard" id="wochenwertung" data-api-base={apiBase} data-prize={prizeLabel} aria-labelledby="lb-title">
+    <div class="lb-head">
+      <div class="lb-eyebrow" data-lb-eyebrow>Diese Woche · Top 10</div>
+      <h2 id="lb-title" data-lb-title>Wochenwertung.</h2>
+      <p data-lb-sub>{prizeLabel} Montag früh geht es wieder bei null los.</p>
+    </div>
 
-  <div class="lb-tabs" role="tablist" aria-label="Zeitraum">
-    <button type="button" class="lb-tab is-active" data-period="week" role="tab" aria-selected="true">Diese Woche</button>
-    <button type="button" class="lb-tab" data-period="all" role="tab" aria-selected="false">Allzeit</button>
-  </div>
+    <div class="lb-tabs" role="tablist" aria-label="Zeitraum">
+      <button type="button" class="lb-tab is-active" data-period="week" role="tab" aria-selected="true">Diese Woche</button>
+      <button type="button" class="lb-tab" data-period="all" role="tab" aria-selected="false">Allzeit</button>
+    </div>
 
-  <ol class="lb-list" data-lb-list>
-    <li class="lb-empty" data-lb-empty>Noch keine bestätigten Scores diese Woche. Sei der erste.</li>
-  </ol>
+    <ol class="lb-list" data-lb-list>
+      <li class="lb-empty" data-lb-empty>Noch keine bestätigten Scores diese Woche. Mach den Anfang.</li>
+    </ol>
 
-  <div class="lb-meta">
-    <span data-lb-week>–</span>
-    <button type="button" class="lb-refresh" data-lb-refresh>Aktualisieren</button>
-  </div>
-</section>
+    <div class="lb-meta">
+      <span data-lb-week>–</span>
+      <button type="button" class="lb-refresh" data-lb-refresh>Aktualisieren</button>
+    </div>
+  </section>
+)}
 
 <script>
   const SECTION = document.querySelector<HTMLElement>('.leaderboard');
   if (SECTION) {
     const apiBase = SECTION.dataset.apiBase ?? '';
+    const prize = SECTION.dataset.prize ?? '';
     const list = SECTION.querySelector<HTMLOListElement>('[data-lb-list]')!;
     const empty = SECTION.querySelector<HTMLElement>('[data-lb-empty]')!;
     const weekEl = SECTION.querySelector<HTMLElement>('[data-lb-week]')!;
@@ -40,14 +54,24 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     const tabs = SECTION.querySelectorAll<HTMLButtonElement>('.lb-tab');
 
     let currentPeriod: 'week' | 'all' = 'week';
-    let lbController: AbortController | null = null;  // P2 fix: abort in-flight on tab-switch
+    let lbController: AbortController | null = null; // laufenden Abruf beim Tab-Wechsel abbrechen
 
     interface Entry { rank: number; name: string; score: number }
     interface Resp { period: 'week' | 'all'; week_key: string | null; top: Entry[] }
 
     const labels = {
-      week: { eyebrow: 'Diese Woche · Top 10', title: 'Wochen-Leaderboard.', sub: 'Top-1 am Sonntag-Abend → 20 € Gutschein per Mail. Reset jeden Sonntag.', empty: 'Noch keine bestätigten Scores diese Woche. Sei der erste.' },
-      all:  { eyebrow: 'Allzeit · Top 10',     title: 'Hall of Pilots.',      sub: 'Beste Scores aller Wochen. Mehrere Versuche pro Person zählen — nur der höchste.', empty: 'Noch keine bestätigten Scores. Spiel mit.' },
+      week: {
+        eyebrow: 'Diese Woche · Top 10',
+        title: 'Wochenwertung.',
+        sub: `${prize} Montag früh geht es wieder bei null los.`.trim(),
+        empty: 'Noch keine bestätigten Scores diese Woche. Mach den Anfang.',
+      },
+      all: {
+        eyebrow: 'Allzeit · Top 10',
+        title: 'Hall of Pommespiloten.',
+        sub: 'Beste Scores aller Wochen. Mehrere Versuche zählen, es bleibt der höchste.',
+        empty: 'Noch keine bestätigten Scores. Flieg die erste Runde.',
+      },
     };
 
     function applyLabels() {
@@ -58,9 +82,28 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
       empty.textContent = l.empty;
     }
 
+    function ownEntry(): { name: string; score: number } | null {
+      try {
+        const raw = sessionStorage.getItem('pp_last_entry');
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as { name?: unknown; score?: unknown };
+        const score = Math.floor(Number(parsed.score));
+        if (!Number.isFinite(score)) return null;
+        return { name: String(parsed.name ?? '').trim(), score };
+      } catch {
+        return null;
+      }
+    }
+
+    function isMine(entry: Entry, mine: { name: string; score: number } | null, scoreNum: number, alreadyMarked: boolean) {
+      if (!mine || alreadyMarked || scoreNum !== mine.score) return false;
+      const name = String(entry.name ?? '').trim();
+      if (mine.name) return name.localeCompare(mine.name, 'de', { sensitivity: 'base' }) === 0;
+      return true; // ohne Spitznamen: Worker zeigt „Pilot #…“, nur der Score passt
+    }
+
     async function load() {
       if (!apiBase) return;
-      // P2 fix (supervisor-extended): abort prior in-flight + check controller-identity post-await
       if (lbController) lbController.abort();
       const controller = new AbortController();
       lbController = controller;
@@ -71,20 +114,20 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
           ? `${apiBase}/leaderboard?period=all`
           : `${apiBase}/leaderboard`;
         const res = await fetch(url, { cache: 'no-store', signal });
-        // Drop stale response if a newer load() started while we awaited
         if (lbController !== controller) return;
         if (!res.ok) throw new Error('lb fetch failed');
-        const data = await res.json() as Resp;
-        if (lbController !== controller) return;  // re-check after JSON-parse-await
+        const data = (await res.json()) as Resp;
+        if (lbController !== controller) return;
         weekEl.textContent = data.period === 'all'
-          ? 'Allzeit-Ranking'
+          ? 'Allzeit'
           : `Woche ${data.week_key ?? '–'}`;
-        list.innerHTML = '';
+        list.replaceChildren();
         if (!data.top || data.top.length === 0) {
           list.appendChild(empty);
           return;
         }
-        // P1 fix: safe DOM-construction instead of innerHTML template-literal
+        const mine = currentPeriod === 'week' ? ownEntry() : null;
+        let marked = false;
         for (const entry of data.top) {
           const rankNum = Math.floor(Number(entry.rank) || 0);
           const scoreNum = Math.floor(Number(entry.score) || 0);
@@ -101,21 +144,24 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
           scoreSpan.textContent = String(scoreNum);
           li.append(rankSpan, nameSpan, scoreSpan);
           if (rankNum === 1) li.classList.add('lb-item--top');
+          if (isMine(entry, mine, scoreNum, marked)) {
+            marked = true;
+            li.classList.add('lb-item--me');
+            const tag = document.createElement('span');
+            tag.className = 'lb-me';
+            tag.textContent = 'du';
+            nameSpan.append(' ', tag);
+          }
           list.appendChild(li);
         }
       } catch (e) {
-        if ((e as Error).name === 'AbortError') return;  // swallow aborts (tab-switch)
-        if (lbController !== controller) return;  // stale error from prior load
+        if ((e as Error).name === 'AbortError') return;
+        if (lbController !== controller) return;
         console.warn('leaderboard load failed', e);
-        weekEl.textContent = 'Leaderboard nicht erreichbar';
+        weekEl.textContent = 'Wochenwertung gerade nicht erreichbar';
       } finally {
-        // Only re-enable refresh if THIS load() is still the latest (prevents UI-thrash on rapid switches)
         if (lbController === controller) refreshBtn.disabled = false;
       }
-    }
-
-    function escapeHtml(s: string) {
-      return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
     }
 
     tabs.forEach((btn) => {
@@ -161,20 +207,21 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     margin-bottom: 8px;
   }
 
-  .lb-head h3 {
+  .lb-head h2 {
     font-family: var(--font-display);
     font-size: clamp(2rem, 5vw, 3rem);
     text-transform: uppercase;
     line-height: 1;
     margin: 0 0 12px;
     letter-spacing: -0.5px;
+    color: var(--cream);
   }
 
   .lb-head p {
     font-family: var(--font-body);
     font-size: 1rem;
     line-height: 1.5;
-    color: color-mix(in oklab, var(--cream) 80%, transparent);
+    color: color-mix(in oklab, var(--cream) 82%, transparent);
     margin: 0;
   }
 
@@ -189,9 +236,10 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
   .lb-tab {
     flex: 1;
     background: transparent;
-    color: color-mix(in oklab, var(--cream) 70%, transparent);
+    color: color-mix(in oklab, var(--cream) 72%, transparent);
     border: 0;
-    padding: 10px 14px;
+    padding: 12px 14px;
+    min-height: 44px;
     font-family: var(--font-mono);
     font-size: 0.72rem;
     letter-spacing: 0.18em;
@@ -204,8 +252,11 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     border-left: 1.5px solid color-mix(in oklab, var(--cream) 30%, transparent);
   }
 
-  .lb-tab:hover:not(.is-active) {
-    color: var(--yellow);
+  .lb-tab:hover:not(.is-active) { color: var(--yellow); }
+
+  .lb-tab:focus-visible {
+    outline: 3px solid var(--orange);
+    outline-offset: -3px;
   }
 
   .lb-tab.is-active {
@@ -224,10 +275,10 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
 
   .lb-item {
     display: grid;
-    grid-template-columns: 60px 1fr auto;
+    grid-template-columns: 52px 1fr auto;
     gap: 14px;
     align-items: baseline;
-    padding: 14px 6px;
+    padding: 14px 8px;
     border-bottom: 1px dashed color-mix(in oklab, var(--cream) 20%, transparent);
   }
 
@@ -235,7 +286,7 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     font-family: var(--font-mono);
     font-size: 0.85rem;
     letter-spacing: 0.18em;
-    color: color-mix(in oklab, var(--cream) 60%, transparent);
+    color: color-mix(in oklab, var(--cream) 65%, transparent);
   }
 
   .lb-name {
@@ -244,6 +295,8 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     letter-spacing: 0.5px;
     text-transform: uppercase;
     color: var(--cream);
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .lb-score {
@@ -257,16 +310,33 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     background: linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--yellow) 18%, transparent) 60%, transparent 100%);
   }
 
-  .lb-item--top .lb-rank { color: var(--accent); }
-  .lb-item--top .lb-name { color: var(--accent); }
-  .lb-item--top .lb-score { color: var(--accent); }
+  .lb-item--top .lb-rank,
+  .lb-item--top .lb-name,
+  .lb-item--top .lb-score { color: var(--yellow); }
+
+  .lb-item--me {
+    background: color-mix(in oklab, var(--orange) 16%, transparent);
+    box-shadow: inset 4px 0 0 var(--orange);
+  }
+
+  .lb-me {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    background: var(--orange);
+    color: var(--cream);
+    padding: 2px 6px;
+    vertical-align: middle;
+  }
 
   .lb-empty {
     text-align: center;
     padding: 32px 0;
     font-family: var(--font-body);
     font-style: italic;
-    color: color-mix(in oklab, var(--cream) 70%, transparent);
+    color: color-mix(in oklab, var(--cream) 72%, transparent);
     list-style: none;
     border-bottom: 1px dashed color-mix(in oklab, var(--cream) 20%, transparent);
   }
@@ -277,10 +347,12 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
     font-family: var(--font-mono);
     font-size: 0.72rem;
     letter-spacing: 0.14em;
-    color: color-mix(in oklab, var(--cream) 60%, transparent);
+    color: color-mix(in oklab, var(--cream) 65%, transparent);
     text-transform: uppercase;
   }
 
@@ -288,18 +360,24 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     background: transparent;
     color: var(--cream);
     border: 1.5px solid color-mix(in oklab, var(--cream) 40%, transparent);
-    padding: 6px 14px;
+    padding: 8px 14px;
+    min-height: 40px;
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     cursor: pointer;
-    transition: border-color var(--duration-fast) var(--ease-out);
+    transition: border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
   }
 
   .lb-refresh:hover:not(:disabled) {
     border-color: var(--accent);
     color: var(--accent);
+  }
+
+  .lb-refresh:focus-visible {
+    outline: 3px solid var(--orange);
+    outline-offset: 2px;
   }
 
   .lb-refresh:disabled { opacity: 0.5; cursor: default; }

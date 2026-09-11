@@ -3,7 +3,7 @@ import FloatingMascot from "./FloatingMascot.astro";
 import type { CollectionEntry } from "astro:content";
 
 interface Props {
-  status: "coming-soon" | "live" | "paused";
+  status: "in-development" | "live" | "paused";
   launch_target: string;
   headline: string;
   sub?: string;
@@ -15,35 +15,64 @@ const { status, launch_target, headline, sub, lead, skus } = Astro.props;
 const sorted = [...skus].sort((a, b) => a.data.order - b.data.order);
 
 const statusLabel: Record<Props["status"], string> = {
-  "coming-soon": "Coming Soon",
-  "live": "Live",
+  "in-development": "In Entwicklung",
+  "live": "Da",
   "paused": "Pausiert",
 };
+
+// Etiketten leicht versetzt (−2° / 0° / +2°), CI §9.4 Asymmetrie-Lizenz.
+const tilts = [-2, 0, 2];
 ---
 <section id="pantry" class="pantry has-mascot">
   <FloatingMascot
     image="04_Cheese_Fries.png"
     size={130}
     rotate={-9}
-    top="22%"
-    right="5%"
+    top="6%"
+    right="2%"
   />
-  <div class="row">
+
+  <div class="wrap">
     <div class="lead-block">
-      <span class="eyebrow">Pantry · {statusLabel[status]} · {launch_target}</span>
+      <!-- First-Class-Pantry-Lockup (code/identity/logos/07-pantry-lockup.svg) inline, Cream-Variante auf Navy. -->
+      <svg class="sub-lockup" viewBox="0 0 800 240" role="img" aria-label="First Class Pantry · Fry High">
+        <g transform="translate(400,42)">
+          <rect x="-90" y="-16" width="180" height="32" class="lk-tag-bg" />
+          <text x="0" y="6" class="lk-mono lk-tag-text" font-size="13" text-anchor="middle" letter-spacing="6">FRY HIGH ·</text>
+        </g>
+        <text x="400" y="138" class="lk-display" font-size="82" text-anchor="middle" letter-spacing="2">FIRST CLASS PANTRY</text>
+        <g class="lk-rule" stroke-width="2">
+          <line x1="180" y1="170" x2="385" y2="170" />
+          <line x1="415" y1="170" x2="620" y2="170" />
+        </g>
+        <circle cx="400" cy="170" r="5" class="lk-dot" />
+        <text x="400" y="204" class="lk-mono" font-size="15" text-anchor="middle" letter-spacing="8">POMMESGEWÜRZ · DREI SORTEN</text>
+      </svg>
+
+      <span class="eyebrow">First Class Pantry · {statusLabel[status]} · {launch_target}</span>
       <h2>
         {headline}{sub && <><br /><span class="sub">{sub}</span></>}
       </h2>
       <p class="lead">{lead}</p>
-      <a href="#newsletter" class="cta">Auf Waitlist sichern →</a>
+      <p class="mono-line">Trag dich ein. Wenn die Mühle läuft, sagen wir Bescheid.</p>
+      <a href="#newsletter" class="fh-btn fh-btn--ghost">Newsletter</a>
     </div>
 
-    <ul class="jars" role="list">
-      {sorted.map((sku) => (
-        <li class={`jar jar-${sku.data.color}`}>
-          <div class="num">{sku.data.number} · {sku.data.name.toUpperCase()}</div>
-          <div class="nickname">{sku.data.nickname ?? sku.data.name}</div>
-          <div class="desc">{sku.data.desc_short}</div>
+    <ul class="labels" role="list">
+      {sorted.map((sku, i) => (
+        <li
+          class={`label label-${sku.data.color}`}
+          style={`--tilt:${tilts[i % tilts.length]}deg`}
+          aria-label={`Pommesgewürz Sorte ${sku.data.number}: ${sku.data.name}`}
+        >
+          <span class="label-brand">First Class Pantry · Pommesgewürz</span>
+          <span class="band" aria-hidden="true"></span>
+          <span class="sku">
+            <span class="sku-num">{sku.data.number}</span>
+            <span class="sku-name">{sku.data.name}</span>
+          </span>
+          <span class="caption">{sku.data.desc_short}</span>
+          <span class="stamp" aria-hidden="true">FH</span>
         </li>
       ))}
     </ul>
@@ -52,15 +81,18 @@ const statusLabel: Record<Props["status"], string> = {
 
 <style>
   .pantry {
-    padding: var(--space-9) var(--space-6);
+    --mono-min: 0.72rem;
+    padding: clamp(64px, 9vw, 110px) clamp(20px, 6vw, 80px);
+    background: var(--navy);
+    color: var(--cream);
   }
 
-  .row {
+  .wrap {
     max-width: var(--container-wide);
     margin: 0 auto;
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-    gap: var(--space-8);
+    gap: clamp(32px, 6vw, 80px);
     align-items: center;
   }
 
@@ -68,15 +100,28 @@ const statusLabel: Record<Props["status"], string> = {
     display: grid;
     gap: var(--space-4);
     max-width: 56ch;
+    justify-items: start;
   }
+
+  /* ── Lockup ── */
+  .sub-lockup {
+    width: min(280px, 100%);
+    height: auto;
+  }
+  .lk-display { font-family: var(--font-display); fill: var(--cream); }
+  .lk-mono { font-family: var(--font-mono); font-weight: 700; fill: var(--cream); }
+  .lk-tag-bg { fill: var(--cream); }
+  .lk-tag-text { fill: var(--navy); }
+  .lk-rule { stroke: var(--cream); }
+  .lk-dot { fill: var(--yellow); }
 
   .eyebrow {
     font-family: var(--font-mono);
-    font-size: var(--t-eyebrow);
+    font-size: 0.75rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--ink);
-    opacity: 0.65;
+    color: var(--cream);
+    opacity: 0.85;
   }
 
   h2 {
@@ -85,97 +130,142 @@ const statusLabel: Record<Props["status"], string> = {
     line-height: 1.02;
     font-weight: 400;
     letter-spacing: -0.01em;
-    color: var(--ink);
+    text-transform: uppercase;
+    color: var(--cream);
+    margin: 0;
   }
-
-  h2 .sub {
-    color: var(--accent);
-  }
+  h2 .sub { color: var(--orange); }
 
   .lead {
     font-family: var(--font-body);
     font-size: var(--t-lead);
+    font-style: italic;
     line-height: 1.55;
-    color: var(--ink);
-  }
-
-  .cta {
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--accent);
-    padding: var(--space-3) 0;
-    border-bottom: 2px solid var(--accent);
-    align-self: start;
-    transition: transform var(--duration-fast) var(--ease-out);
-  }
-
-  .cta:hover,
-  .cta:focus-visible {
-    transform: translateY(-2px);
-  }
-
-  .jars {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-4);
-    list-style: none;
-    padding: 0;
+    color: var(--cream);
     margin: 0;
   }
 
-  .jar {
-    background: var(--cream);
-    border-radius: var(--r-md);
-    padding: var(--space-6) var(--space-4);
+  .mono-line {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+    line-height: 1.5;
+    color: color-mix(in oklab, var(--cream) 85%, transparent);
+    margin: 0;
+  }
+
+  /* ── Etiketten nach CI §12.6 ── */
+  .labels {
     display: grid;
-    gap: var(--space-3);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    list-style: none;
+    padding: 12px 0;
+    margin: 0;
+  }
+
+  .label {
+    position: relative;
+    background: var(--cream);
+    color: var(--navy);
+    border-radius: var(--r-sm);
+    padding: 14px 16px 44px;
+    display: grid;
+    gap: 12px;
     align-content: start;
-    min-height: 220px;
-    border-top: 6px solid var(--jar-accent, var(--accent));
+    min-height: 250px;
+    min-width: 0;
+    transform: rotate(var(--tilt, 0deg));
     box-shadow:
-      0 1px 0 color-mix(in oklab, var(--ink) 8%, transparent),
-      0 12px 24px color-mix(in oklab, var(--ink) 8%, transparent);
+      0 1px 0 rgba(0, 0, 0, 0.15),
+      0 18px 36px -12px rgba(0, 0, 0, 0.55);
     transition: transform var(--duration-base) var(--ease-out);
   }
+  .label:hover { transform: rotate(var(--tilt, 0deg)) translateY(-2px); }
 
-  .jar:hover { transform: translateY(-3px); }
-
-  .jar-pink    { --jar-accent: var(--pink); }
-  .jar-green   { --jar-accent: var(--green); }
-  .jar-yellow  { --jar-accent: var(--yellow); }
-  .jar-orange  { --jar-accent: var(--orange); }
-  .jar-navy    { --jar-accent: var(--navy); }
-  .jar-cream   { --jar-accent: color-mix(in oklab, var(--ink) 20%, transparent); }
-
-  .num {
+  .label-brand {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
-    letter-spacing: 0.16em;
-    color: var(--ink);
-    opacity: 0.7;
+    font-size: var(--mono-min);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--navy);
+    line-height: 1.3;
   }
 
-  .nickname {
+  .band {
+    display: block;
+    height: 8px;
+    margin: 0 -16px;
+    background: var(--band, var(--orange));
+  }
+  .label-pink   { --band: var(--pink); }
+  .label-green  { --band: var(--green); }
+  .label-yellow { --band: var(--yellow); }
+  .label-orange { --band: var(--orange); }
+  .label-navy   { --band: var(--navy); }
+  .label-cream  { --band: var(--cream-warm); }
+
+  .sku {
+    display: grid;
+    gap: 2px;
     font-family: var(--font-display);
-    font-size: clamp(1.6rem, 2.4vw, 2.2rem);
+    text-transform: uppercase;
+    color: var(--navy);
+  }
+  .sku-num {
+    font-size: 1rem;
+    letter-spacing: 0.12em;
     line-height: 1;
-    letter-spacing: 0.02em;
-    color: var(--ink);
+  }
+  .sku-name {
+    font-size: clamp(1.5rem, 2.2vw, 1.9rem);
+    line-height: 1;
+    letter-spacing: 0.01em;
+    overflow-wrap: anywhere;
   }
 
-  .desc {
-    font-family: var(--font-body);
-    font-size: 0.95rem;
+  .caption {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: color-mix(in oklab, var(--navy) 80%, transparent);
     line-height: 1.4;
-    color: var(--ink);
-    opacity: 0.78;
   }
 
-  @media (max-width: 900px) {
-    .row { grid-template-columns: 1fr; }
-    .jars { grid-template-columns: 1fr; }
-    .jar { min-height: 0; }
+  .stamp {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: var(--cream);
+    display: grid;
+    place-items: center;
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    letter-spacing: 0.5px;
+    line-height: 1;
+  }
+
+  @media (max-width: 980px) {
+    .wrap { grid-template-columns: 1fr; }
+    .labels { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .label { min-height: 220px; padding: 12px 14px 40px; }
+    .band { margin: 0 -14px; }
+  }
+
+  @media (max-width: 720px) {
+    .pantry :global([data-mascot]) { display: none; }
+    .labels { grid-template-columns: 1fr; gap: 16px; padding: 8px 6px; }
+    .label { min-height: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .label { transition: none; }
+    .label:hover { transform: rotate(var(--tilt, 0deg)); }
   }
 </style>

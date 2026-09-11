@@ -1,18 +1,20 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 
-const apiBase = "https://fryhigh-game.fryhigh.workers.dev";
+// Crew-Tool für Gutscheine aus dem Pommespilot-Gewinnspiel. Intern, noindex, per robots.txt gesperrt.
+// Worker-Routen: GET /vouchers/check?code=&pin= (Details nur mit PIN), POST /vouchers/redeem { pin, code, note }.
+const apiBase = "https://fryhigh-game.fryhigh-bhv.workers.dev";
 ---
 <BaseLayout
-  title="Crew · Voucher-Tool · Fry High"
-  description="Voucher prüfen + einlösen. Crew-intern."
+  title="Crew · Gutschein-Tool · Fry High"
+  description="Gutschein prüfen und einlösen. Crew-intern."
   noindex={true}
 >
   <main class="crew">
     <header>
-      <span class="eyebrow">Crew-Tool · Pilot-Flight-Voucher</span>
-      <h1>Voucher prüfen<br/>+ einlösen.</h1>
-      <p>Gast zeigt den Code (Format <code>FLY-XXXX</code>). Erst <strong>Prüfen</strong>, dann <strong>Einlösen</strong>. PIN bleibt im Browser bis du auf „Abmelden" klickst.</p>
+      <span class="eyebrow">Crew-Tool · Pommespilot-Gutschein</span>
+      <h1>Gutschein prüfen<br/>und einlösen.</h1>
+      <p>Der Gast zeigt den Code aus der Gewinner-Mail (Format <code>FLY-…</code>, 20 Zeichen). Erst <strong>Prüfen</strong>, dann <strong>Einlösen</strong>. Der PIN bleibt in diesem Browser, bis du auf „Abmelden“ tippst.</p>
     </header>
 
     <section class="card pin-card" data-step="pin">
@@ -25,15 +27,16 @@ const apiBase = "https://fryhigh-game.fryhigh.workers.dev";
         <button type="button" id="pin-save">PIN speichern</button>
         <button type="button" id="pin-clear" class="ghost">Abmelden</button>
       </div>
-      <p class="hint" id="pin-status">PIN nicht gesetzt.</p>
+      <p class="hint" id="pin-status" aria-live="polite">PIN nicht gesetzt.</p>
     </section>
 
     <section class="card code-card" data-step="code">
-      <h2>Code</h2>
+      <h2>Gutschein-Code</h2>
       <label>
-        <span>Voucher-Code</span>
-        <input type="text" id="code" autocomplete="off" placeholder="FLY-XXXX" maxlength="12" required />
+        <span>Code aus der Gewinner-Mail</span>
+        <input type="text" id="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="FLY-…" maxlength="20" required aria-describedby="code-hint" />
       </label>
+      <p class="hint" id="code-hint">Format: FLY- plus 16 Zeichen, ohne 0, O, 1 und I.</p>
       <div class="row">
         <button type="button" id="check">Prüfen</button>
         <button type="button" id="reset" class="ghost">Zurücksetzen</button>
@@ -42,10 +45,10 @@ const apiBase = "https://fryhigh-game.fryhigh.workers.dev";
 
     <section class="card result-card" data-step="result" hidden>
       <h2>Status</h2>
-      <div id="result"></div>
+      <div id="result" aria-live="polite"></div>
       <label class="redeem-note" hidden>
-        <span>Notiz (optional · z. B. „Walross Fries + Cola")</span>
-        <input type="text" id="note" maxlength="120" placeholder="..." />
+        <span>Notiz (optional, z. B. „Rainbow Fritten“)</span>
+        <input type="text" id="note" maxlength="120" placeholder="Was wurde ausgesucht?" />
       </label>
       <div class="row">
         <button type="button" id="redeem" class="primary" hidden>Einlösen</button>
@@ -53,7 +56,7 @@ const apiBase = "https://fryhigh-game.fryhigh.workers.dev";
     </section>
 
     <footer class="fineprint">
-      <p>Endpoint: <code>{apiBase}</code> · keine Cookies, kein Tracking. PIN nur in <code>localStorage</code>.</p>
+      <p>Endpoint: <code>{apiBase}</code>. Keine Cookies, kein Tracking. PIN nur in <code>localStorage</code> dieses Browsers. Einlösungen werden mit Zeitstempel und Notiz gespeichert.</p>
     </footer>
   </main>
 </BaseLayout>
@@ -73,8 +76,12 @@ const apiBase = "https://fryhigh-game.fryhigh.workers.dev";
 
   let lastValidCode = null;
 
+  function readPin() {
+    try { return localStorage.getItem(PIN_KEY); } catch { return null; }
+  }
+
   function loadPin() {
-    const p = localStorage.getItem(PIN_KEY);
+    const p = readPin();
     if (p) {
       pinInput.value = p;
       pinStatus.textContent = 'PIN gespeichert (' + p.length + ' Stellen).';
@@ -88,12 +95,12 @@ const apiBase = "https://fryhigh-game.fryhigh.workers.dev";
   $('pin-save').addEventListener('click', () => {
     const v = pinInput.value.trim();
     if (!v) { pinStatus.textContent = 'Leer.'; return; }
-    localStorage.setItem(PIN_KEY, v);
+    try { localStorage.setItem(PIN_KEY, v); } catch { pinStatus.textContent = 'Browser speichert nicht. Privatmodus?'; return; }
     loadPin();
   });
 
   $('pin-clear').addEventListener('click', () => {
-    localStorage.removeItem(PIN_KEY);
+    try { localStorage.removeItem(PIN_KEY); } catch {}
     pinInput.value = '';
     loadPin();
   });
@@ -118,30 +125,44 @@ const apiBase = "https://fryhigh-game.fryhigh.workers.dev";
     resultBox.innerHTML = body;
   }
 
+  const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const fmtDate = (ms) => new Date(ms).toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' });
+  const fmtDateTime = (ms) => new Date(ms).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' });
+
   $('check').addEventListener('click', async () => {
     const code = codeInput.value.trim();
+    const pin = readPin();
     if (!code) { render('warn', '<p>Kein Code eingegeben.</p>'); return; }
-    render('loading', '<p>Prüfe ' + code + ' …</p>');
+    if (!pin) { render('warn', '<p>PIN fehlt. Oben speichern, sonst zeigt der Worker keine Details.</p>'); return; }
+    render('loading', '<p>Prüfe ' + esc(code) + ' …</p>');
     redeemBtn.hidden = true;
     noteWrap.hidden = true;
     try {
-      const r = await fetch(apiBase + '/vouchers/check?code=' + encodeURIComponent(code));
+      const r = await fetch(apiBase + '/vouchers/check?code=' + encodeURIComponent(code) + '&pin=' + encodeURIComponent(pin));
       const d = await r.json();
       if (d.ok && d.valid) {
-        const exp = new Date(d.expires_at).toLocaleDateString('de-DE');
         render('ok',
-          '<p><strong>Gültig.</strong> Score ' + d.score + ' · Woche ' + d.week_key + ' · gültig bis ' + exp + '.</p>'
+          '<p><strong>Gültig.</strong> ' + esc(d.label || '15-€-Gutschein für Fry High') + '.</p>' +
+          '<ul>' +
+            '<li>Woche ' + esc(d.week_key) + ' · Score ' + esc(d.score) + '</li>' +
+            '<li>Gültig bis ' + fmtDate(d.expires_at) + '</li>' +
+            (d.value_eur ? '<li>Warenwert bis ' + esc(d.value_eur) + ' €</li>' : '') +
+            '<li>Einlösen: ' + esc(d.redeem_location || 'Fry High im Zoo am Meer') + '</li>' +
+          '</ul>'
         );
         redeemBtn.hidden = false;
         noteWrap.hidden = false;
         lastValidCode = code;
       } else if (d.reason === 'redeemed') {
-        const when = new Date(d.redeemed_at).toLocaleString('de-DE');
-        render('warn', '<p>Schon eingelöst am ' + when + '.</p>');
+        render('warn', '<p>Schon eingelöst am ' + fmtDateTime(d.redeemed_at) + (d.redeemed_by_note ? ' (' + esc(d.redeemed_by_note) + ')' : '') + '.</p>');
       } else if (d.reason === 'expired') {
-        render('err', '<p>Abgelaufen.</p>');
+        render('err', '<p>Abgelaufen' + (d.expires_at ? ' seit ' + fmtDate(d.expires_at) : '') + '.</p>');
+      } else if (d.reason === 'unknown') {
+        render('err', '<p>Unbekannter Code. Tippfehler? Kein 0, O, 1 oder I im Code.</p>');
+      } else if (d.reason === 'invalid') {
+        render('err', '<p>Ungültig oder PIN falsch. PIN oben prüfen und neu speichern.</p>');
       } else {
-        render('err', '<p>Unbekannter Code.</p>');
+        render('err', '<p>Fehler: ' + esc(d.error || r.status) + '.</p>');
       }
     } catch (e) {
       render('err', '<p>Netzwerk-Fehler. Nochmal versuchen.</p>');
@@ -149,7 +170,7 @@ const apiBase = "https://fryhigh-game.fryhigh.workers.dev";
   });
 
   redeemBtn.addEventListener('click', async () => {
-    const pin = localStorage.getItem(PIN_KEY);
+    const pin = readPin();
     if (!pin) { render('warn', '<p>PIN fehlt. Oben speichern.</p>'); return; }
     if (!lastValidCode) { render('warn', '<p>Erst prüfen.</p>'); return; }
     redeemBtn.disabled = true;
@@ -162,18 +183,19 @@ const apiBase = "https://fryhigh-game.fryhigh.workers.dev";
       });
       const d = await r.json();
       if (d.ok) {
-        const when = new Date(d.redeemed_at).toLocaleString('de-DE');
-        render('ok', '<p><strong>Eingelöst.</strong> ' + lastValidCode + ' · ' + when + '.</p>');
+        render('ok', '<p><strong>Eingelöst.</strong> ' + esc(lastValidCode) + ' · ' + fmtDateTime(d.redeemed_at) + '.</p>');
         noteWrap.hidden = true;
         noteInput.value = '';
+        lastValidCode = null;
+        redeemBtn.hidden = true;
       } else if (r.status === 401) {
-        render('err', '<p>PIN falsch. Korrigieren + speichern.</p>');
+        render('err', '<p>PIN falsch. Oben korrigieren und speichern.</p>');
       } else if (r.status === 409) {
-        render('warn', '<p>War schon eingelöst.</p>');
+        render('warn', '<p>War schon eingelöst' + (d.redeemed_at ? ' am ' + fmtDateTime(d.redeemed_at) : '') + '.</p>');
       } else if (r.status === 410) {
         render('err', '<p>Abgelaufen.</p>');
       } else {
-        render('err', '<p>Fehler: ' + (d.error || r.status) + '.</p>');
+        render('err', '<p>Fehler: ' + esc(d.error || r.status) + '.</p>');
       }
     } catch (e) {
       render('err', '<p>Netzwerk-Fehler. Nochmal.</p>');
@@ -265,21 +287,22 @@ const apiBase = "https://fryhigh-game.fryhigh.workers.dev";
     font-size: 1.15rem;
     letter-spacing: 0.08em;
     padding: 10px 12px;
+    min-height: 48px;
     border: 1.5px solid var(--navy);
     background: var(--cream-warm);
     color: var(--navy);
     text-transform: none;
   }
 
-  input:focus {
+  input:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
 
   #code {
     text-transform: uppercase;
-    letter-spacing: 0.18em;
-    font-size: 1.4rem;
+    letter-spacing: 0.14em;
+    font-size: 1.25rem;
   }
 
   .row {
@@ -294,6 +317,7 @@ const apiBase = "https://fryhigh-game.fryhigh.workers.dev";
     letter-spacing: 0.14em;
     text-transform: uppercase;
     padding: 11px 18px;
+    min-height: 48px;
     border: 1.5px solid var(--navy);
     background: var(--navy);
     color: var(--cream);
@@ -301,6 +325,7 @@ const apiBase = "https://fryhigh-game.fryhigh.workers.dev";
   }
 
   button:hover { background: var(--navy-deep); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   button:disabled { opacity: 0.55; cursor: wait; }
 
   button.ghost {
@@ -322,6 +347,8 @@ const apiBase = "https://fryhigh-game.fryhigh.workers.dev";
     color: var(--ink-soft);
   }
 
+  .card .hint + .row { margin-top: 12px; }
+
   .hint.ok { color: var(--green); }
 
   .result-body {
@@ -333,6 +360,7 @@ const apiBase = "https://fryhigh-game.fryhigh.workers.dev";
   }
 
   .result-body p { margin: 0; line-height: 1.5; }
+  .result-body ul { margin: 8px 0 0; padding-left: 20px; line-height: 1.5; }
   .result-body.state-ok { border-left-color: var(--green); background: color-mix(in oklab, var(--green) 8%, var(--cream-warm)); }
   .result-body.state-warn { border-left-color: var(--yellow); background: color-mix(in oklab, var(--yellow) 14%, var(--cream-warm)); }
   .result-body.state-err { border-left-color: var(--pink); background: color-mix(in oklab, var(--pink) 8%, var(--cream-warm)); }
@@ -352,5 +380,3 @@ const apiBase = "https://fryhigh-game.fryhigh.workers.dev";
     font-size: 0.92em;
   }
 </style>
-</content>
-</invoke>

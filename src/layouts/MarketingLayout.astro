@@ -7,13 +7,14 @@ interface Props {
   title: string;
   description?: string;
   ogImage?: string;
+  noindex?: boolean;
 }
 
 const props = Astro.props;
 ---
 <BaseLayout {...props}>
   <NavBar />
-  <main>
+  <main id="main" tabindex="-1">
     <slot />
   </main>
   <Footer />

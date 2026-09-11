@@ -26,6 +26,7 @@ const home = defineCollection({
       eyebrow: z.string(),
       headline_lines: z.array(headlineFragment),
       lead: z.string(),
+      location_line: z.string(),
       ctas: z.array(ctaSchema),
       image: z.string().optional(),
     }),
@@ -40,19 +41,73 @@ const home = defineCollection({
   }),
 });
 
+// Karte: Default-Modus "anker" zeigt drei datierte Preisanker; "kompakt" zeigt
+// die fünf stabilen Gerichte mit Preis (F12). Kids ohne Preise bis F14.
+const karte = defineCollection({
+  loader: glob({ pattern: 'karte.md', base: './src/content' }),
+  schema: z.object({
+    eyebrow: z.string(),
+    headline: z.string(),
+    headline_accent: z.string().optional(),
+    stand: z.string(),
+    mode: z.enum(['anker', 'kompakt']).default('anker'),
+    anker: z.array(z.object({
+      label: z.string(),
+      price_from: z.string(),
+    })),
+    items: z.array(z.object({
+      name: z.string(),
+      desc: z.string(),
+      price: z.string(),
+      tags: z.array(z.string()).default([]),
+    })),
+    kids: z.object({
+      intro: z.string(),
+      items: z.array(z.object({
+        name: z.string(),
+        desc: z.string(),
+        price: z.string().optional(),
+      })),
+    }),
+    drinks: z.string(),
+    vegan_note: z.string(),
+    allergen_note: z.string(),
+    instagram_note: z.string(),
+    instagram_url: z.string(),
+  }),
+});
+
 const catering = defineCollection({
   loader: glob({ pattern: 'catering.md', base: './src/content' }),
   schema: z.object({
     eyebrow: z.string(),
     headline: z.string(),
     intro: z.string(),
+    threshold_text: z.string(),
     features: z.array(z.string()),
+    packages: z.array(z.object({
+      name: z.string(),
+      body: z.string(),
+      recommended: z.boolean().default(false),
+    })),
+    references: z.array(z.object({
+      text: z.string(),
+    })),
+    response_promise: z.string(),
     form: z.object({
       submit_endpoint: z.string(),
       pax_min: z.number().default(50),
       pax_max: z.number().default(500),
       gates: z.array(z.object({
-        value: z.string(),
+        value: z.enum([
+          'Hochzeit',
+          'Firmenfeier',
+          'Privat',
+          'Festival',
+          'Weihnachtsfeier',
+          'Grünkohl',
+          'Sonstiges',
+        ]),
         label: z.string(),
       })),
     }),
@@ -71,6 +126,7 @@ const tisch = defineCollection({
       pax_min: z.number().default(1),
       pax_max: z.number().default(12),
       booking_weeks: z.number().int().default(8),
+      default_time: z.string().default('12:30'),
       zones: z.array(z.object({
         value: z.string(),
         label: z.string(),
@@ -80,24 +136,44 @@ const tisch = defineCollection({
   }),
 });
 
-const dusk = defineCollection({
-  loader: glob({ pattern: 'dusk.md', base: './src/content' }),
+// Winter: Weihnachtsfeiern und Grünkohl als Teaser mit Anfrage über das
+// Catering-Formular (cta_anlass = vorgewählter Anlass). Keine Preise, keine Termine (F26–F28).
+const winter = defineCollection({
+  loader: glob({ pattern: 'winter.md', base: './src/content' }),
   schema: z.object({
     eyebrow: z.string(),
     headline: z.string(),
     headline_accent: z.string().optional(),
-    clock_pill: z.string(),
     intro: z.string(),
-    honesty_note: z.string(),
-    honesty_cta_label: z.string().default('Newsletter abonnieren →'),
-    honesty_cta_href: z.string().default('#newsletter'),
-    tonight: z.object({
-      label: z.string(),
-      headline: z.string(),
-      sub: z.string(),
-      cta_label: z.string().optional(),
-      cta_href: z.string().optional(),
-    }).optional(),
+    cards: z.array(z.object({
+      title: z.string(),
+      body: z.string(),
+      tags: z.array(z.string()).default([]),
+      cta_label: z.string(),
+      cta_anlass: z.string(),
+    })),
+    note: z.string(),
+    cta_label: z.string(),
+    cta_href: z.string(),
+  }),
+});
+
+// Spiel: contest_live false = spielbar, lokaler Bestwert, Wochenwertung angekündigt;
+// true = Formular, Rangliste und Gewinnablauf sichtbar (F33).
+const spiel = defineCollection({
+  loader: glob({ pattern: 'spiel.md', base: './src/content' }),
+  schema: z.object({
+    name: z.string().default('Pommespilot'),
+    contest_live: z.boolean().default(false),
+    prize_label: z.string(),
+    prize_cap_eur: z.number(),
+    redeem_location: z.string(),
+    min_age: z.number().int(),
+    valid_days: z.number().int(),
+    teaser_eyebrow: z.string(),
+    teaser_headline: z.string(),
+    teaser_body: z.string(),
+    teaser_cta: z.string(),
   }),
 });
 
@@ -114,12 +190,11 @@ const kinder = defineCollection({
 const pantry = defineCollection({
   loader: glob({ pattern: 'pantry.md', base: './src/content' }),
   schema: z.object({
-    status: z.enum(['coming-soon', 'live', 'paused']).default('coming-soon'),
+    status: z.enum(['in-development', 'live', 'paused']).default('in-development'),
     launch_target: z.string(),
     headline: z.string(),
     sub: z.string().optional(),
     lead: z.string(),
-    waitlist_endpoint: z.string().optional(),
   }),
 });
 
@@ -144,27 +219,12 @@ const story = defineCollection({
 
 // ─── multi-entry collections ────────────────────────────────────────────
 
-const liveNotes = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/live-notes' }),
-  schema: z.object({
-    title: z.string(),
-    tag: z.string(),
-    category: z.enum(['hot', 'fresh', 'event', 'normal']).default('normal'),
-    body: z.string(),
-    stamps: z.array(z.string()).default([]),
-    publish_at: z.coerce.date(),
-    expires_at: z.coerce.date(),
-    draft: z.boolean().default(false),
-    order: z.number().int().min(1).max(4).default(1),
-  }),
-});
-
 // Cutouts: KEIN Collection-Schema. PNGs liegen als statische Assets in
 // public/cutouts/. Mascot-Positionen werden explizit pro Sektion in der
 // <FloatingMascot>-Komponente platziert — kuratiertes Sprinkling, kein
 // Daten-Driven-Grid. Begründung: Joschka 2026-05-15 — "Wall of Fries"
-// verworfen, Cutouts sollen zwischen Texten/Informationen aufploppen
-// und bei Mauszeiger-Annäherung wegflappern. Siehe Spec §4.7.1.
+// verworfen, Cutouts sollen zwischen Texten/Informationen statisch aufploppen.
+// Siehe Spec §4.7.1.
 
 const standorte = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/standorte' }),
@@ -180,6 +240,12 @@ const standorte = defineCollection({
       hours: z.string(),
       season: z.string().optional(),
     }).optional(),
+    hours_line: z.string().optional(),
+    access_line: z.string().optional(),
+    route_url: z.string().optional(),
+    phone: z.string().optional(),
+    photo: z.string().optional(),
+    photo_alt: z.string().optional(),
     description: z.string(),
     image: z.string().optional(),
     modes: z.array(z.string()).default([]),
@@ -200,39 +266,6 @@ const crew = defineCollection({
   }),
 });
 
-const duskPrograms = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/dusk-programs' }),
-  schema: z.object({
-    num: z.string(),
-    slug: z.string(),
-    title: z.string(),
-    body: z.string(),
-    tags: z.array(z.string()).default([]),
-    status: z.enum(['live', 'soon']).default('soon'),
-    order: z.number().int().default(99),
-  }),
-});
-
-const kinderPakete = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/kinder-pakete' }),
-  schema: z.object({
-    slug: z.string(),
-    crew_name: z.string(),
-    crew_size: z.string(),
-    age_range: z.string().optional(),
-    duration: z.string().optional(),
-    location: z.string().optional(),
-    price_from_eur: z.number(),
-    price_label: z.string().default('Gesamt-Paket'),
-    badge: z.string().optional(),
-    cta_label: z.string().optional(),
-    image: z.string().optional(),
-    featured: z.boolean().default(false),
-    includes: z.array(z.string()).default([]),
-    order: z.number().int().default(99),
-  }),
-});
-
 const pantrySkus = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/pantry-skus' }),
   schema: z.object({
@@ -248,16 +281,15 @@ const pantrySkus = defineCollection({
 
 export const collections = {
   home,
+  karte,
   catering,
   tisch,
-  dusk,
+  winter,
+  spiel,
   kinder,
   pantry,
   story,
-  'live-notes': liveNotes,
   standorte,
   crew,
-  'dusk-programs': duskPrograms,
-  'kinder-pakete': kinderPakete,
   'pantry-skus': pantrySkus,
 };

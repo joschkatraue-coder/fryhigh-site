@@ -7,8 +7,9 @@
 // Env-Vars (in wrangler.toml [vars]):
 //   FROM_EMAIL   = "catering-form@fryhigh.de"   (TBD: DNS-Verify in Resend)
 //   TO_EMAIL     = "info@fryhigh.de"
-//   ALLOW_ORIGIN = "https://fryhigh.de"
+//   ALLOW_ORIGIN = "https://fryhigh.de,https://www.fryhigh.de,https://fryhigh-site.pages.dev"  (Liste; Origin-Echo nur bei Treffer)
 //
+// Ohne RESEND_API_KEY antwortet der Worker 503 { ok:false, error:'mail not configured' }; kein Scheinerfolg.
 // Caveman: ein File, eine Function. Keine Routing-Library, kein Framework.
 
 const CORS = (origin) => ({
@@ -16,7 +17,16 @@ const CORS = (origin) => ({
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Max-Age': '86400',
+  Vary: 'Origin',
 });
+
+// ALLOW_ORIGIN ist eine kommagetrennte Liste. Origin-Echo nur bei Treffer, sonst erster Eintrag
+// (der Browser blockt die Antwort dann korrekt).
+function resolveOrigin(request, env) {
+  const list = String(env.ALLOW_ORIGIN ?? 'https://fryhigh.de').split(',').map((s) => s.trim()).filter(Boolean);
+  const reqOrigin = request.headers.get('Origin');
+  return reqOrigin && list.includes(reqOrigin) ? reqOrigin : list[0];
+}
 
 const json = (body, status, origin) =>
   new Response(JSON.stringify(body), {
@@ -34,7 +44,7 @@ const isEmail = (s) => typeof s === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.tes
 
 export default {
   async fetch(request, env) {
-    const origin = env.ALLOW_ORIGIN ?? 'https://fryhigh.de';
+    const origin = resolveOrigin(request, env);
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS(origin) });
@@ -58,7 +68,9 @@ export default {
     const eventDate = String(data.event_date ?? '').trim().slice(0, 32);
     const pax = String(data.pax ?? '').trim().slice(0, 8);
     const gate = String(data.gate ?? '').trim().slice(0, 32);
-    const cargo = String(data.cargo ?? '').trim().slice(0, 4000);
+    const phone = String(data.phone ?? '').trim().slice(0, 40);
+    // Formular (Stand 2026-09-11) sendet "nachricht"; "cargo" bleibt für den alten Client lesbar.
+    const cargo = String(data.nachricht ?? data.cargo ?? '').trim().slice(0, 4000);
 
     if (!name || !isEmail(email) || !eventDate) {
       return json({ error: 'missing required fields (name, email, event_date)' }, 422, origin);
@@ -69,18 +81,20 @@ export default {
       <h2>Neue Catering-Anfrage</h2>
       <p><strong>Name:</strong> ${escape(name)}<br/>
          <strong>E-Mail:</strong> <a href="mailto:${escape(email)}">${escape(email)}</a><br/>
+         <strong>Telefon:</strong> ${escape(phone || '–')}<br/>
          <strong>Event-Datum:</strong> ${escape(eventDate)}<br/>
          <strong>Gäste:</strong> ${escape(pax)}<br/>
-         <strong>Event-Typ:</strong> ${escape(gate)}</p>
-      <h3>Cargo Manifest</h3>
+         <strong>Anlass:</strong> ${escape(gate)}</p>
+      <h3>Nachricht</h3>
       <pre style="white-space:pre-wrap;font-family:inherit">${escape(cargo)}</pre>
       <hr/>
       <p style="color:#888;font-size:12px">Source: ${escape(data.source || '')} · Submitted: ${escape(data.ts || '')}</p>
     `;
 
+    // Ohne Resend-Key kein Scheinerfolg: 503, das Frontend zeigt den Mail-Link auf info@fryhigh.de.
     if (!env.RESEND_API_KEY) {
-      console.warn('RESEND_API_KEY missing — echo-only mode');
-      return json({ ok: true, mode: 'echo', subject }, 200, origin);
+      console.error('RESEND_API_KEY missing — mail not configured', { subject });
+      return json({ ok: false, error: 'mail not configured' }, 503, origin);
     }
 
     const resend = await fetch('https://api.resend.com/emails', {

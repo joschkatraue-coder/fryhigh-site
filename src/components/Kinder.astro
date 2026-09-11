@@ -1,280 +1,149 @@
 ---
-import type { CollectionEntry } from "astro:content";
+import { getEntry } from "astro:content";
 import FloatingMascot from "./FloatingMascot.astro";
 
+interface KidsItem { name: string; desc: string; price?: string; }
 interface Props {
   eyebrow: string;
   headline: string;
   headline_accent?: string;
   intro: string;
-  pakete: CollectionEntry<"kinder-pakete">[];
+  kids?: KidsItem[];
+  // F21 (Joschka, 2026-09-11): Gruppenrabatt und Kuchen-Pauschale nennen.
+  group_note?: string;
 }
 
-const { eyebrow, headline, headline_accent, intro, pakete } = Astro.props;
-const sorted = [...pakete].sort((a, b) => a.data.order - b.data.order);
+const {
+  eyebrow,
+  headline,
+  headline_accent,
+  intro,
+  kids: kidsProp,
+  group_note = "Ab 20 Personen gibt es 10 % auf alles. Mitgebrachter Kuchen: 15 € Servicepauschale.",
+} = Astro.props;
+
+// Kids-Karte aus karte.md (Namen, Beschreibung, Preis sobald eingetragen). Prop übersteuert.
+const karte = kidsProp ? undefined : await getEntry("karte", "karte");
+const kids: KidsItem[] = kidsProp ?? karte?.data.kids.items ?? [];
 ---
 <section id="kinder" class="kinder has-mascot">
   <FloatingMascot
     image="06_Pinguin_Fries_Champignon.png"
-    size={130}
+    size={120}
     rotate={-12}
-    bottom="14%"
-    left="3%"
-  />
-  <FloatingMascot
-    image="08_Seehund_Fries_Garnelen.png"
-    size={110}
-    rotate={8}
-    top="18%"
-    right="4%"
+    top="40px"
+    right="2.5%"
   />
 
   <div class="bg-shapes" aria-hidden="true">
     <span class="shape shape-yellow"></span>
     <span class="shape shape-pink"></span>
-    <span class="shape shape-orange"></span>
   </div>
 
-  <header class="kinder-lead">
-    <div class="kinder-lead-copy">
-      <img
-        src="/lockups/junior-crew.svg"
-        alt="Junior Crew · Fry High"
-        class="sub-lockup"
-        width="200"
-        height="80"
-      />
+  <header class="lead">
+    <div class="lead-copy">
+      <!-- Junior-Crew-Lockup (public/lockups/junior-crew.svg) inline, damit Anton und JetBrains Mono greifen. -->
+      <svg class="sub-lockup" viewBox="0 0 800 240" role="img" aria-label="Junior Crew · Fry High">
+        <g transform="translate(400,42)">
+          <rect x="-90" y="-16" width="180" height="32" class="lk-tag-bg" />
+          <text x="0" y="6" class="lk-mono lk-tag-text" font-size="13" text-anchor="middle" letter-spacing="6">FRY HIGH ·</text>
+        </g>
+        <text x="400" y="138" class="lk-display" font-size="92" text-anchor="middle" letter-spacing="2">JUNIOR CREW</text>
+        <g class="lk-rule" stroke-width="2">
+          <line x1="180" y1="170" x2="385" y2="170" />
+          <line x1="415" y1="170" x2="620" y2="170" />
+        </g>
+        <circle cx="400" cy="170" r="5" class="lk-dot" />
+        <text x="400" y="204" class="lk-mono" font-size="15" text-anchor="middle" letter-spacing="8">KINDERGEBURTSTAG · AB 4 JAHRE</text>
+      </svg>
       <span class="eyebrow">{eyebrow}</span>
       <h2>
         {headline}
         {headline_accent && (<><br /><span class="acc">{headline_accent}</span></>)}
       </h2>
     </div>
-    <p class="lead-text">{intro}</p>
+    <p class="intro">{intro}</p>
   </header>
 
-  <aside class="zoo-combo" aria-label="Kombi-Tag: Kindergeburtstag plus Zoo am Meer">
-    <header class="zc-head">
-      <span class="zc-eyebrow">Kombi · Crew + Zoo am Meer</span>
-      <h3>
-        Pommes-Mittag.<br />
-        <span class="zc-acc">Zoo-Nachmittag.</span><br />
-        Eis-Runde zurück.
-      </h3>
-      <p class="zc-lead">
-        Zoo am Meer ist <strong>5 Minuten zu Fuß</strong> weg. Wir blocken eure Crew und Karte für die ganze Geburtstags-Schicht — kommt zurück wann ihr wollt. Eintritt Zoo nicht inklusive, aber Family-Ticket-Tipp gibt's per Mail dazu.
-      </p>
-      <svg class="zc-scribble" viewBox="0 0 120 36" aria-hidden="true">
-        <path d="M4 18 C 28 -2, 60 38, 92 16 L 86 12 M 92 16 L 87 22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </header>
-
-    <ol class="zc-flow" role="list">
-      <li class="zc-step">
-        <span class="zc-num">01</span>
-        <svg class="zc-icon" viewBox="0 0 32 32" aria-hidden="true">
-          <path d="M9 12h14l-1.6 16H10.6L9 12ZM9 12v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2M12 16v6M16 14v8M20 16v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <h4>Boarding · 11 h</h4>
-        <p>Crew anheuern. Kappe auf. Karte besprechen.</p>
-      </li>
-      <li class="zc-step">
-        <span class="zc-num">02</span>
-        <svg class="zc-icon" viewBox="0 0 32 32" aria-hidden="true">
-          <path d="M6 14h20l-2 14H8L6 14Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M10 8v8M14 6v10M18 8v8M22 7v9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <h4>Loaded Fries</h4>
-        <p>Kindgerechte Karte. Pommes-Mal-Aktion.</p>
-      </li>
-      <li class="zc-step">
-        <span class="zc-num">03</span>
-        <svg class="zc-icon" viewBox="0 0 32 32" aria-hidden="true">
-          <path d="M16 4c-3.4 0-5.5 2.2-5.5 5.5v8c0 2 1 3.5 2.6 4.6L11 28h10l-2.1-5.9c1.6-1.1 2.6-2.6 2.6-4.6v-8C21.5 6.2 19.4 4 16 4Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-          <circle cx="13.5" cy="11" r="0.9" fill="currentColor"/>
-          <circle cx="18.5" cy="11" r="0.9" fill="currentColor"/>
-        </svg>
-        <h4>Zoo-Pause</h4>
-        <p>5 Min Fußweg · Pinguine, Eisbär, Seehunde.</p>
-      </li>
-      <li class="zc-step">
-        <span class="zc-num">04</span>
-        <svg class="zc-icon" viewBox="0 0 32 32" aria-hidden="true">
-          <path d="M10 14h12L16 28 10 14Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M9 14c0-3.9 3.1-7 7-7s7 3.1 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          <path d="M11 10c0.6-0.6 1.5-1 2.5-1M14 6c0.6-0.6 1.5-1 2.5-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-        </svg>
-        <h4>Eis-Runde</h4>
-        <p>Zurück zur Crew. Foto-Bereich. Stempel.</p>
-      </li>
-    </ol>
-  </aside>
-
-  <ol class="kinder-grid" role="list">
-    {sorted.map((p, i) => {
-      const d = p.data;
-      const num = String(i + 1).padStart(2, "0");
-      const cargoSeed = `Kindergeburtstag · ${d.crew_name}\n· ${d.crew_size}, ${d.age_range ?? ""}, ${d.duration ?? ""}\n· Datum / Uhrzeit:\n· Allergien / Spezial-Wünsche:\n· Combo mit Zoo-Besuch? (ja / nein):`;
-      return (
-        <li class:list={["crew-card", { featured: d.featured }]}>
-          {d.badge && <span class="crew-badge">{d.badge}</span>}
-
-          <div class="crew-img">
-            {d.image && (
-              <img
-                src={`/cutouts/${d.image}`}
-                alt={d.crew_name}
-                loading="lazy"
-                decoding="async"
-              />
-            )}
-          </div>
-
-          <div class="crew-body">
-            <span class="crew-tag">Crew · {num}</span>
-            <h3 class="crew-name">{d.crew_name}</h3>
-
-            <ul class="kid-icons" role="list" aria-label="Was die Kinder erleben">
-              <li title="Loaded Fries kindgerecht">
-                <svg viewBox="0 0 32 32" aria-hidden="true">
-                  <path d="M6 14h20l-2 14H8L6 14Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
-                  <path d="M10 8v8M14 6v10M18 8v8M22 7v9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                </svg>
-              </li>
-              <li title="Kapitänsmütze">
-                <svg viewBox="0 0 32 32" aria-hidden="true">
-                  <path d="M5 22h22l-2-7a9 9 0 0 0-18 0l-2 7Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
-                  <path d="M5 22h22M14 14h4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                </svg>
-              </li>
-              <li title="Pommes-Mal-Aktion">
-                <svg viewBox="0 0 32 32" aria-hidden="true">
-                  <path d="M5 27l8-8M13 19l5 5L29 13a3.5 3.5 0 0 0-5-5L13 19Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
-                  <path d="M5 27l-1 2 2-1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                </svg>
-              </li>
-              <li title="Foto-Bereich · Pilot-Stempel">
-                <svg viewBox="0 0 32 32" aria-hidden="true">
-                  <rect x="4" y="10" width="24" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2.2"/>
-                  <path d="M11 10l1.6-3h6.8l1.6 3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
-                  <circle cx="16" cy="18" r="4" fill="none" stroke="currentColor" stroke-width="2.2"/>
-                </svg>
-              </li>
-            </ul>
-
-            <dl class="crew-meta">
-              <div><dt>Crew</dt><dd>{d.crew_size}</dd></div>
-              {d.age_range && <div><dt>Alter</dt><dd>{d.age_range}</dd></div>}
-              {d.duration && <div><dt>Dauer</dt><dd>{d.duration}</dd></div>}
-              {d.location && <div><dt>Ort</dt><dd>{d.location}</dd></div>}
-            </dl>
-
-            <ul class="crew-includes">
-              {d.includes.map((line) => <li>{line}</li>)}
-            </ul>
-
-            <div class="crew-price">
-              <span class="price-from">ab</span>
-              <span class="price-num">{d.price_from_eur}&nbsp;€</span>
-              <span class="price-label">{d.price_label}</span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            class="crew-cta"
-            data-crew-cta
-            data-crew={d.crew_name}
-            data-cargo={cargoSeed}
-            aria-label={`${d.cta_label ?? d.crew_name + ' anheuern'} — springt zur Catering-Anfrage`}
-          >
-            <span>{d.cta_label ?? `${d.crew_name} anheuern`}</span>
-            <span class="arr" aria-hidden="true">→</span>
-          </button>
-        </li>
-      );
-    })}
+  <ol class="steps" role="list" aria-label="Geburtstag im Zoo am Meer in drei Schritten">
+    <li class="step">
+      <span class="step-num" aria-hidden="true">01</span>
+      <h3>Tisch anfragen</h3>
+      <p>Anlass Geburtstag, Anzahl der Kinder dazu.</p>
+    </li>
+    <li class="step step--kids">
+      <span class="step-num" aria-hidden="true">02</span>
+      <h3>Kids-Karte</h3>
+      {kids.length > 0 ? (
+        <ul class="kids" role="list">
+          {kids.map((k) => (
+            <li>
+              <span class="k-name">{k.name}</span>
+              <span class="k-desc">{k.desc}</span>
+              {k.price && <span class="k-price">{k.price}</span>}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>Kleiner Eisbär, Baby-Pinguin, Mini-Pilot.</p>
+      )}
+    </li>
+    <li class="step step--note">
+      <span class="step-num" aria-hidden="true">03</span>
+      <span class="step-tag">Sag Bescheid</span>
+      <h3>Allergien &amp; Wünsche</h3>
+      <p>Vegan, glutenfrei, kein Schwein? Schreib es in die Anfrage, wir bauen die Karte um.</p>
+    </li>
   </ol>
 
-  <ul class="kinder-extras" role="list">
-    <li>
-      <span class="ex-tag">Inklusive</span>
-      <h4>Foto-Bereich</h4>
-      <p>Pilot-Stempel, Kapitänsmütze, Holz-Steuerrad. Eltern dürfen knipsen — kein Pflicht-Hashtag, kein Insta-Stress.</p>
-    </li>
-    <li>
-      <span class="ex-tag">Optional</span>
-      <h4>Allergien & Spezial-Wünsche</h4>
-      <p>Vegan, glutenfrei, no Schwein, no Mais — schreib's in die Cargo-Manifest-Zeile. Wir bauen die Karte um.</p>
-    </li>
-    <li>
-      <span class="ex-tag">Wichtig</span>
-      <h4>Vorlauf 14 Tage</h4>
-      <p>Crew + Karte werden für euch geblockt. Slots Samstag mittag gehen früh raus — lieber gleich anfragen.</p>
-    </li>
-  </ul>
+  <div class="foot">
+    <div class="foot-notes">
+      <p class="zoo-line">Zoo drumherum: Pinguine vor dem Essen, Eisbär danach. Oder andersrum.</p>
+      {group_note && <p class="group-note">{group_note}</p>}
+    </div>
+    <a
+      href="#tisch"
+      class="fh-btn"
+      data-kinder-cta
+      aria-label="Geburtstags-Tisch anfragen, springt zur Tischanfrage"
+    >
+      <span>Geburtstags-Tisch anfragen</span>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+    </a>
+  </div>
 </section>
 
 <script>
-  // Hand-Off: Crew-CTA → Catering-Form mit Gate=Privat + Cargo-Seed.
-  // Caveman: läuft einmal beim DOM-Ready, kein Cleanup nötig.
-  document.querySelectorAll<HTMLButtonElement>('[data-crew-cta]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const crew = btn.dataset.crew ?? '';
-      const cargo = btn.dataset.cargo ?? '';
-
-      // Stamp-Animation auf Button (visuelles Feedback)
-      btn.classList.add('stamping');
-      window.setTimeout(() => btn.classList.remove('stamping'), 480);
-
-      const form = document.querySelector<HTMLFormElement>('[data-catering-form]');
-      const target = document.getElementById('catering');
-
-      if (form) {
-        // Privat-Gate clicken (Form-Logik in Catering.astro setzt active + hidden input)
-        const privatGate = form.querySelector<HTMLButtonElement>('[data-gate-value="Privat"]');
-        if (privatGate) privatGate.click();
-
-        const cargoTa = form.querySelector<HTMLTextAreaElement>('textarea[name="cargo"]');
-        if (cargoTa) {
-          cargoTa.value = cargo;
-        }
-
-        // Optional: Pax-Slider auf Minimum (50, Kindergeburtstag selten >50)
-        const pax = form.querySelector<HTMLInputElement>('[data-pax-range]');
-        if (pax) {
-          pax.value = String(pax.min || 50);
-          pax.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-      }
-
-      // Smooth scroll zur Catering-Sektion
-      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-      // Nach dem Scroll: Cargo-Feld fokussieren (wartet auf Scroll-Ende, fallback 700ms)
+  // CTA: zum Tisch-Formular (liegt unter Kinder) scrollen und Anlass "Geburtstag" vorwählen.
+  document.querySelectorAll<HTMLAnchorElement>("[data-kinder-cta]").forEach((cta) => {
+    cta.addEventListener("click", (e) => {
+      const target = document.getElementById("tisch");
+      if (!target) return; // ohne Ziel greift der normale Anker
+      e.preventDefault();
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      target.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+      document.dispatchEvent(new CustomEvent("tisch:preset", { detail: { anlass: "Geburtstag" } }));
+      // Fallback für den Fall, dass das Tisch-Skript den Event nicht kennt.
       window.setTimeout(() => {
-        const cargoTa = document.querySelector<HTMLTextAreaElement>('[data-catering-form] textarea[name="cargo"]');
-        cargoTa?.focus();
-      }, 700);
-
-      // Telemetry-Hook (optional, no-op falls nicht gesetzt)
-      if (typeof window !== 'undefined' && (window as any).fryhighTrack) {
-        (window as any).fryhighTrack('kinder_handoff', { crew });
-      }
+        const occ = document.querySelector<HTMLButtonElement>('[data-table-form] .fp-occ[data-occasion="Geburtstag"]');
+        if (occ && !occ.classList.contains("active")) occ.click();
+      }, 400);
     });
   });
 </script>
 
 <style>
   .kinder {
+    --mono-min: 0.72rem;
+    --muted: color-mix(in oklab, var(--ink) 75%, transparent);
     position: relative;
     overflow: hidden;
-    padding: clamp(60px, 9vw, 110px) clamp(20px, 6vw, 80px);
-    background: linear-gradient(180deg, var(--cream-warm) 0%, var(--cream) 60%, var(--cream-warm) 100%);
+    padding: clamp(56px, 7vw, 88px) clamp(20px, 6vw, 80px);
+    background: var(--cream);
     color: var(--ink);
   }
 
-  /* Playful background shapes — Junior Crew energy ohne Cartoon-Slop */
+  /* Zwei leise Farbnebel, Junior-Crew-Energie ohne Cartoon */
   .bg-shapes {
     position: absolute;
     inset: 0;
@@ -285,78 +154,79 @@ const sorted = [...pakete].sort((a, b) => a.data.order - b.data.order);
     position: absolute;
     border-radius: 50%;
     filter: blur(2px);
-    opacity: 0.55;
+    opacity: 0.5;
   }
   .shape-yellow {
-    top: -120px; right: -80px;
+    top: -140px; right: -100px;
     width: 360px; height: 360px;
-    background: radial-gradient(circle, color-mix(in oklab, var(--yellow) 60%, transparent) 0%, transparent 70%);
+    background: radial-gradient(circle, color-mix(in oklab, var(--yellow) 55%, transparent) 0%, transparent 70%);
   }
   .shape-pink {
-    bottom: -100px; left: 12%;
+    bottom: -120px; left: 10%;
     width: 280px; height: 280px;
-    background: radial-gradient(circle, color-mix(in oklab, var(--pink) 35%, transparent) 0%, transparent 70%);
-  }
-  .shape-orange {
-    top: 38%; left: -120px;
-    width: 240px; height: 240px;
-    background: radial-gradient(circle, color-mix(in oklab, var(--orange) 30%, transparent) 0%, transparent 70%);
+    background: radial-gradient(circle, color-mix(in oklab, var(--pink) 30%, transparent) 0%, transparent 70%);
   }
 
-  /* Lead row */
-  .kinder-lead {
+  /* ── Kopf ── */
+  .lead {
     position: relative;
     z-index: 1;
+    /* global.css .lead setzt italic; Anton hat keinen Kursivschnitt (CI §4.1). */
+    font-style: normal;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 48px;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 40px;
     align-items: end;
     max-width: var(--container-wide);
-    margin: 0 auto var(--space-8);
+    margin: 0 auto var(--space-6);
   }
 
   .sub-lockup {
-    display: block;
-    height: 64px;
-    width: auto;
-    margin-bottom: var(--space-4);
-    /* Sub-Lockup ist navy/pink — kein Filter nötig auf cream */
+    width: min(220px, 100%);
+    height: auto;
+    margin-bottom: 14px;
   }
+  .lk-display { font-family: var(--font-display); fill: var(--navy); }
+  .lk-mono { font-family: var(--font-mono); font-weight: 700; fill: var(--navy); }
+  .lk-tag-bg { fill: var(--navy); }
+  .lk-tag-text { fill: var(--cream); }
+  .lk-rule { stroke: var(--navy); }
+  .lk-dot { fill: var(--pink); }
 
   .kinder .eyebrow {
     font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.22em;
+    font-size: 0.75rem;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--orange);
+    color: var(--navy);
+    opacity: 1;
     display: inline-block;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
 
   .kinder h2 {
     font-family: var(--font-display);
-    font-size: clamp(2.25rem, 6vw, 4.5rem);
+    font-size: clamp(2.25rem, 5.5vw, 4rem);
     line-height: 0.96;
     letter-spacing: -0.5px;
     text-transform: uppercase;
     color: var(--navy);
     margin: 0;
   }
-
   .kinder h2 .acc { color: var(--pink); }
 
-  .lead-text {
+  .intro {
     font-family: var(--font-body);
     font-size: 1.0625rem;
     font-style: italic;
-    color: color-mix(in oklab, var(--ink) 75%, transparent);
+    color: var(--ink);
     line-height: 1.6;
     margin: 0;
     max-width: 52ch;
   }
 
-  /* Card grid */
-  .kinder-grid {
+  /* ── Drei Karten ── */
+  .steps {
     position: relative;
     z-index: 1;
     list-style: none;
@@ -364,282 +234,37 @@ const sorted = [...pakete].sort((a, b) => a.data.order - b.data.order);
     padding: 0;
     max-width: var(--container-wide);
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 22px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
   }
-
-  .crew-card {
+  .step {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    background: var(--cream);
-    border: 2px solid var(--navy);
-    box-shadow: 0 6px 0 0 var(--navy), 0 18px 30px -12px rgba(20, 30, 50, 0.18);
-    transition:
-      transform 280ms var(--ease-out),
-      box-shadow 280ms var(--ease-out);
-  }
-
-  .crew-card:hover {
-    transform: translateY(-6px) rotate(-0.4deg);
-    box-shadow: 0 10px 0 0 var(--navy), 0 28px 44px -10px rgba(20, 30, 50, 0.28);
-  }
-
-  .crew-card.featured {
-    background: var(--navy);
-    color: var(--cream);
-    transform: translateY(-8px);
-    box-shadow: 0 8px 0 0 var(--pink), 0 24px 44px -12px rgba(20, 30, 50, 0.4);
-  }
-
-  .crew-card.featured:hover {
-    transform: translateY(-14px) rotate(-0.4deg);
-  }
-
-  .crew-badge {
-    position: absolute;
-    top: -14px;
-    right: 18px;
-    background: var(--orange);
-    color: var(--cream);
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    padding: 6px 12px;
-    border: 2px solid var(--cream);
-    transform: rotate(3deg);
-    z-index: 2;
-    box-shadow: 0 2px 0 0 var(--navy);
-  }
-
-  .crew-img {
-    aspect-ratio: 5 / 4;
-    background:
-      radial-gradient(circle at 50% 110%, color-mix(in oklab, var(--yellow) 30%, transparent) 0%, transparent 60%),
-      linear-gradient(180deg, var(--cream-warm) 0%, var(--cream) 100%);
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    border-bottom: 2px solid var(--navy);
-    position: relative;
-  }
-
-  .crew-card.featured .crew-img {
-    background:
-      radial-gradient(circle at 50% 110%, color-mix(in oklab, var(--pink) 45%, transparent) 0%, transparent 60%),
-      linear-gradient(180deg, color-mix(in oklab, var(--navy) 92%, var(--navy-deep)) 0%, var(--navy) 100%);
-    border-bottom-color: var(--pink);
-  }
-
-  .crew-img img {
-    width: 78%;
-    height: 78%;
-    object-fit: contain;
-    filter:
-      drop-shadow(2px 2px 0 white)
-      drop-shadow(-2px -2px 0 white)
-      drop-shadow(2px -2px 0 white)
-      drop-shadow(-2px 2px 0 white)
-      drop-shadow(0 14px 20px rgba(0, 0, 0, 0.3));
-    transition: transform 360ms var(--ease-out);
-  }
-
-  .crew-card:hover .crew-img img {
-    transform: scale(1.06) rotate(-3deg);
-  }
-
-  .crew-body {
-    padding: 22px 22px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    flex: 1;
-  }
-
-  .crew-tag {
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: color-mix(in oklab, currentColor 55%, transparent);
-  }
-
-  .crew-card.featured .crew-tag { color: var(--pink); opacity: 1; }
-
-  .crew-name {
-    font-family: var(--font-display);
-    font-size: 1.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    line-height: 1;
-    margin: 0;
-    color: var(--navy);
-  }
-
-  .crew-card.featured .crew-name { color: var(--cream); }
-
-  .crew-meta {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px 14px;
-    padding: 12px 0;
-    border-top: 1px dashed color-mix(in oklab, currentColor 35%, transparent);
-    border-bottom: 1px dashed color-mix(in oklab, currentColor 35%, transparent);
-    margin: 0;
-  }
-  .crew-meta > div { display: flex; flex-direction: column; gap: 2px; }
-  .crew-meta dt {
-    font-family: var(--font-mono);
-    font-size: 0.56rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: color-mix(in oklab, currentColor 55%, transparent);
-    margin: 0;
-  }
-  .crew-meta dd {
-    font-family: var(--font-display);
-    font-size: 1.0625rem;
-    color: currentColor;
-    margin: 0;
-    letter-spacing: 0.3px;
-  }
-
-  .crew-includes {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    font-family: var(--font-body);
-    font-size: 0.94rem;
-    line-height: 1.4;
-  }
-  .crew-includes li {
-    padding-left: 20px;
-    position: relative;
-    color: color-mix(in oklab, currentColor 85%, transparent);
-  }
-  .crew-includes li::before {
-    content: '✓';
-    position: absolute;
-    left: 0;
-    top: 0;
-    color: var(--orange);
-    font-weight: 700;
-  }
-  .crew-card.featured .crew-includes li::before { color: var(--pink); }
-
-  .crew-price {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    padding-top: 12px;
-    margin-top: auto;
-    border-top: 1px solid color-mix(in oklab, currentColor 20%, transparent);
-  }
-  .price-from {
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: color-mix(in oklab, currentColor 55%, transparent);
-  }
-  .price-num {
-    font-family: var(--font-display);
-    font-size: 2rem;
-    line-height: 1;
-    color: var(--orange);
-    letter-spacing: -0.5px;
-  }
-  .crew-card.featured .price-num { color: var(--pink); }
-  .price-label {
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: color-mix(in oklab, currentColor 55%, transparent);
-  }
-
-  /* CTA */
-  .crew-cta {
-    background: var(--orange);
-    color: var(--cream);
-    border: none;
-    border-top: 2px solid var(--navy);
-    padding: 18px 22px;
-    font-family: var(--font-display);
-    font-size: 1.0625rem;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-    transition: background var(--duration-fast) var(--ease-out);
-    border-radius: 0;
-  }
-  .crew-card.featured .crew-cta {
-    background: var(--pink);
-    color: var(--cream);
-    border-top-color: var(--pink);
-  }
-  .crew-cta:hover { background: color-mix(in oklab, var(--orange) 85%, black); }
-  .crew-card.featured .crew-cta:hover { background: color-mix(in oklab, var(--pink) 85%, black); }
-  .crew-cta .arr {
-    display: inline-block;
-    transition: transform 200ms var(--ease-out);
-    font-size: 1.25rem;
-  }
-  .crew-cta:hover .arr { transform: translateX(6px); }
-
-  /* Click-stamp Animation — kurzes "Boarding-Stempel"-Feedback */
-  .crew-cta.stamping {
-    animation: stamp 480ms var(--ease-out);
-  }
-  @keyframes stamp {
-    0%   { transform: scale(1); }
-    20%  { transform: scale(0.96); }
-    40%  { transform: scale(1.02); box-shadow: inset 0 0 0 3px var(--cream); }
-    100% { transform: scale(1); box-shadow: inset 0 0 0 0 transparent; }
-  }
-
-  /* Extras row */
-  .kinder-extras {
-    position: relative;
-    z-index: 1;
-    list-style: none;
-    margin: var(--space-8) auto 0;
-    padding: 0;
-    max-width: var(--container-wide);
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 22px;
-  }
-  .kinder-extras > li {
-    padding: 24px;
+    padding: 22px 22px 22px 24px;
     background: color-mix(in oklab, var(--cream) 92%, var(--navy));
     border-left: 4px solid var(--orange);
     display: flex;
     flex-direction: column;
     gap: 8px;
+    min-width: 0;
   }
-  .kinder-extras > li:nth-child(2) { border-left-color: var(--pink); }
-  .kinder-extras > li:nth-child(3) { border-left-color: var(--yellow); }
+  .step:nth-child(2) { border-left-color: var(--pink); }
+  .step:nth-child(3) { border-left-color: var(--navy); }
 
-  .ex-tag {
+  .step-num {
     font-family: var(--font-mono);
-    font-size: 0.62rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--orange);
+    font-size: var(--mono-min);
+    letter-spacing: 0.18em;
+    color: var(--muted);
   }
-  .kinder-extras > li:nth-child(2) .ex-tag { color: var(--pink); }
-  .kinder-extras > li:nth-child(3) .ex-tag { color: color-mix(in oklab, var(--yellow) 60%, var(--navy)); }
-
-  .kinder-extras h4 {
+  .step-tag {
+    font-family: var(--font-mono);
+    font-size: var(--mono-min);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--navy);
+  }
+  .step h3 {
     font-family: var(--font-display);
     font-size: 1.25rem;
     text-transform: uppercase;
@@ -648,236 +273,93 @@ const sorted = [...pakete].sort((a, b) => a.data.order - b.data.order);
     margin: 0;
     line-height: 1;
   }
-  .kinder-extras p {
+  .step p {
     font-family: var(--font-body);
-    font-size: 0.94rem;
+    font-size: 0.95rem;
     line-height: 1.5;
-    color: color-mix(in oklab, var(--ink) 80%, transparent);
+    color: var(--ink);
     margin: 0;
   }
 
-  @media (max-width: 980px) {
-    .kinder-grid { grid-template-columns: 1fr; max-width: 480px; }
-    .kinder-extras { grid-template-columns: 1fr; }
-    .crew-card.featured { transform: none; }
-    .crew-card.featured:hover { transform: translateY(-6px) rotate(-0.4deg); }
-    .kinder-lead { grid-template-columns: 1fr; align-items: start; gap: 20px; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .crew-card, .crew-card:hover,
-    .crew-img img, .crew-card:hover .crew-img img,
-    .crew-cta .arr, .crew-cta:hover .arr {
-      transform: none;
-      transition: none;
-    }
-    .crew-cta.stamping { animation: none; }
-  }
-
-  /* ──────────── Zoo-Combo Strip ──────────── */
-  .zoo-combo {
-    position: relative;
-    z-index: 1;
-    max-width: var(--container-wide);
-    margin: 0 auto var(--space-7);
-    padding: 28px 28px 32px;
-    background:
-      linear-gradient(135deg,
-        color-mix(in oklab, var(--pink) 12%, var(--cream)) 0%,
-        color-mix(in oklab, var(--yellow) 18%, var(--cream)) 100%);
-    border: 2.5px dashed var(--navy);
-    border-radius: 8px;
-    display: grid;
-    grid-template-columns: 0.9fr 1.4fr;
-    gap: 32px;
-    align-items: start;
-  }
-
-  .zc-head {
-    position: relative;
-  }
-
-  .zc-eyebrow {
-    display: inline-block;
-    font-family: var(--font-mono);
-    font-size: 0.66rem;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--pink);
-    margin-bottom: 12px;
-    padding: 4px 10px;
-    background: var(--cream);
-    border: 1.5px solid var(--pink);
-    border-radius: 999px;
-  }
-
-  .zc-head h3 {
-    font-family: var(--font-display);
-    font-size: clamp(1.5rem, 3.2vw, 2.25rem);
-    line-height: 1;
-    text-transform: uppercase;
-    color: var(--navy);
-    margin: 0 0 14px;
-    letter-spacing: -0.3px;
-  }
-  .zc-head h3 .zc-acc {
-    color: var(--pink);
-    display: inline-block;
-    transform: rotate(-1.5deg);
-  }
-
-  .zc-lead {
-    font-family: var(--font-body);
-    font-size: 0.9375rem;
-    line-height: 1.55;
-    color: color-mix(in oklab, var(--ink) 80%, transparent);
-    margin: 0;
-  }
-  .zc-lead strong {
-    color: var(--orange);
-    font-weight: 600;
-    font-style: italic;
-  }
-
-  .zc-scribble {
-    position: absolute;
-    bottom: -8px;
-    right: -18px;
-    width: 90px;
-    height: 28px;
-    color: var(--orange);
-    transform: rotate(8deg);
-    pointer-events: none;
-  }
-
-  .zc-flow {
+  .kids {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-    position: relative;
+    gap: 6px;
   }
-  .zc-flow::before {
-    content: '';
-    position: absolute;
-    top: 38px;
-    left: 12%;
-    right: 12%;
-    height: 0;
-    border-top: 2px dashed color-mix(in oklab, var(--navy) 40%, transparent);
-    z-index: 0;
+  .kids li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    line-height: 1.4;
+    color: var(--ink);
+  }
+  .k-name {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--navy);
+  }
+  .k-desc { color: var(--ink); }
+  .k-price {
+    font-family: var(--font-mono);
+    font-size: var(--mono-min);
+    letter-spacing: 0.06em;
+    color: var(--navy);
+    margin-left: auto;
   }
 
-  .zc-step {
+  /* ── Fuß: Hinweise links, CTA rechts ── */
+  .foot {
     position: relative;
     z-index: 1;
+    max-width: var(--container-wide);
+    margin: var(--space-6) auto 0;
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
     align-items: center;
-    text-align: center;
-    gap: 8px;
-    padding: 10px 4px;
+    gap: 24px;
+    flex-wrap: wrap;
   }
-
-  .zc-num {
-    font-family: var(--font-mono);
-    font-size: 0.6rem;
-    letter-spacing: 0.2em;
-    color: color-mix(in oklab, var(--navy) 60%, transparent);
-  }
-
-  .zc-icon {
-    width: 44px;
-    height: 44px;
-    background: var(--cream);
-    color: var(--navy);
-    border: 2px solid var(--navy);
-    border-radius: 50%;
-    padding: 8px;
-    box-sizing: border-box;
-    transition: transform 220ms var(--ease-out), background 220ms var(--ease-out), color 220ms var(--ease-out);
-  }
-  .zc-step:nth-child(1) .zc-icon { color: var(--orange); border-color: var(--orange); }
-  .zc-step:nth-child(2) .zc-icon { color: var(--orange); border-color: var(--orange); }
-  .zc-step:nth-child(3) .zc-icon { color: var(--pink);   border-color: var(--pink); }
-  .zc-step:nth-child(4) .zc-icon { color: color-mix(in oklab, var(--yellow) 50%, var(--navy)); border-color: color-mix(in oklab, var(--yellow) 50%, var(--navy)); }
-
-  .zc-step:hover .zc-icon {
-    transform: scale(1.12) rotate(-6deg);
-    background: var(--navy);
-    color: var(--cream);
-  }
-
-  .zc-step h4 {
-    font-family: var(--font-display);
-    font-size: 1.0625rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--navy);
-    margin: 4px 0 0;
-    line-height: 1;
-  }
-
-  .zc-step p {
+  .foot-notes { display: grid; gap: 6px; max-width: 60ch; }
+  .zoo-line {
     font-family: var(--font-body);
-    font-size: 0.84rem;
-    line-height: 1.4;
-    color: color-mix(in oklab, var(--ink) 70%, transparent);
+    font-style: italic;
+    font-size: 1rem;
+    color: var(--ink);
     margin: 0;
-    max-width: 22ch;
+  }
+  .group-note {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.02em;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 0;
   }
 
-  /* ──────────── Kid-Icons-Row (in jeder Card) ──────────── */
-  .kid-icons {
-    list-style: none;
-    margin: 0;
-    padding: 10px 0;
-    display: flex;
-    gap: 10px;
-    justify-content: flex-start;
-    border-bottom: 1px dashed color-mix(in oklab, currentColor 35%, transparent);
+  .foot .fh-btn { gap: 10px; }
+  .foot .ico {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    transition: transform var(--duration-fast) var(--ease-out);
   }
-  .kid-icons li {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: color-mix(in oklab, var(--orange) 12%, var(--cream));
-    color: var(--orange);
-    border: 1.5px solid color-mix(in oklab, var(--orange) 55%, transparent);
-    display: grid;
-    place-items: center;
-    flex-shrink: 0;
-    transition: transform 200ms var(--ease-out);
-  }
-  .kid-icons li:hover {
-    transform: rotate(-8deg) scale(1.1);
-  }
-  .kid-icons svg {
-    width: 20px;
-    height: 20px;
-  }
-  .crew-card.featured .kid-icons li {
-    background: color-mix(in oklab, var(--pink) 22%, var(--navy));
-    color: var(--cream);
-    border-color: var(--pink);
-  }
+  .foot .fh-btn:hover .ico { transform: translateX(4px); }
 
-  /* Combo-Strip-Responsive */
   @media (max-width: 980px) {
-    .zoo-combo {
-      grid-template-columns: 1fr;
-      gap: 20px;
-    }
-    .zc-flow { grid-template-columns: 1fr 1fr; }
-    .zc-flow::before { display: none; }
-    .zc-scribble { display: none; }
+    .lead { grid-template-columns: 1fr; align-items: start; gap: 18px; }
+    .steps { grid-template-columns: 1fr; }
+    .foot { flex-direction: column; align-items: flex-start; }
   }
-  @media (max-width: 560px) {
-    .zc-flow { grid-template-columns: 1fr; }
-    .kid-icons { gap: 8px; }
-    .kid-icons li { width: 32px; height: 32px; }
-    .kid-icons svg { width: 18px; height: 18px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .foot .ico { transition: none; }
+    .foot .fh-btn:hover .ico { transform: none; }
   }
 </style>

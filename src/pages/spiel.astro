@@ -1,57 +1,132 @@
 ---
+// /spiel · Pommespilot. Inhalt aus src/content/spiel.md (P1); ohne die Datei greifen die Defaults.
+import { getEntry } from "astro:content";
 import MarketingLayout from "../layouts/MarketingLayout.astro";
 import PilotFlightGame from "../components/PilotFlightGame.astro";
 import Leaderboard from "../components/Leaderboard.astro";
+
+interface SpielData {
+  name: string;
+  contest_live: boolean;
+  prize_label: string;
+  prize_cap_eur: number;
+  redeem_location: string;
+  min_age: number;
+  valid_days: number;
+  teaser_eyebrow: string;
+  teaser_headline: string;
+  teaser_body: string;
+  teaser_cta: string;
+}
+
+const DEFAULTS: SpielData = {
+  name: "Pommespilot",
+  contest_live: false,
+  prize_label: "Ein 15-€-Gutschein für Fry High",
+  prize_cap_eur: 15,
+  redeem_location: "im Zoo am Meer oder am Foodtruck bei öffentlichen Events",
+  min_age: 18,
+  valid_days: 30,
+  teaser_eyebrow: "Pommespilot · Mini-Spiel",
+  teaser_headline: "Flieg. Sammel. Schmier nicht ab.",
+  teaser_body: "Zutaten einsammeln, Möwen und Ketchup ausweichen, nicht ins Wasser fallen. Ein Tipp reicht.",
+  teaser_cta: "Spielen",
+};
+
+let spiel: SpielData = DEFAULTS;
+try {
+  // @ts-ignore Collection „spiel“ kommt aus P1; fehlt sie, bleibt der Fallback.
+  const entry = await getEntry("spiel", "spiel");
+  if (entry && entry.data) spiel = { ...DEFAULTS, ...(entry.data as Partial<SpielData>) };
+} catch {
+  spiel = DEFAULTS;
+}
+
+const live = spiel.contest_live === true;
+const lcFirst = (s: string) => (s ? s.charAt(0).toLowerCase() + s.slice(1) : s);
+// Gewinn-Satz an genau einer Stelle gebaut; prize_cap_eur ist intern und bleibt unsichtbar.
+const prizeSentence = `Wer am Sonntag oben steht: ${lcFirst(spiel.prize_label)}, ${spiel.redeem_location}.`;
+const TERMS_VERSION = "2026-09-11";
+
+const description = live
+  ? `${spiel.name}: Zutaten sammeln, Möwen ausweichen, Wochenwertung. ${prizeSentence}`
+  : `${spiel.name}: Zutaten sammeln, Möwen ausweichen, Bestwert knacken. Die Wochenwertung mit Gewinn startet in Kürze.`;
 ---
-<MarketingLayout
-  title="Pilot Flight — Mini-Spiel · Fry High"
-  description="Fly den Captain durch die Pommes-Berge. Top-1 der Woche kriegt einen 20-Euro-Gutschein per Mail."
->
+<MarketingLayout title="Pommespilot · Mini-Spiel · Fry High" description={description}>
   <section class="spiel-hero">
     <div class="spiel-hero-inner">
-      <span class="spiel-eyebrow">Pilot Flight · Mini-Spiel</span>
-      <h1>Flieg den Captain<br/>durch die Pommes-Berge.</h1>
-      <p>
-        Tap, klick oder <kbd>Space</kbd> hält den Pilot in der Luft. Ohne Tap fällt er.
-        Jeder Berg, den du durchfliegst, ein Punkt. Wer am Ende der Woche oben steht,
-        kriegt am Sonntag einen <strong>20 € Gutschein</strong> per Mail —
-        einlösbar im Truck oder im Zoo am Meer.
+      <span class="spiel-eyebrow">{live ? "Gewinnspiel · Wochenwertung" : `${spiel.name} · Mini-Spiel`}</span>
+      <h1>Flieg. Sammel.<br />Schmier nicht ab.</h1>
+      <p class="spiel-lead">
+        Der Pilot reist, sammelt, kommt zurück und kocht. Hier fliegst du ihn über die Wesermündung:
+        Zutaten einsammeln, Möwen und Ketchup ausweichen, Wolkendecke und Wasser meiden.
+        Drei Zutaten einer Kreation geben Bonus. Die Kreationen im Spiel sind aus dem Archiv, die
+        Karte im Laden wechselt.
+        {live && <> {prizeSentence}</>}
       </p>
+      <ul class="spiel-rules-short" aria-label="Kurzregeln">
+        <li><strong>Steuern.</strong> Klick, Tipp oder Leertaste hebt, Loslassen sinkt.</li>
+        <li><strong>Punkte.</strong> Zutat 10, überflogene Möwe 1, drei Zutaten einer Kreation 50 extra.</li>
+        <li><strong>Schluss.</strong> Möwe, Ketchup, Wolkendecke oder Wasser.</li>
+      </ul>
     </div>
   </section>
 
-  <PilotFlightGame />
+  <PilotFlightGame contestLive={live} prizeLabel={prizeSentence} minAge={spiel.min_age} termsVersion={TERMS_VERSION} />
 
-  <section class="spiel-rules">
-    <div class="spiel-rules-inner">
-      <h2>Wie's läuft.</h2>
-      <ol>
-        <li>
-          <strong>Spielen.</strong> Klick auf <em>Abheben</em>, dann tap/klick/Space. Boden oder Berg = Crash.
-        </li>
-        <li>
-          <strong>Score einreichen.</strong> Nach dem Crash: E-Mail rein, Display-Name (öffentlich, freiwillig),
-          Einverständnis bestätigen.
-        </li>
-        <li>
-          <strong>Mail bestätigen.</strong> Wir schicken einen Bestätigungs-Link. Klick rein, Score zählt im
-          Leaderboard, du bist im Newsletter.
-        </li>
-        <li>
-          <strong>Wochen-Sieger.</strong> Sonntag-Abend: Top-1 kriegt automatisch einen Voucher-Code per Mail.
-          Gültig 30 Tage, einlösbar im Truck.
-        </li>
-      </ol>
-      <p class="spiel-rules-fineprint">
-        Mehrere Versuche pro Person ausdrücklich erwünscht. Bot-Versuche kicken wir raus.
-        Voucher nicht in bar auszahlbar, nicht kombinierbar mit anderen Aktionen.
-        Volljährig oder Erziehungsberechtigte fragen. Details:
-        <a href="/datenschutz">Datenschutz</a>.
+  <Leaderboard contestLive={live} prizeLabel={prizeSentence} />
+
+  <section class="spiel-flow">
+    <div class="spiel-flow-inner">
+      <span class="spiel-eyebrow">Wie es läuft</span>
+      <h2>Vier Schritte.</h2>
+      {live ? (
+        <ol>
+          <li>
+            <strong>Fliegen.</strong> Klick auf „Ballern wir los“, dann tippen, sammeln, ausweichen. Der Score steht
+            oben links, dein Bestwert daneben.
+          </li>
+          <li>
+            <strong>Eintragen.</strong> Nach dem Crash trägst du unter dem Spiel deine E-Mail ein. Spitzname ist
+            freiwillig und steht öffentlich in der Wertung. Zwei Haken sind Pflicht: Bedingungen und Alter ab {spiel.min_age}.
+          </li>
+          <li>
+            <strong>Mail bestätigen.</strong> Wir schicken dir einen Link. Klick rein, dann zählt der Score. Den
+            Newsletter gibt es nur mit dem extra Haken.
+          </li>
+          <li>
+            <strong>Sonntag.</strong> Wer Sonntag 23:59 Uhr den höchsten bestätigten Score hat, bekommt den Code per
+            Mail. {spiel.prize_label}, einlösbar {spiel.redeem_location}, {spiel.valid_days} Tage gültig.
+          </li>
+        </ol>
+      ) : (
+        <ol>
+          <li>
+            <strong>Fliegen.</strong> Klick auf den Startknopf, dann tippen. Loslassen sinkt, Möwen und Ketchup
+            sind Schluss.
+          </li>
+          <li>
+            <strong>Sammeln.</strong> Jede Zutat gibt 10 Punkte. Drei Zutaten einer Kreation ergeben das Set,
+            das gibt 50 extra und den Namen der Kreation obendrauf.
+          </li>
+          <li>
+            <strong>Bestwert.</strong> Dein Bestwert bleibt in deinem Browser gespeichert. Nochmal fliegen geht
+            sofort.
+          </li>
+          <li>
+            <strong>Wochenwertung.</strong> Die Wertung mit Gewinn startet in Kürze. Trag dich in den
+            <a class="fh-link" href="/#newsletter">Newsletter</a> ein, dann sagen wir Bescheid.
+          </li>
+        </ol>
+      )}
+      <p class="spiel-fineprint">
+        {live
+          ? `Mehrere Versuche sind erwünscht, es zählt der höchste bestätigte Score. Bots kicken wir raus. Mindestalter ${spiel.min_age}. Kein Bargeld, nicht kombinierbar. Alles Weitere steht in den `
+          : "Die Regeln für die Wochenwertung stehen schon fest: "}
+        <a class="fh-link" href="/spiel/teilnahmebedingungen">Teilnahmebedingungen</a>.
       </p>
     </div>
   </section>
-
-  <Leaderboard />
 </MarketingLayout>
 
 <style>
@@ -62,19 +137,19 @@ import Leaderboard from "../components/Leaderboard.astro";
   }
 
   .spiel-hero-inner {
-    max-width: 720px;
+    max-width: 760px;
     margin: 0 auto;
     text-align: center;
   }
 
   .spiel-eyebrow {
+    display: inline-block;
     font-family: var(--font-mono);
     font-size: 0.78rem;
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--orange-deep);
     margin-bottom: 12px;
-    display: inline-block;
   }
 
   .spiel-hero h1 {
@@ -87,53 +162,76 @@ import Leaderboard from "../components/Leaderboard.astro";
     letter-spacing: -0.5px;
   }
 
-  .spiel-hero p {
+  .spiel-lead {
     font-family: var(--font-body);
     font-size: 1.0625rem;
     line-height: 1.55;
-    margin: 0;
+    margin: 0 auto 22px;
     color: var(--ink);
+    max-width: 62ch;
   }
 
-  .spiel-hero kbd {
-    background: var(--navy);
-    color: var(--cream);
-    padding: 1px 8px;
+  .spiel-rules-short {
+    list-style: none;
+    padding: 0;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    max-width: 720px;
+    text-align: left;
+  }
+
+  .spiel-rules-short li {
+    background: var(--cream);
+    border: 1.5px solid color-mix(in oklab, var(--ink) 18%, transparent);
+    padding: 12px 14px;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    line-height: 1.45;
+  }
+
+  .spiel-rules-short strong {
+    display: block;
     font-family: var(--font-mono);
-    font-size: 0.85em;
-    border-radius: 3px;
+    font-weight: 500;
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--orange-deep);
+    margin-bottom: 4px;
   }
 
-  .spiel-rules {
+  .spiel-flow {
     background: var(--cream);
     color: var(--ink);
     padding: clamp(48px, 7vw, 84px) clamp(20px, 6vw, 56px);
   }
 
-  .spiel-rules-inner {
+  .spiel-flow-inner {
     max-width: 720px;
     margin: 0 auto;
   }
 
-  .spiel-rules h2 {
+  .spiel-flow h2 {
     font-family: var(--font-display);
     font-size: clamp(1.875rem, 5vw, 2.5rem);
     text-transform: uppercase;
     line-height: 1;
-    margin: 0 0 24px;
+    margin: 6px 0 24px;
     color: var(--navy);
     letter-spacing: -0.3px;
   }
 
-  .spiel-rules ol {
+  .spiel-flow ol {
     list-style: none;
     padding: 0;
     margin: 0 0 28px;
-    counter-reset: rules;
+    counter-reset: steps;
   }
 
-  .spiel-rules li {
-    counter-increment: rules;
+  .spiel-flow li {
+    counter-increment: steps;
     padding: 14px 0 14px 56px;
     position: relative;
     font-family: var(--font-body);
@@ -142,37 +240,36 @@ import Leaderboard from "../components/Leaderboard.astro";
     border-bottom: 1px dashed color-mix(in oklab, var(--ink) 18%, transparent);
   }
 
-  .spiel-rules li::before {
-    content: counter(rules, decimal-leading-zero);
+  .spiel-flow li::before {
+    content: counter(steps, decimal-leading-zero);
     position: absolute;
     left: 0;
     top: 16px;
     font-family: var(--font-mono);
     font-size: 0.85rem;
     letter-spacing: 0.14em;
-    color: var(--accent);
+    color: var(--orange-deep);
     background: var(--cream-warm);
-    border: 1.5px solid var(--accent);
+    border: 1.5px solid var(--orange-deep);
     padding: 6px 10px;
     line-height: 1;
   }
 
-  .spiel-rules li strong {
+  .spiel-flow li strong {
     font-weight: 600;
     color: var(--navy);
-    display: inline;
   }
 
-  .spiel-rules-fineprint {
+  .spiel-fineprint {
     font-family: var(--font-body);
-    font-size: 0.875rem;
+    font-size: 0.9rem;
     line-height: 1.55;
-    color: color-mix(in oklab, var(--ink) 65%, transparent);
+    color: color-mix(in oklab, var(--ink) 72%, transparent);
     margin: 24px 0 0;
   }
 
-  .spiel-rules-fineprint a {
-    color: var(--accent);
-    border-bottom: 1px solid color-mix(in oklab, var(--accent) 35%, transparent);
+  @media (max-width: 720px) {
+    .spiel-rules-short { grid-template-columns: 1fr; }
+    .spiel-flow li { padding-left: 48px; }
   }
 </style>

@@ -2,7 +2,7 @@
 import MarketingLayout from "../layouts/MarketingLayout.astro";
 ---
 <MarketingLayout
-  title="Datenschutzerklärung — Fry High"
+  title="Datenschutzerklärung · Fry High"
   description="Informationen zur Verarbeitung personenbezogener Daten auf fryhigh.de gemäß DSGVO."
   noindex={true}
 >
@@ -10,7 +10,7 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
     <header class="legal-head">
       <span class="eyebrow">DSGVO · Datenschutz</span>
       <h1>Datenschutz.</h1>
-      <p class="legal-meta">Stand: <time datetime="2026-05-17">17.05.2026</time></p>
+      <p class="legal-meta">Stand: <time datetime="2026-09-11">11.09.2026</time></p>
     </header>
 
     <section>
@@ -20,103 +20,121 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
       </p>
       <p>
         <strong>Fry High GbR</strong><br />
-        [TBD vollständige Anschrift einsetzen]<br />
         H.-H.-Meier-Straße 7<br />
         27568 Bremerhaven<br />
-        E-Mail: <a href="mailto:info@fryhigh.de">info@fryhigh.de</a>
+        E-Mail: <a href="mailto:info@fryhigh.de">info@fryhigh.de</a><br />
+        Ansprechpartner: Joschka Traue (Kontakt wie im Impressum)
       </p>
     </section>
 
     <section>
-      <h2>2. Erhebung allgemeiner Daten beim Besuch</h2>
+      <h2>2. Verbindungsdaten beim Besuch</h2>
       <p>
-        Wenn du diese Website aufrufst, werden automatisch Informationen allgemeiner Natur erfasst. Diese Informationen (Server-Logfiles) beinhalten u. a.:
+        Wenn du diese Website aufrufst, verarbeitet unser Hoster Cloudflare technisch notwendige Verbindungsdaten: IP-Adresse, Browsertyp und -version, Betriebssystem, Referrer-URL sowie Datum und Uhrzeit der Anfrage. Diese Daten braucht es, um die Seite auszuliefern und Angriffe abzuwehren. Wir selbst führen keine eigenen Logfiles und werten keine Besucherdaten aus.
       </p>
-      <ul>
-        <li>Browsertyp und Browserversion</li>
-        <li>verwendetes Betriebssystem</li>
-        <li>Referrer-URL (zuvor besuchte Seite)</li>
-        <li>Hostname des zugreifenden Rechners (IP-Adresse, gekürzt)</li>
-        <li>Datum und Uhrzeit der Serveranfrage</li>
-      </ul>
       <p>
-        Diese Daten werden zur Sicherstellung eines störungsfreien Betriebs der Website sowie zur Verbesserung unseres Angebots ausgewertet. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse).
+        Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einem sicheren, störungsfreien Betrieb).
       </p>
     </section>
 
     <section>
-      <h2>3. Hosting</h2>
+      <h2>3. Hosting und Backend</h2>
       <p>
-        Diese Website wird gehostet bei <strong>Cloudflare, Inc.</strong> (Cloudflare Pages, 101 Townsend St., San Francisco, CA 94107, USA). Beim Aufruf werden technisch notwendige Verbindungsdaten verarbeitet (IP-Adresse, Browser-Information, Anfragezeitpunkt). Mit Cloudflare besteht ein Auftragsverarbeitungsvertrag gemäß Art. 28 DSGVO sowie Standardvertragsklauseln (SCC) für den Datentransfer in die USA.
+        Diese Website wird gehostet bei <strong>Cloudflare, Inc.</strong> (Cloudflare Pages, 101 Townsend St., San Francisco, CA 94107, USA). Cloudflare stellt dafür einen Auftragsverarbeitungsvertrag nach Art. 28 DSGVO mit Standardvertragsklauseln (SCC) für den Datentransfer in die USA bereit, der Teil der Nutzungsbedingungen ist.
       </p>
       <p>
-        Die für die Catering-Form, Tisch-Reservierung und das Pilot-Flight-Spiel notwendigen Backend-Funktionen laufen ebenfalls bei Cloudflare (<em>Cloudflare Workers</em>). Spiel-Scores liegen in einer <em>Cloudflare D1</em>-Datenbank (Region EU). Datenschutzerklärung Cloudflare: <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">cloudflare.com/privacypolicy</a>.
-      </p>
-    </section>
-
-    <section>
-      <h2>4. Cookies</h2>
-      <p>
-        Diese Website setzt <strong>keine Tracking-Cookies</strong> und keine Cookies von Drittanbietern. Einzige Ausnahme können technisch notwendige Session-Cookies sein, die für den Betrieb essenziell sind.
+        Die Backend-Funktionen für das Catering-Formular, die Tischanfrage, das Mini-Spiel Pommespilot und das Crew-Tool laufen ebenfalls bei Cloudflare (<em>Cloudflare Workers</em>, Datenbank <em>Cloudflare D1</em>). Datenschutzerklärung Cloudflare: <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">cloudflare.com/privacypolicy</a>.
       </p>
     </section>
 
     <section>
-      <h2>5. Kontaktformulare (Catering &amp; Tisch-Reservierung)</h2>
+      <h2>4. Cookies und lokaler Speicher</h2>
       <p>
-        Wenn du uns über das <strong>Catering-Anfrage-Formular</strong> oder das
-        <strong>Tisch-Reservierungs-Formular</strong> kontaktierst, werden die von dir angegebenen Daten
-        (Name, E-Mail, ggf. Telefon, Datum/Uhrzeit, Personenzahl, Bereich/Anlass, Anfragetext) zum Zweck
-        der Bearbeitung deiner Anfrage gespeichert und per E-Mail an info@fryhigh.de zugestellt.
+        Diese Website setzt <strong>keine Tracking-Cookies</strong> und keine Cookies von Drittanbietern. Das Mini-Spiel kann deinen Bestwert lokal in deinem Browser ablegen (localStorage); diese Daten verlassen deinen Browser nicht und du kannst sie jederzeit über die Browser-Einstellungen löschen.
+      </p>
+    </section>
+
+    <section>
+      <h2>5. Kontaktformulare (Catering und Tischanfrage)</h2>
+      <p>
+        Wenn du uns über das <strong>Catering-Formular</strong> oder das <strong>Tischanfrage-Formular</strong> kontaktierst, schickt dein Browser die Angaben (Name, E-Mail, ggf. Telefon, Datum und Uhrzeit, Personenzahl, Bereich oder Anlass, Anfragetext) an einen Cloudflare Worker. Der Worker leitet sie als E-Mail an info@fryhigh.de weiter, sobald unser Mail-Versand aktiv ist. Er speichert deine Angaben nicht dauerhaft.
       </p>
       <p>
-        Der Mail-Versand erfolgt über unseren Versanddienstleister <strong>Resend, Inc.</strong>
-        (2261 Market Street #5039, San Francisco, CA 94114, USA). Mit Resend besteht ein
-        Auftragsverarbeitungsvertrag gemäß Art. 28 DSGVO sowie SCC für den USA-Transfer.
-        Datenschutzerklärung: <a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer">resend.com/legal/privacy-policy</a>.
+        Solange der Versand nicht aktiv ist, zeigt dir das Formular einen Hinweis mit einem Mail-Link. Dann schreibst du uns direkt aus deinem Mailprogramm an info@fryhigh.de; die Daten laufen in dem Fall nur über dein Mailprogramm und unser Postfach.
       </p>
       <p>
-        Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vertragsanbahnung). Die Daten werden gelöscht,
-        sobald sie für die Anfragebearbeitung nicht mehr erforderlich sind, spätestens jedoch nach Ablauf
-        der gesetzlichen Aufbewahrungsfristen.
+        Der Mail-Versand aus dem Worker erfolgt über den Versanddienstleister <strong>Resend</strong> (Plus Five Five, Inc., 2261 Market Street #5039, San Francisco, CA 94114, USA). Resend stellt dafür einen Auftragsverarbeitungsvertrag nach Art. 28 DSGVO mit SCC für den USA-Transfer bereit. Datenschutzerklärung: <a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer">resend.com/legal/privacy-policy</a>.
+      </p>
+      <p>
+        Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vertragsanbahnung). Wir löschen die Anfrage, sobald sie erledigt ist. Anfragen mit geschäftlicher Relevanz bewahren wir nach § 147 AO bis zu sechs Jahre auf.
       </p>
     </section>
 
     <section>
       <h2>6. Newsletter</h2>
       <p>
-        Für den Versand unseres Newsletters nutzen wir <strong>MailerLite Limited</strong>
-        (Bridge House, Cork, T12 K201, Irland). Die Anmeldung erfolgt im Double-Opt-In-Verfahren:
-        Nach der Anmeldung erhältst du eine E-Mail zur Bestätigung. Erst nach Bestätigung wird
-        deine Adresse in den Verteiler aufgenommen.
+        Trägst du dich auf der Startseite in den Newsletter ein, öffnet sich zurzeit dein Mailprogramm mit einer Mail an info@fryhigh.de. Wir tragen dich dann selbst in unseren Verteiler ein. Gespeichert werden deine E-Mail-Adresse und das Datum deiner Mail. Abmelden kannst du dich jederzeit formlos per Mail an info@fryhigh.de.
       </p>
       <p>
-        Gespeichert werden: E-Mail-Adresse, Anmeldedatum, IP-Adresse der Anmeldung, Bestätigungsdatum.
-        Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO (Einwilligung).
+        Sobald wir den Versanddienst <strong>MailerLite Limited</strong> (88 Harcourt Street, Dublin 2, D02 DK18, Irland) eingebunden haben, läuft die Anmeldung dort im Double-Opt-in-Verfahren: Nach der Anmeldung bekommst du eine E-Mail zur Bestätigung, erst danach steht deine Adresse im Verteiler. MailerLite speichert dann E-Mail-Adresse, Anmeldedatum, IP-Adresse der Anmeldung und Bestätigungsdatum; ein Auftragsverarbeitungsvertrag nach Art. 28 DSGVO wird dabei geschlossen. In jeder Newsletter-Mail steht ein Abmeldelink. Datenschutzerklärung MailerLite: <a href="https://www.mailerlite.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer">mailerlite.com/legal/privacy-policy</a>.
       </p>
       <p>
-        Du kannst den Newsletter jederzeit abbestellen — der Link dazu befindet sich in jeder Newsletter-Mail.
-        Auftragsverarbeitungsvertrag gemäß Art. 28 DSGVO besteht.
-        Datenschutzerklärung MailerLite: <a href="https://www.mailerlite.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer">mailerlite.com/legal/privacy-policy</a>.
+        Rechtsgrundlage ist in beiden Fällen Art. 6 Abs. 1 lit. a DSGVO (Einwilligung). Du kannst sie jederzeit mit Wirkung für die Zukunft widerrufen.
+      </p>
+    </section>
+
+    <section id="spiel">
+      <h2>7. Mini-Spiel Pommespilot</h2>
+      <p>
+        Auf <a href="/spiel">/spiel</a> kannst du den Pommespilot spielen. Das Spielen selbst braucht keine Daten von dir. Erst wenn du nach einer Runde deinen Score in die Wochenwertung eintragen willst, verarbeiten wir Folgendes:
+      </p>
+      <ul>
+        <li>deine E-Mail-Adresse (für den Bestätigungslink und die Gewinnbenachrichtigung)</li>
+        <li>deinen freiwilligen Spitznamen (öffentlich in der Rangliste; ohne Spitznamen zeigen wir einen Platzhalter wie „Pilot #4A2F“)</li>
+        <li>Score und Spieldauer (für die Wertung und für den Plausibilitätscheck gegen Manipulation)</li>
+        <li>Zeitstempel des Eintrags und der Bestätigung, ein zufälliges Sitzungs- und Bestätigungs-Token, die Version der Teilnahmebedingungen und deinen Haken „mindestens 18“ (als Nachweis deiner Einwilligung)</li>
+        <li>bei Gewinn: Gutschein-Code, Ausgabe- und Ablaufdatum sowie Zeitpunkt und Notiz der Einlösung</li>
+      </ul>
+      <p>
+        Die Daten liegen in einer Datenbank bei Cloudflare (<em>Cloudflare D1</em>, siehe Abschnitt 3). Bestätigungs- und Gewinner-Mails verschicken wir über Resend (siehe Abschnitt 5). Deine IP-Adresse speichern wir beim Spiel nicht.
+      </p>
+      <p>
+        Zwecke: Wochenwertung, Ermittlung und Benachrichtigung des Gewinners, Einlösung des Gutscheins und Schutz vor Manipulation. Rechtsgrundlagen: Art. 6 Abs. 1 lit. b DSGVO für Teilnahme und Gewinnabwicklung (Teilnahmevertrag nach den <a href="/spiel/teilnahmebedingungen">Teilnahmebedingungen</a>), Art. 6 Abs. 1 lit. a DSGVO für die Veröffentlichung deines Spitznamens in der Rangliste (dein Haken beim Eintragen) und, getrennt davon und freiwillig, für den Newsletter (eigener Haken).
+      </p>
+      <p>
+        Speicherdauer: Sitzungs-Token verfallen nach 60 Minuten und werden beim wöchentlichen Aufräumlauf gelöscht. Einträge, die du nicht innerhalb von 7 Tagen über den Mail-Link bestätigst, löscht derselbe Aufräumlauf automatisch. Bei bestätigten Einträgen anonymisieren wir die E-Mail-Adresse 120 Tage nach dem Eintrag (30 Tage Gutschein-Gültigkeit plus 90 Tage für Rückfragen); die E-Mail-Adresse beim Gutschein 90 Tage nach dessen Ablauf. Spitzname und Score bleiben danach ohne Personenbezug in der Allzeit-Rangliste.
+      </p>
+      <p>
+        Newsletter aus dem Spiel: Hast du beim Eintragen den Newsletter angehakt, speichern wir das zusammen mit dem Zeitpunkt, an dem du den Bestätigungslink geklickt hast. Solange MailerLite nicht eingebunden ist, tragen wir dich selbst ein (Abschnitt 6). Sobald MailerLite eingebunden ist, legen wir deine Adresse dort als unbestätigt an, und MailerLite schickt dir eine eigene Bestätigungsmail.
+      </p>
+      <p>
+        Widerruf: Du kannst deine Einwilligung jederzeit per Mail an <a href="mailto:info@fryhigh.de">info@fryhigh.de</a> widerrufen. Wir entfernen deinen Eintrag dann aus der Rangliste und löschen deine Daten, soweit wir sie nicht für einen bereits ausgegebenen Gutschein oder aus steuerlichen Gründen behalten müssen.
       </p>
     </section>
 
     <section>
-      <h2>7. Externe Verlinkungen</h2>
+      <h2>8. Crew-Tool für Gutscheine</h2>
       <p>
-        Unsere Website verlinkt zu unseren Profilen bei Instagram, Facebook und TikTok. Die Links sind klassische HTML-Links — es werden <strong>keine Daten an die Plattformen übertragen, bevor du den Link anklickst</strong>. Erst beim Klick gelten die Datenschutzbestimmungen des jeweiligen Anbieters.
+        Unsere Crew prüft und entwertet Gutschein-Codes über eine interne Seite mit PIN. Dabei speichern wir zum Gutschein den Zeitpunkt der Einlösung und eine optionale kurze Notiz der Crew (zum Beispiel das gewählte Gericht). Der PIN liegt nur im Browser des jeweiligen Crew-Geräts (localStorage). Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Gewinnabwicklung).
       </p>
     </section>
 
     <section>
-      <h2>8. Schriftarten</h2>
+      <h2>9. Externe Verlinkungen</h2>
       <p>
-        Diese Website nutzt die Schriftarten Anton, Crimson Pro und JetBrains Mono. Die Schriftdateien werden lokal vom Webserver ausgeliefert (Self-Hosting via <code>@fontsource</code>) — es findet <strong>keine Verbindung zu Google Fonts oder externen CDNs</strong> statt.
+        Unsere Website verlinkt zu unseren Profilen bei Instagram, Facebook und TikTok. Die Links sind klassische HTML-Links. Es werden <strong>keine Daten an die Plattformen übertragen, bevor du den Link anklickst</strong>. Erst beim Klick gelten die Datenschutzbestimmungen des jeweiligen Anbieters.
       </p>
     </section>
 
     <section>
-      <h2>9. Deine Rechte</h2>
+      <h2>10. Schriftarten</h2>
+      <p>
+        Diese Website nutzt die Schriftarten Anton, Crimson Pro und JetBrains Mono. Die Schriftdateien liegen auf unserem eigenen Server. Es findet <strong>keine Verbindung zu Google Fonts oder anderen Anbietern</strong> statt.
+      </p>
+    </section>
+
+    <section>
+      <h2>11. Deine Rechte</h2>
       <p>
         Dir stehen folgende Rechte gegenüber dem Verantwortlichen hinsichtlich der dich betreffenden personenbezogenen Daten zu:
       </p>
@@ -135,52 +153,20 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
     </section>
 
     <section>
-      <h2>10. Beschwerderecht</h2>
+      <h2>12. Beschwerderecht</h2>
       <p>
         Du hast das Recht, dich bei der zuständigen Aufsichtsbehörde zu beschweren, wenn du der Ansicht bist, dass die Verarbeitung deiner personenbezogenen Daten gegen die DSGVO verstößt. Zuständig in Bremen ist:
       </p>
       <p>
         <strong>Die Landesbeauftragte für Datenschutz und Informationsfreiheit der Freien Hansestadt Bremen</strong><br />
-        Arndtstraße 1<br />
+        Georgstraße 122-124<br />
         27570 Bremerhaven<br />
         <a href="https://www.datenschutz.bremen.de" target="_blank" rel="noopener noreferrer">www.datenschutz.bremen.de</a>
       </p>
     </section>
 
     <section>
-      <h2>11. Pilot-Flight-Spiel</h2>
-      <p>
-        Wenn du auf <a href="/spiel">/spiel</a> spielst und deinen Score in das Wochen-Leaderboard
-        einreichst, verarbeiten wir folgende Daten:
-      </p>
-      <ul>
-        <li><strong>E-Mail-Adresse</strong> — für die Bestätigung deines Scores und für den Voucher-Versand bei einem Gewinn.</li>
-        <li><strong>Display-Name</strong> (optional, frei wählbar) — wird im öffentlichen Wochen-Leaderboard angezeigt. Wenn du keinen Namen angibst, anonymisieren wir deine E-Mail (Beispiel: <code>jo***@example.de</code>).</li>
-        <li><strong>Score, Spieldauer, Session-Token</strong> — zur Bewertung und zur Plausibilitätsprüfung (Anti-Cheat).</li>
-        <li><strong>Verkürzter IP-Hash</strong> — zur Abwehr von Mehrfach-/Bot-Einreichungen. Aus dem Hash lässt sich die IP nicht rekonstruieren.</li>
-        <li><strong>Voucher-Code</strong> (nur bei Wochen-Gewinn) — zur Einlösung im Truck.</li>
-      </ul>
-      <p>
-        Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO (deine Einwilligung per Checkbox im Submit-Formular).
-        Mit dem Klick auf den Bestätigungs-Link in der Verifikations-Mail bestätigst du sowohl die Score-Speicherung
-        als auch die Aufnahme in den Fry-High-Newsletter.
-      </p>
-      <p>
-        Die Score-Daten werden in einer Cloudflare-D1-Datenbank (Region EU) gespeichert. Scores einer
-        Kalenderwoche werden am Wochen-Reset (jeweils Sonntag-Abend) archiviert und spätestens nach
-        90 Tagen gelöscht. Voucher-Codes werden nach Einlösung oder nach Ablauf des Gültigkeits­zeitraums
-        (30 Tage) anonymisiert. Den Newsletter kannst du jederzeit abbestellen (Link in jeder Mail) —
-        deine Score-Daten werden davon nicht berührt.
-      </p>
-      <p>
-        Du hast jederzeit das Recht, die Löschung deiner Spiel-Daten zu verlangen.
-        Schreib uns formlos an <a href="mailto:info@fryhigh.de">info@fryhigh.de</a> mit Stichwort
-        „Pilot Flight Löschung".
-      </p>
-    </section>
-
-    <section>
-      <h2>12. Aktualität dieser Datenschutzerklärung</h2>
+      <h2>13. Aktualität dieser Datenschutzerklärung</h2>
       <p>
         Diese Datenschutzerklärung ist aktuell gültig und hat den oben angegebenen Stand. Durch die Weiterentwicklung unserer Website oder aufgrund geänderter gesetzlicher bzw. behördlicher Vorgaben kann es notwendig werden, diese Erklärung zu ändern.
       </p>
@@ -229,6 +215,7 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
 
   .legal section {
     margin-bottom: 36px;
+    scroll-margin-top: 96px;
   }
 
   .legal h2 {

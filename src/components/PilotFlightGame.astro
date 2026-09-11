@@ -1,461 +1,1342 @@
 ---
-// Pilot Flight — Mini-Spiel (Flappy-Variante mit Captain).
-// Canvas-Logik im Client-Script. Brand-Treu: Navy/Orange/Cream/Yellow,
-// Anton+Mono Typo, keine Stock-Sprites, geometrische Hindernisse.
-//
-// Backend: src/components/.. ist dumb; alle API-Calls gehen an `apiBase`.
+// Pommespilot · Mini-Spiel „Sammelflug“.
+// Engine (Physik, Spawn, Punkte, Sets): src/scripts/pommespilot.js (reines JS, kein DOM).
+// Hier: Canvas-Rendering als Vektorpfade in CI-Farben, DPR-Skalierung, HUD, Overlays,
+// Sound (WebAudio, Standard aus), Session/Submit gegen den Worker, Rang, Mail-Status.
+// Formular liegt UNTER dem Canvas (mobil nicht im Spielrahmen). Alle API-Calls gehen an `apiBase`.
 
 interface Props {
   apiBase?: string;
+  contestLive?: boolean;
+  prizeLabel?: string;
+  minAge?: number;
+  termsVersion?: string;
 }
-const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
+
+const {
+  apiBase = "https://fryhigh-game.fryhigh-bhv.workers.dev",
+  contestLive = false,
+  prizeLabel = "Wer am Sonntag oben steht, bekommt einen 15-€-Gutschein für Fry High.",
+  minAge = 18,
+  termsVersion = "2026-09-11",
+} = Astro.props;
 ---
-<div class="game" data-api-base={apiBase}>
-  <div class="game-frame">
-    <canvas class="game-canvas" width="800" height="500" role="application" tabindex="0" aria-label="Pilot Flight — Drücke Leertaste oder klick zum Steigen"></canvas>
+<div
+  class="pp"
+  data-pommespilot
+  data-api-base={apiBase}
+  data-contest-live={contestLive ? "1" : "0"}
+  data-terms-version={termsVersion}
+>
+  <p class="pp-banner" data-verified-banner role="status" hidden>
+    Score bestätigt. Du stehst in der Wochenwertung.
+  </p>
 
-    <div class="game-hud" data-game-hud>
-      <div class="hud-cell hud-score">
-        <span class="hud-label">Score</span>
-        <span class="hud-value" data-score-display aria-hidden="true">0</span>
+  <div class="pp-stage" data-stage>
+    <canvas
+      class="pp-canvas"
+      data-canvas
+      width="960"
+      height="540"
+      role="application"
+      tabindex="0"
+      aria-label="Pommespilot. Klick, Tipp oder Leertaste hebt den Flieger, Loslassen sinkt. Zutaten sammeln, Möwen und Ketchup ausweichen."
+    ></canvas>
+
+    <div class="pp-hud" aria-hidden="true">
+      <div class="hud-cell">
+        <span class="hud-label">Punkte</span>
+        <span class="hud-value" data-score>0</span>
       </div>
-      <div class="hud-cell hud-best">
-        <span class="hud-label">Best · Session</span>
-        <span class="hud-value" data-best-display aria-hidden="true">0</span>
+      <div class="hud-cell">
+        <span class="hud-label">Bestwert</span>
+        <span class="hud-value" data-best>0</span>
+      </div>
+      <div class="hud-cell hud-set">
+        <span class="hud-label hud-set-name" data-set-name>Kreation</span>
+        <span class="hud-dots" data-set-dots><i></i><i></i><i></i></span>
       </div>
     </div>
-    <span class="sr-only" data-score-announce aria-live="polite" aria-atomic="true"></span>
 
-    <div class="game-overlay game-overlay--idle" data-overlay="idle">
-      <div class="overlay-card">
-        <div class="overlay-eyebrow">Pilot Flight</div>
-        <h3>Bring den Captain durch die Pommes-Berge.</h3>
-        <p>Klick, Tap oder <kbd>Space</kbd> = Steigen.<br/>Loslassen = Fallen. Crash = Game over.</p>
-        <button type="button" class="game-btn game-btn--primary" data-start-btn>
-          Abheben →
-        </button>
-        <div class="overlay-mini">Top-1 der Woche kriegt 20 € Gutschein.</div>
+    <button type="button" class="pp-sound" data-sound aria-pressed="false" aria-label="Sound einschalten">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path class="snd-body" d="M4 9v6h4l5 4V5L8 9H4z" />
+        <path class="snd-wave" d="M16 8.5a4.5 4.5 0 0 1 0 7" />
+        <path class="snd-off" d="M16 9l5 6M21 9l-5 6" />
+      </svg>
+    </button>
+
+    <span class="sr-only" data-announce aria-live="polite" aria-atomic="true"></span>
+
+    <div class="pp-overlay" data-overlay="idle">
+      <div class="pp-card">
+        <div class="pp-eyebrow">Pommespilot</div>
+        <h3>Flieg. Sammel. Schmier nicht ab.</h3>
+        <p>
+          Klick, Tipp<span class="kbd-hint"> oder <kbd>Leertaste</kbd></span> hebt, Loslassen sinkt. Zutaten geben Punkte, drei von einer Kreation
+          geben Bonus. Möwen, Ketchup, Wolkendecke und Wasser sind Schluss.
+        </p>
+        <button type="button" class="fh-btn" data-start>Ballern wir los</button>
+        {contestLive && <p class="pp-mini">{prizeLabel}</p>}
       </div>
     </div>
 
-    <div class="game-overlay game-overlay--gameover" data-overlay="gameover" hidden>
-      <div class="overlay-card">
-        <div class="overlay-eyebrow">Crash</div>
-        <h3>Du bist abgestürzt mit <span data-final-score>0</span> Punkten.</h3>
+    <div class="pp-overlay" data-overlay="pause" hidden>
+      <div class="pp-card pp-card--slim">
+        <div class="pp-eyebrow">Pause</div>
+        <h3>Kurz durchatmen.</h3>
+        <p>Tipp, Klick<span class="kbd-hint"> oder <kbd>Leertaste</kbd></span>, dann geht es weiter.</p>
+      </div>
+    </div>
 
-        <form class="score-form" data-score-form>
-          <p class="form-lead">Bei Highscore mitmachen? Wir bestätigen per Mail.</p>
-
-          <label class="form-field">
-            <span class="form-label">Display-Name (öffentlich · optional)</span>
-            <input type="text" name="display_name" maxlength="32" placeholder="z. B. PiratPaul" />
-          </label>
-
-          <label class="form-field">
-            <span class="form-label">E-Mail · für Bestätigung + Wochen-Mail</span>
-            <input type="email" name="email" required autocomplete="email" placeholder="kontakt@…" />
-          </label>
-
-          <label class="form-consent">
-            <input type="checkbox" name="consent" required />
-            <span>
-              Klar — speichere meinen Score, zeig meinen Spitznamen in der Rangliste.
-              Mit dem Klick bin ich auch in der Wochen-Mail dabei. Austragen jederzeit per Link in jeder Mail.
-              <a href="/datenschutz" target="_blank" rel="noopener">Datenschutz</a>
-            </span>
-          </label>
-
-          <button type="submit" class="game-btn game-btn--primary" data-submit-btn>
-            Score einreichen →
-          </button>
-          <div class="form-meta" data-form-meta>&nbsp;</div>
-        </form>
-
-        <button type="button" class="game-btn game-btn--ghost" data-restart-btn>
-          Nochmal fliegen
-        </button>
+    <div class="pp-overlay" data-overlay="over" hidden>
+      <div class="pp-card">
+        <div class="pp-eyebrow">Abgeschmiert</div>
+        <h3>Abgeschmiert bei <span data-final>0</span>.</h3>
+        <p class="pp-note" data-best-note hidden>Neuer Bestwert.</p>
+        <p class="pp-rank" data-rank hidden></p>
+        <div class="pp-actions">
+          <button type="button" class="fh-btn" data-restart>Nochmal fliegen</button>
+          {contestLive && (
+            <button type="button" class="fh-btn fh-btn--ghost" data-to-form>Score eintragen</button>
+          )}
+        </div>
+        {!contestLive && (
+          <p class="pp-mini">Bestwert hier im Browser: <span data-over-best>0</span>.</p>
+        )}
       </div>
     </div>
   </div>
+
+  {contestLive ? (
+    <form class="pp-form" data-score-form hidden novalidate>
+      <div class="pp-form-head">
+        <span class="pp-eyebrow">Wochenwertung</span>
+        <h3>Score in die Wertung? Wir schicken dir einen Link.</h3>
+        <p class="pp-form-lead">
+          Dein Score: <strong data-form-score>0</strong>. {prizeLabel}
+        </p>
+      </div>
+
+      <label class="pp-field">
+        <span class="pp-label">Spitzname · öffentlich, freiwillig</span>
+        <input type="text" name="display_name" maxlength="32" autocomplete="nickname" placeholder="z. B. Möwenschreck" />
+      </label>
+
+      <label class="pp-field">
+        <span class="pp-label">E-Mail · für den Bestätigungs-Link</span>
+        <input type="email" name="email" required autocomplete="email" placeholder="du@beispiel.de" />
+      </label>
+
+      <input class="pp-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+
+      <label class="pp-check">
+        <input type="checkbox" name="terms" required />
+        <span>
+          Ich akzeptiere die
+          <a href="/spiel/teilnahmebedingungen" target="_blank" rel="noopener">Teilnahmebedingungen</a>
+          und die
+          <a href="/datenschutz" target="_blank" rel="noopener">Datenschutzhinweise</a>.
+        </span>
+      </label>
+
+      <label class="pp-check">
+        <input type="checkbox" name="age" required />
+        <span>Ich bin mindestens {minAge} Jahre alt.</span>
+      </label>
+
+      <label class="pp-check">
+        <input type="checkbox" name="newsletter_opt_in" />
+        <span>Newsletter dazu. Karte, Specials, Catering-Slots. Kein Spam.</span>
+      </label>
+
+      <button type="submit" class="fh-btn" data-submit>Score eintragen</button>
+      <p class="pp-meta" data-form-meta role="status" aria-live="polite"></p>
+    </form>
+  ) : (
+    <div class="pp-soon">
+      <span class="pp-eyebrow">Wochenwertung</span>
+      <h3>Wochenwertung mit Gewinn startet in Kürze.</h3>
+      <p>
+        Trag dich in den Newsletter ein, dann sagen wir Bescheid. Dein Bestwert bleibt hier im Browser gespeichert:
+        <strong data-soon-best>0</strong>.
+      </p>
+      <a class="fh-link" href="/#newsletter">Zum Newsletter</a>
+    </div>
+  )}
 </div>
 
 <script>
-  type GameState = 'idle' | 'playing' | 'gameover' | 'submitting';
+  import {
+    createState,
+    step,
+    startRun,
+    drainEvents,
+    activeProgress,
+    provisionalRank,
+    INGREDIENTS,
+    CREATIONS,
+    COLORS,
+    H,
+    W_DEFAULT,
+    W_MIN,
+    CEIL_Y,
+    WATER_Y,
+    GLYPH,
+    GULL_SIZE,
+    BLOB_R,
+  } from '../scripts/pommespilot.js';
 
-  interface Pipe {
-    x: number;
-    gapY: number;
-    passed: boolean;
+  type Phase = 'idle' | 'playing' | 'crashing' | 'over';
+  interface Gull { x: number; y: number; phase: number }
+  interface BlobItem { x: number; y: number; wobble: number }
+  interface Ing { x: number; y: number; kind: number; spin: number }
+  interface GameState {
+    w: number;
+    phase: Phase;
+    frames: number;
+    score: number;
+    speed: number;
+    difficulty: number;
+    player: { x: number; y: number; vy: number; angle: number };
+    gulls: Gull[];
+    blobs: BlobItem[];
+    ingredients: Ing[];
+    activeCreation: number;
+    crashAt: { x: number; y: number } | null;
   }
+  interface GameEvent { type: string; x?: number; y?: number; points?: number; kind?: number; name?: string; score?: number }
+  interface Particle { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string; g: number }
+  interface Popup { x: number; y: number; text: string; life: number; max: number; color: string; size: number }
+  interface Toast { text: string; life: number; max: number }
 
-  const W = 800;
-  const H = 500;
-  const GRAVITY = 0.45;
-  const JUMP_V = -7.5;
-  const PIPE_SPEED = 2.5;
-  const PIPE_GAP = 150;
-  const PIPE_SPACING = 280;
-  const PIPE_WIDTH = 70;
-  const PLAYER_W = 32;
-  const PLAYER_H = 22;
-  const PLAYER_X = 140;
-  const TARGET_DT = 1000 / 60;  // ms per frame at 60Hz (delta-time normalization)
-
-  const ROOT = document.querySelector<HTMLDivElement>('.game');
-  if (!ROOT) throw new Error('game root missing');
+  const ROOT = document.querySelector<HTMLElement>('[data-pommespilot]');
+  if (!ROOT) throw new Error('Pommespilot: Wurzel fehlt');
   const apiBase = ROOT.dataset.apiBase ?? '';
+  const contestLive = ROOT.dataset.contestLive === '1';
+  const termsVersion = ROOT.dataset.termsVersion ?? '2026-09-11';
 
-  const canvas = ROOT.querySelector<HTMLCanvasElement>('.game-canvas')!;
+  function q<T extends HTMLElement>(sel: string): T | null {
+    return ROOT!.querySelector<T>(sel);
+  }
+  const stage = q<HTMLElement>('[data-stage]')!;
+  const canvas = q<HTMLCanvasElement>('[data-canvas]')!;
   const ctx = canvas.getContext('2d')!;
-  const scoreDisplay = ROOT.querySelector<HTMLElement>('[data-score-display]')!;
-  const bestDisplay = ROOT.querySelector<HTMLElement>('[data-best-display]')!;
-  const scoreAnnounce = ROOT.querySelector<HTMLElement>('[data-score-announce]')!;
-  const finalScore = ROOT.querySelector<HTMLElement>('[data-final-score]')!;
-  const overlayIdle = ROOT.querySelector<HTMLElement>('[data-overlay="idle"]')!;
-  const overlayGameOver = ROOT.querySelector<HTMLElement>('[data-overlay="gameover"]')!;
-  const startBtn = ROOT.querySelector<HTMLButtonElement>('[data-start-btn]')!;
-  const restartBtn = ROOT.querySelector<HTMLButtonElement>('[data-restart-btn]')!;
-  const scoreForm = ROOT.querySelector<HTMLFormElement>('[data-score-form]')!;
-  const submitBtn = ROOT.querySelector<HTMLButtonElement>('[data-submit-btn]')!;
-  const formMeta = ROOT.querySelector<HTMLElement>('[data-form-meta]')!;
+  const scoreEl = q<HTMLElement>('[data-score]')!;
+  const bestEl = q<HTMLElement>('[data-best]')!;
+  const setNameEl = q<HTMLElement>('[data-set-name]')!;
+  const setDots = Array.from(q<HTMLElement>('[data-set-dots]')!.children) as HTMLElement[];
+  const soundBtn = q<HTMLButtonElement>('[data-sound]')!;
+  const announce = q<HTMLElement>('[data-announce]')!;
+  const overlays = {
+    idle: q<HTMLElement>('[data-overlay="idle"]')!,
+    pause: q<HTMLElement>('[data-overlay="pause"]')!,
+    over: q<HTMLElement>('[data-overlay="over"]')!,
+  };
+  const finalEl = q<HTMLElement>('[data-final]')!;
+  const bestNote = q<HTMLElement>('[data-best-note]')!;
+  const rankEl = q<HTMLElement>('[data-rank]')!;
+  const overBestEl = q<HTMLElement>('[data-over-best]');
+  const soonBestEl = q<HTMLElement>('[data-soon-best]');
+  const startBtn = q<HTMLButtonElement>('[data-start]')!;
+  const restartBtn = q<HTMLButtonElement>('[data-restart]')!;
+  const toFormBtn = q<HTMLButtonElement>('[data-to-form]');
+  const form = q<HTMLFormElement>('[data-score-form]');
+  const formScore = q<HTMLElement>('[data-form-score]');
+  const submitBtn = q<HTMLButtonElement>('[data-submit]');
+  const formMeta = q<HTMLElement>('[data-form-meta]');
+  const verifiedBanner = q<HTMLElement>('[data-verified-banner]')!;
 
-  let state: GameState = 'idle';
-  let py = H / 2;
-  let vy = 0;
-  let pipes: Pipe[] = [];
-  let frame = 0;
-  let score = 0;
-  let best = 0;
-  let startTs = 0;
-  let durationMs = 0;
-  let sessionToken: string | null = null;
-  let cloudOffset = 0;
-  let rafId = 0;
-  let lastTs = 0;
-  let spawnTimer = 0;
-  let currentRunId = 0;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const FONT_MONO = "'JetBrains Mono', 'SFMono-Regular', Consolas, monospace";
+  const FONT_DISPLAY = "'Anton', 'Impact', system-ui, sans-serif";
+  const C = COLORS as Record<string, string>;
+  const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-  function reset() {
-    py = H / 2;
-    vy = 0;
-    pipes = [];
-    frame = 0;
-    score = 0;
-    spawnTimer = 0;
-    lastTs = 0;
-    scoreDisplay.textContent = '0';
-    scoreAnnounce.textContent = '';
+  // ── Persistenz (localStorage kann fehlen oder werfen) ──────────────────────
+  function readStore(key: string): string | null {
+    try { return localStorage.getItem(key); } catch { return null; }
+  }
+  function writeStore(key: string, value: string) {
+    try { localStorage.setItem(key, value); } catch { /* privat, voll, gesperrt: egal */ }
   }
 
-  async function requestSession(): Promise<string | null> {
-    if (!apiBase) return null;
+  let best = Math.max(0, Math.floor(Number(readStore('pp_best') ?? 0)) || 0);
+  bestEl.textContent = String(best);
+  if (soonBestEl) soonBestEl.textContent = String(best);
+
+  // ── Sound (Oszillatoren, Standard aus) ─────────────────────────────────────
+  let soundOn = readStore('pp_sound') === '1';
+  let audio: AudioContext | null = null;
+  function applySoundUi() {
+    soundBtn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+    soundBtn.setAttribute('aria-label', soundOn ? 'Sound ausschalten' : 'Sound einschalten');
+    soundBtn.classList.toggle('is-on', soundOn);
+  }
+  applySoundUi();
+  function beep(freqFrom: number, freqTo: number, ms: number, type: OscillatorType, gain = 0.06, delay = 0) {
+    if (!soundOn) return;
+    try {
+      audio ??= new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      if (audio.state === 'suspended') void audio.resume();
+      const t0 = audio.currentTime + delay;
+      const osc = audio.createOscillator();
+      const g = audio.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freqFrom, t0);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqTo), t0 + ms / 1000);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + ms / 1000);
+      osc.connect(g).connect(audio.destination);
+      osc.start(t0);
+      osc.stop(t0 + ms / 1000 + 0.02);
+    } catch { /* kein Audio: still */ }
+  }
+  const sfx = {
+    tap: () => beep(420, 640, 60, 'square', 0.03),
+    pickup: () => beep(880, 1320, 90, 'sine', 0.06),
+    gull: () => beep(660, 700, 40, 'triangle', 0.02),
+    set: () => { beep(660, 660, 90, 'square', 0.05); beep(880, 880, 90, 'square', 0.05, 0.09); beep(1320, 1320, 160, 'square', 0.05, 0.18); },
+    crash: () => { beep(220, 50, 320, 'sawtooth', 0.08); beep(160, 40, 400, 'square', 0.04, 0.05); },
+  };
+  soundBtn.addEventListener('click', () => {
+    soundOn = !soundOn;
+    writeStore('pp_sound', soundOn ? '1' : '0');
+    applySoundUi();
+    if (soundOn) sfx.tap();
+  });
+
+  // ── Canvas-Größe und DPR ───────────────────────────────────────────────────
+  let scale = 1;
+  let offsetX = 0;
+  let logicalW = W_DEFAULT;
+  function fitCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const cssW = Math.max(1, rect.width);
+    const cssH = Math.max(1, rect.height);
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    scale = canvas.height / H;
+    logicalW = Math.round(clamp((H * cssW) / cssH, W_MIN, W_DEFAULT));
+    offsetX = Math.max(0, (canvas.width - logicalW * scale) / 2);
+    // Nur im Leerlauf neu anlegen: nach dem Crash bleibt der Zustand (Score, Szene) stehen.
+    if (state.phase === 'idle' && state.w !== logicalW) state = createState({ width: logicalW }) as GameState;
+  }
+
+  // ── Spielzustand und Effekte ───────────────────────────────────────────────
+  let state = createState({ width: W_DEFAULT }) as GameState;
+  let paused = false;
+  let tapQueued = false;
+  let lastTs = 0;
+  let bg = 0;             // Parallax-Strecke
+  let propAngle = 0;
+  let shake = 0;          // Restzeit Screen-Shake in Frames
+  let sessionToken: string | null = null;
+  let sessionFailed = false;
+  let runId = 0;
+  let durationMs = 0;
+  let finalScore = 0;
+  let hasResult = false;
+  let lastAnnounced = 0;
+  const particles: Particle[] = [];
+  const popups: Popup[] = [];
+  let toast: Toast | null = null;
+  let displayedScore = -1;
+
+  function show(which: keyof typeof overlays | null) {
+    for (const [key, el] of Object.entries(overlays)) el.hidden = key !== which;
+  }
+
+  async function requestSession() {
+    sessionToken = null;
+    sessionFailed = false;
+    if (!apiBase || !contestLive) return;
+    const id = runId;
     try {
       const res = await fetch(`${apiBase}/session/start`, { method: 'POST' });
-      if (!res.ok) return null;
-      const data = await res.json() as { token: string };
-      return data.token;
+      if (!res.ok) throw new Error(`session ${res.status}`);
+      const data = (await res.json()) as { token?: string };
+      if (id === runId) sessionToken = data.token ?? null;
     } catch {
-      return null;
+      if (id === runId) sessionFailed = true;
     }
   }
 
-  async function startGame() {
-    overlayIdle.hidden = true;
-    overlayGameOver.hidden = true;
-    reset();
-    sessionToken = null;  // clear synchronously — no stale-token reuse (P1 fix)
-    state = 'playing';
-    startTs = performance.now();
-    const runId = ++currentRunId;
-    // Session-Token holen, parallel zum Spiel-Start (User merkt nix)
-    const tok = await requestSession();
-    if (runId === currentRunId) sessionToken = tok;  // only set if still latest run
-  }
-
-  function gameOver() {
-    if (state !== 'playing') return;
-    state = 'gameover';
-    durationMs = Math.round(performance.now() - startTs);
-    if (score > best) {
-      best = score;
-      bestDisplay.textContent = String(best);
+  function begin() {
+    runId += 1;
+    fitCanvas();
+    startRun(state);
+    paused = false;
+    lastTs = 0;
+    particles.length = 0;
+    popups.length = 0;
+    toast = null;
+    shake = 0;
+    lastAnnounced = 0;
+    hasResult = false;
+    show(null);
+    if (form) {
+      form.hidden = true;
+      if (formMeta) formMeta.textContent = '';
     }
-    finalScore.textContent = String(score);
-    formMeta.textContent = '';
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Score einreichen →';
-    scoreForm.reset();
-    overlayGameOver.hidden = false;
+    void requestSession();
+    canvas.focus({ preventScroll: true });
   }
 
-  function jump() {
-    if (state === 'playing') {
-      vy = JUMP_V;
-    } else if (state === 'idle') {
-      startGame();
-    }
-  }
-
-  function step(ts?: number) {
-    // P1 fix: pause on hidden tab (battery, prevent pipe-accumulation crash on return)
-    if (document.hidden) {
-      lastTs = 0;  // reset on next visible tick
-      rafId = requestAnimationFrame(step);
+  function tap() {
+    if (paused) {
+      paused = false;
+      lastTs = 0;
+      show(null);
       return;
     }
+    if (state.phase === 'playing') tapQueued = true;
+    else if (state.phase === 'idle') begin();
+  }
 
-    // P1 fix: delta-time normalization for frame-rate-independent physics
-    const now = ts ?? performance.now();
-    if (!lastTs) lastTs = now;
-    const dt = Math.min((now - lastTs) / TARGET_DT, 2.5);  // cap dt to prevent huge jumps
-    lastTs = now;
-
-    cloudOffset = (cloudOffset + 0.3 * dt) % W;
-
-    if (state === 'playing') {
-      vy += GRAVITY * dt;
-      py += vy * dt;
-
-      // Spawn-Timer accumulator (not frame-modulo) for delta-time consistency
-      spawnTimer += dt;
-      const spawnInterval = PIPE_SPACING / PIPE_SPEED;  // frames at 60Hz
-      if (spawnTimer >= spawnInterval) {
-        spawnTimer -= spawnInterval;
-        const margin = 60;
-        const gapY = margin + Math.random() * (H - PIPE_GAP - margin * 2);
-        pipes.push({ x: W + PIPE_WIDTH, gapY, passed: false });
-      }
-
-      for (const p of pipes) {
-        p.x -= PIPE_SPEED * dt;
-        if (!p.passed && p.x + PIPE_WIDTH < PLAYER_X) {
-          p.passed = true;
-          score += 1;
-          scoreDisplay.textContent = String(score);
-          // P0 fix: throttled live-region announce every 5 points (not every frame)
-          if (score % 5 === 0) scoreAnnounce.textContent = `${score} Punkte`;
-        }
-      }
-      pipes = pipes.filter((p) => p.x + PIPE_WIDTH > 0);
-
-      if (py < 0 || py + PLAYER_H > H) gameOver();
-
-      for (const p of pipes) {
-        const inX = PLAYER_X + PLAYER_W > p.x && PLAYER_X < p.x + PIPE_WIDTH;
-        if (inX) {
-          const inGapY = py > p.gapY && py + PLAYER_H < p.gapY + PIPE_GAP;
-          if (!inGapY) { gameOver(); break; }
-        }
-      }
-
-      frame += 1;
+  function onGameOver() {
+    durationMs = Math.round((state.frames * 1000) / 60);
+    const score = state.score;
+    finalScore = score;
+    hasResult = true;
+    finalEl.textContent = String(score);
+    bestNote.hidden = !(score > best && score > 0);
+    if (score > best) {
+      best = score;
+      bestEl.textContent = String(best);
+      writeStore('pp_best', String(best));
     }
+    if (overBestEl) overBestEl.textContent = String(best);
+    if (soonBestEl) soonBestEl.textContent = String(best);
+    rankEl.hidden = true;
+    rankEl.textContent = '';
+    show('over');
+    announce.textContent = `Abgeschmiert bei ${score} Punkten.`;
+    if (form) {
+      form.hidden = false;
+      if (formScore) formScore.textContent = String(score);
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Score eintragen'; }
+      if (formMeta) formMeta.textContent = '';
+    }
+    if (contestLive) void loadRank(score);
+  }
 
-    draw();
-    rafId = requestAnimationFrame(step);
+  async function loadRank(score: number) {
+    if (!apiBase) return;
+    const id = runId;
+    try {
+      const res = await fetch(`${apiBase}/leaderboard`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = (await res.json()) as { top?: { score: number }[] };
+      if (id !== runId || !hasResult) return;
+      const rank = provisionalRank(data.top ?? [], score);
+      rankEl.textContent = rank
+        ? `Vorläufig Platz ${rank} diese Woche. Zählt, sobald du den Mail-Link geklickt hast.`
+        : 'Vorläufig außerhalb der Top 10 diese Woche. Trotzdem eintragen, der Sonntag entscheidet.';
+      rankEl.hidden = false;
+    } catch { /* Wertung nicht erreichbar: still */ }
+  }
+
+  // ── Events aus der Engine → Effekte ───────────────────────────────────────
+  function spawnParticles(x: number, y: number, n: number, colors: string[], speed: number, g: number, size: number, life: number) {
+    const count = reduceMotion ? Math.ceil(n / 3) : n;
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const v = speed * (0.4 + Math.random() * 0.8);
+      particles.push({
+        x, y,
+        vx: Math.cos(a) * v,
+        vy: Math.sin(a) * v - speed * 0.4,
+        life, max: life,
+        size: size * (0.6 + Math.random() * 0.8),
+        color: colors[i % colors.length],
+        g,
+      });
+    }
+  }
+  function splash(x: number) {
+    for (let i = 0; i < (reduceMotion ? 8 : 28); i++) {
+      const v = 4 + Math.random() * 7;
+      particles.push({
+        x: x + (Math.random() - 0.5) * 40, y: WATER_Y,
+        vx: (Math.random() - 0.5) * 5, vy: -v,
+        life: 50, max: 50, size: 3 + Math.random() * 4,
+        color: i % 4 === 0 ? C.navyDeep : C.cream, g: 0.32,
+      });
+    }
+  }
+  function handleEvents(events: GameEvent[]) {
+    for (const ev of events) {
+      if (ev.type === 'tap') {
+        sfx.tap();
+      } else if (ev.type === 'pickup') {
+        const ing = INGREDIENTS[ev.kind ?? 0];
+        const col = C[ing.color] ?? C.yellow;
+        spawnParticles(ev.x ?? 0, ev.y ?? 0, 10, [col, C.cream], 3.2, 0.12, 4, 28);
+        popups.push({ x: ev.x ?? 0, y: (ev.y ?? 0) - 14, text: `+${ev.points ?? 10}`, life: 42, max: 42, color: col, size: 26 });
+        sfx.pickup();
+      } else if (ev.type === 'gull') {
+        popups.push({ x: ev.x ?? 0, y: (ev.y ?? 0) - 18, text: '+1', life: 30, max: 30, color: C.cream, size: 16 });
+        sfx.gull();
+      } else if (ev.type === 'set') {
+        toast = { text: `${ev.name} komplett · +${ev.points ?? 50}`, life: 110, max: 110 };
+        spawnParticles(ev.x ?? state.player.x, ev.y ?? state.player.y, 26, [C.yellow, C.orange, C.pink, C.cream], 5, 0.14, 5, 46);
+        sfx.set();
+        announce.textContent = `${ev.name} komplett, plus ${ev.points ?? 50}.`;
+      } else if (ev.type === 'crash') {
+        shake = reduceMotion ? 0 : 26;
+        spawnParticles(ev.x ?? 0, ev.y ?? 0, 18, [C.orange, C.yellow, C.cream], 5, 0.28, 5, 40);
+        splash(ev.x ?? state.player.x);
+        sfx.crash();
+      } else if (ev.type === 'plop') {
+        spawnParticles(ev.x ?? 0, WATER_Y, 5, [C.cream], 2.2, 0.28, 3, 22);
+      }
+    }
+  }
+
+  function updateFx(dt: number) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.vy += p.g * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+    for (let i = popups.length - 1; i >= 0; i--) {
+      const p = popups[i];
+      p.y -= 0.9 * dt;
+      p.life -= dt;
+      if (p.life <= 0) popups.splice(i, 1);
+    }
+    if (toast) {
+      toast.life -= dt;
+      if (toast.life <= 0) toast = null;
+    }
+    if (shake > 0) shake -= dt;
+    propAngle += (state.phase === 'playing' ? 0.9 : 0.25) * dt;
+    const drift = state.phase === 'playing' ? state.speed : reduceMotion ? 0 : 1.2;
+    bg += drift * dt;
+  }
+
+  function updateHud() {
+    if (state.score !== displayedScore) {
+      displayedScore = state.score;
+      scoreEl.textContent = String(state.score);
+      if (state.score - lastAnnounced >= 50 && state.phase === 'playing') {
+        lastAnnounced = state.score;
+        announce.textContent = `${state.score} Punkte`;
+      }
+    }
+    const prog = activeProgress(state) as boolean[];
+    setDots.forEach((d, i) => d.classList.toggle('is-on', Boolean(prog[i])));
+    const name = state.activeCreation >= 0 ? CREATIONS[state.activeCreation].name : 'Kreation';
+    if (setNameEl.textContent !== name) setNameEl.textContent = name;
+  }
+
+  // ── Zeichnen ───────────────────────────────────────────────────────────────
+  const skyCache = new Map<number, CanvasGradient>();
+  function skyGradient(dusk: number) {
+    const key = Math.round(dusk * 40);
+    let g = skyCache.get(key);
+    if (!g) {
+      const d = key / 40;
+      g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, C.navyDeep);
+      g.addColorStop(lerp(0.56, 0.3, d), C.navy);
+      g.addColorStop(lerp(0.88, 0.7, d), C.orange);
+      g.addColorStop(1, C.yellow);
+      skyCache.set(key, g);
+    }
+    return g;
+  }
+
+  function drawSun(w: number, dusk: number) {
+    const x = w * 0.74;
+    const y = lerp(WATER_Y - 96, WATER_Y - 30, dusk);
+    const r = 44;
+    const glow = ctx.createRadialGradient(x, y, r * 0.6, x, y, r * 2.6);
+    glow.addColorStop(0, 'rgba(245,197,24,0.35)');
+    glow.addColorStop(1, 'rgba(245,197,24,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(x - r * 3, y - r * 3, r * 6, r * 6);
+    ctx.fillStyle = C.yellow;
+    ctx.globalAlpha = 0.92;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Ferne Bremerhaven-Silhouette: Klimahaus-Bogen, Sail City, Hafenkräne, Zoo-Kuppel, Radarturm, Blöcke.
+  const SKY_TILE = 1400;
+  function drawSkylineTile(ox: number) {
+    const base = WATER_Y + 1;
+    ctx.beginPath();
+    // Blöcke Stadt
+    const blocks = [[0, 90, 42], [100, 50, 30], [160, 70, 58], [240, 40, 36], [560, 60, 40], [630, 90, 52], [730, 50, 34], [980, 80, 44], [1070, 46, 28], [1300, 70, 38]];
+    for (const [bx, bw, bh] of blocks) ctx.rect(ox + bx, base - bh, bw, bh);
+    // Sail City (Turm mit Segelspitze)
+    ctx.moveTo(ox + 300, base);
+    ctx.lineTo(ox + 300, base - 120);
+    ctx.lineTo(ox + 316, base - 150);
+    ctx.lineTo(ox + 330, base - 120);
+    ctx.lineTo(ox + 330, base);
+    ctx.closePath();
+    // Klimahaus (Rumpf-Bogen)
+    ctx.moveTo(ox + 370, base);
+    ctx.bezierCurveTo(ox + 380, base - 62, ox + 500, base - 62, ox + 520, base);
+    ctx.closePath();
+    // Zoo-Kuppel
+    ctx.moveTo(ox + 800, base);
+    ctx.arc(ox + 830, base, 30, Math.PI, 0);
+    ctx.closePath();
+    // Radarturm
+    ctx.rect(ox + 900, base - 100, 4, 100);
+    ctx.moveTo(ox + 910, base - 106);
+    ctx.arc(ox + 902, base - 106, 8, 0, Math.PI * 2);
+    ctx.fill();
+    // Hafenkräne (Linien)
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (const cx of [1140, 1200, 1250]) {
+      ctx.moveTo(ox + cx, base);
+      ctx.lineTo(ox + cx, base - 96);
+      ctx.lineTo(ox + cx + 54, base - 96);
+      ctx.moveTo(ox + cx, base - 70);
+      ctx.lineTo(ox + cx + 54, base - 96);
+      ctx.moveTo(ox + cx + 44, base - 96);
+      ctx.lineTo(ox + cx + 44, base - 60);
+    }
+    ctx.stroke();
+  }
+  function drawSkyline(w: number) {
+    ctx.save();
+    ctx.globalAlpha = 0.1;
+    ctx.fillStyle = C.cream;
+    ctx.strokeStyle = C.cream;
+    const off = -((bg * 0.15) % SKY_TILE);
+    for (let x = off; x < w + SKY_TILE; x += SKY_TILE) drawSkylineTile(x);
+    ctx.restore();
+  }
+
+  function puff(x: number, y: number, r: number) {
+    ctx.moveTo(x + r, y);
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.moveTo(x + r * 1.7, y + r * 0.2);
+    ctx.arc(x + r * 0.9, y + r * 0.2, r * 0.8, 0, Math.PI * 2);
+    ctx.moveTo(x - r * 0.2, y + r * 0.3);
+    ctx.arc(x - r * 0.9, y + r * 0.3, r * 0.7, 0, Math.PI * 2);
+  }
+  function drawMidClouds(w: number) {
+    ctx.save();
+    ctx.globalAlpha = 0.16;
+    ctx.fillStyle = C.cream;
+    ctx.beginPath();
+    const tile = 900;
+    const off = -((bg * 0.4) % tile);
+    for (let x = off; x < w + tile; x += tile) {
+      puff(x + 80, 150, 30);
+      puff(x + 380, 210, 24);
+      puff(x + 640, 120, 34);
+    }
+    ctx.fill();
+    ctx.restore();
+  }
+  function drawCloudDeck(w: number) {
+    ctx.save();
+    ctx.fillStyle = C.cream;
+    ctx.globalAlpha = 0.94;
+    ctx.fillRect(0, 0, w, CEIL_Y - 22);
+    ctx.beginPath();
+    const tile = 200;
+    const off = -((bg * 0.6) % tile);
+    for (let x = off - tile; x < w + tile; x += tile) {
+      puff(x + 40, CEIL_Y - 24, 26);
+      puff(x + 130, CEIL_Y - 30, 22);
+    }
+    ctx.fill();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = C.navy;
+    ctx.beginPath();
+    for (let x = off - tile; x < w + tile; x += tile) {
+      ctx.moveTo(x + 66, CEIL_Y - 12);
+      ctx.arc(x + 40, CEIL_Y - 12, 26, 0.15, Math.PI - 0.15);
+      ctx.moveTo(x + 152, CEIL_Y - 18);
+      ctx.arc(x + 130, CEIL_Y - 18, 22, 0.15, Math.PI - 0.15);
+    }
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawWater(w: number) {
+    ctx.save();
+    ctx.fillStyle = C.navyDeep;
+    ctx.fillRect(0, WATER_Y, w, H - WATER_Y);
+    ctx.strokeStyle = C.cream;
+    ctx.lineWidth = 2;
+    const rows = [[8, 0.55, 1.0], [24, 0.3, 0.8], [42, 0.16, 0.6]];
+    for (const [dy, alpha, par] of rows) {
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      const phase = bg * par * 0.08 + state.frames * 0.03;
+      for (let x = -20; x <= w + 20; x += 8) {
+        const y = WATER_Y + dy + Math.sin(x * 0.045 + phase) * 3 + Math.sin(x * 0.11 - phase * 1.3) * 1.5;
+        if (x === -20) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = C.orange;
+    ctx.fillRect(0, WATER_Y - 1, w, 1.5);
+    ctx.restore();
+  }
+
+  function drawIngredient(i: Ing) {
+    const ing = INGREDIENTS[i.kind];
+    const col = C[ing.color] ?? C.yellow;
+    const r = GLYPH / 2;
+    const bob = Math.sin(i.spin) * 2;
+    ctx.save();
+    ctx.translate(i.x, i.y + bob);
+    ctx.fillStyle = 'rgba(14,24,37,0.82)';
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = col;
+    ctx.stroke();
+    ctx.fillStyle = col;
+    ctx.strokeStyle = C.navyDeep;
+    drawShape(ing.shape, ing.id, col);
+    ctx.restore();
+    // Buchstabentag (Mono) unter dem Badge
+    ctx.save();
+    ctx.font = `700 12px ${FONT_MONO}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const tw = ctx.measureText(ing.tag).width + 8;
+    ctx.fillStyle = 'rgba(14,24,37,0.85)';
+    ctx.fillRect(i.x - tw / 2, i.y + bob + r + 3, tw, 15);
+    ctx.fillStyle = C.cream;
+    ctx.fillText(ing.tag, i.x, i.y + bob + r + 11);
+    ctx.restore();
+  }
+
+  function drawShape(shape: string, id: string, col: string) {
+    const s = 10;
+    ctx.lineWidth = 1.5;
+    switch (shape) {
+      case 'chili': {
+        ctx.beginPath();
+        ctx.moveTo(-9, -6);
+        ctx.quadraticCurveTo(10, -10, 9, 4);
+        ctx.quadraticCurveTo(6, 10, -2, 6);
+        ctx.quadraticCurveTo(-8, 2, -9, -6);
+        ctx.fill();
+        ctx.fillStyle = id === 'chili' ? C.green : C.cream;
+        ctx.fillRect(-11, -9, 5, 4);
+        break;
+      }
+      case 'corn': {
+        ctx.beginPath();
+        ctx.arc(0, 0, s, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = C.navyDeep;
+        for (const [dx, dy] of [[-4, -3], [4, -3], [0, 4]]) {
+          ctx.beginPath();
+          ctx.arc(dx, dy, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        break;
+      }
+      case 'triangle': {
+        ctx.beginPath();
+        ctx.moveTo(-10, -8);
+        ctx.lineTo(10, -8);
+        ctx.lineTo(0, 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = C.orange;
+        ctx.fillRect(-3, -4, 2, 2);
+        ctx.fillRect(3, -2, 2, 2);
+        ctx.fillRect(-1, 3, 2, 2);
+        break;
+      }
+      case 'oval': {
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 11, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = C.navyDeep;
+        ctx.beginPath();
+        ctx.moveTo(-6, -3); ctx.lineTo(-4, 3);
+        ctx.moveTo(0, -4); ctx.lineTo(2, 4);
+        ctx.moveTo(6, -3); ctx.lineTo(7, 3);
+        ctx.stroke();
+        break;
+      }
+      case 'cube': {
+        ctx.save();
+        ctx.rotate(0.18);
+        ctx.fillRect(-8, -8, 16, 16);
+        ctx.fillStyle = C.creamWarm;
+        ctx.fillRect(-8, 2, 16, 6);
+        ctx.strokeStyle = C.navyDeep;
+        ctx.strokeRect(-8, -8, 16, 16);
+        ctx.restore();
+        break;
+      }
+      case 'seeds': {
+        ctx.beginPath();
+        ctx.arc(0, 0, s, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = C.cream;
+        for (const [dx, dy] of [[-4, -4], [4, -4], [-4, 4], [4, 4], [0, 0]]) {
+          ctx.beginPath();
+          ctx.arc(dx, dy, 1.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        break;
+      }
+      case 'blob': {
+        ctx.beginPath();
+        ctx.moveTo(-9, -3);
+        ctx.lineTo(-4, -10);
+        ctx.lineTo(5, -8);
+        ctx.lineTo(10, -1);
+        ctx.lineTo(7, 8);
+        ctx.lineTo(-3, 10);
+        ctx.lineTo(-10, 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = C.yellow;
+        ctx.fillRect(-3, -5, 4, 3);
+        break;
+      }
+      case 'dots': {
+        ctx.fillStyle = C.navy;
+        ctx.beginPath();
+        ctx.arc(0, 0, s, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = col;
+        for (const [dx, dy] of [[-5, -2], [0, -5], [5, -2], [-3, 4], [3, 4]]) {
+          ctx.beginPath();
+          ctx.ellipse(dx, dy, 2.6, 1.7, 0.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        break;
+      }
+      case 'ring': {
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = col;
+        ctx.beginPath();
+        ctx.arc(0, 0, 8, 0, Math.PI * 2);
+        ctx.stroke();
+        if (id === 'roestzwiebel') {
+          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = C.orange;
+          ctx.beginPath();
+          ctx.arc(0, 0, 8, 0.3, 1.4);
+          ctx.arc(0, 0, 8, 2.8, 3.9);
+          ctx.stroke();
+        }
+        break;
+      }
+      case 'crescent': {
+        ctx.beginPath();
+        ctx.arc(0, 2, 10, Math.PI * 1.05, Math.PI * 1.95);
+        ctx.arc(0, -3, 7, Math.PI * 1.95, Math.PI * 1.05, true);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = C.cream;
+        ctx.beginPath();
+        ctx.moveTo(-4, -6); ctx.lineTo(-3, -1);
+        ctx.moveTo(1, -7); ctx.lineTo(1, -2);
+        ctx.moveTo(6, -5); ctx.lineTo(5, 0);
+        ctx.stroke();
+        break;
+      }
+      case 'leaf': {
+        if (id === 'gruenkohl') {
+          ctx.beginPath();
+          for (let k = 0; k < 7; k++) {
+            const a = (k / 7) * Math.PI * 2;
+            ctx.moveTo(Math.cos(a) * 9, Math.sin(a) * 9);
+            ctx.arc(Math.cos(a) * 6, Math.sin(a) * 6, 4.5, 0, Math.PI * 2);
+          }
+          ctx.fill();
+          ctx.fillStyle = C.navyDeep;
+          ctx.beginPath();
+          ctx.arc(0, 0, 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(0, 10); ctx.lineTo(0, -9);
+          for (const [y, dx] of [[-6, 6], [-2, 7], [2, 6], [6, 4]]) {
+            ctx.moveTo(0, y); ctx.lineTo(-dx, y - 4);
+            ctx.moveTo(0, y); ctx.lineTo(dx, y - 4);
+          }
+          ctx.stroke();
+        }
+        break;
+      }
+      case 'wedge': {
+        ctx.beginPath();
+        ctx.arc(0, 2, 10, Math.PI, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = C.creamWarm;
+        ctx.beginPath();
+        ctx.arc(0, 2, 7, Math.PI, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = col;
+        ctx.beginPath();
+        for (const a of [-2.6, -2.1, -1.57, -1.05, -0.5]) {
+          ctx.moveTo(0, 2);
+          ctx.lineTo(Math.cos(a) * 7, 2 + Math.sin(a) * 7);
+        }
+        ctx.stroke();
+        break;
+      }
+      case 'sausage': {
+        ctx.beginPath();
+        ctx.moveTo(-9, 2);
+        ctx.quadraticCurveTo(0, -8, 9, 2);
+        ctx.quadraticCurveTo(0, 8, -9, 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = C.cream;
+        ctx.fillRect(-11, 0, 3, 3);
+        ctx.fillRect(8, 0, 3, 3);
+        break;
+      }
+      case 'drop':
+      default: {
+        ctx.beginPath();
+        ctx.moveTo(0, -11);
+        ctx.bezierCurveTo(7, -2, 9, 3, 9, 4);
+        ctx.arc(0, 4, 9, 0, Math.PI, false);
+        ctx.bezierCurveTo(-9, 3, -7, -2, 0, -11);
+        ctx.fill();
+        ctx.fillStyle = C.cream;
+        ctx.beginPath();
+        ctx.arc(-3, 4, 2, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      }
+    }
+  }
+
+  function drawBlob(b: BlobItem) {
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(Math.sin(b.wobble) * 0.12);
+    ctx.fillStyle = C.orange;
+    ctx.beginPath();
+    ctx.moveTo(0, -BLOB_R - 8);
+    ctx.bezierCurveTo(BLOB_R, -2, BLOB_R, 4, BLOB_R, 5);
+    ctx.arc(0, 5, BLOB_R, 0, Math.PI, false);
+    ctx.bezierCurveTo(-BLOB_R, 4, -BLOB_R, -2, 0, -BLOB_R - 8);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(245,240,225,0.6)';
+    ctx.beginPath();
+    ctx.arc(-4, 3, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawGull(g: Gull) {
+    const flap = Math.sin(g.phase);
+    ctx.save();
+    ctx.translate(g.x, g.y);
+    ctx.strokeStyle = C.cream;
+    ctx.fillStyle = C.cream;
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-26, -4 - flap * 9);
+    ctx.quadraticCurveTo(-13, -12 - flap * 6, 0, 0);
+    ctx.quadraticCurveTo(13, -12 - flap * 6, 26, -4 - flap * 9);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(2, 2, 11, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(-11, 0, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = C.orange;
+    ctx.beginPath();
+    ctx.moveTo(-15, -1);
+    ctx.lineTo(-20, 1);
+    ctx.lineTo(-15, 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = C.navyDeep;
+    ctx.beginPath();
+    ctx.arc(-12, -1, 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawPlane() {
+    const p = state.player;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.angle);
+    // Flügel hinten (Navy)
+    ctx.fillStyle = C.navy;
+    ctx.beginPath();
+    ctx.ellipse(-2, 8, 15, 5, 0.05, 0, Math.PI * 2);
+    ctx.fill();
+    // Heckflosse
+    ctx.beginPath();
+    ctx.moveTo(-30, -2);
+    ctx.lineTo(-22, -18);
+    ctx.lineTo(-14, -2);
+    ctx.closePath();
+    ctx.fill();
+    // Rumpf (Cream, Navy-Umriss)
+    ctx.fillStyle = C.cream;
+    ctx.strokeStyle = C.navy;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-32, -4);
+    ctx.quadraticCurveTo(-10, -14, 22, -9);
+    ctx.quadraticCurveTo(34, -6, 34, 0);
+    ctx.quadraticCurveTo(34, 8, 22, 9);
+    ctx.quadraticCurveTo(-10, 12, -32, 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // Orange Streifen
+    ctx.fillStyle = C.orange;
+    ctx.fillRect(-14, 1, 30, 3);
+    // Kanzel-Ausschnitt
+    ctx.fillStyle = C.navy;
+    ctx.beginPath();
+    ctx.moveTo(-6, -8);
+    ctx.lineTo(16, -9);
+    ctx.lineTo(16, -2);
+    ctx.lineTo(-6, -2);
+    ctx.closePath();
+    ctx.fill();
+    // Pommestüte als Pilot: Becher, Fritten, Kapitänsmütze
+    ctx.fillStyle = C.cream;
+    ctx.beginPath();
+    ctx.moveTo(-1, -8);
+    ctx.lineTo(11, -8);
+    ctx.lineTo(9, -1);
+    ctx.lineTo(1, -1);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = C.orange;
+    ctx.fillRect(1, -6, 2, 4);
+    ctx.fillRect(5, -6, 2, 4);
+    ctx.fillStyle = C.yellow;
+    for (const [dx, h] of [[1, 11], [4, 14], [7, 12]]) ctx.fillRect(dx, -8 - h, 2.4, h);
+    ctx.fillStyle = C.navy;
+    ctx.fillRect(-2, -24, 14, 4);
+    ctx.fillRect(0, -27, 10, 4);
+    ctx.fillStyle = C.yellow;
+    ctx.fillRect(4, -25, 3, 2);
+    // Windschutz
+    ctx.strokeStyle = C.navy;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(14, -9);
+    ctx.lineTo(20, -18);
+    ctx.stroke();
+    // Flügel vorne (Navy)
+    ctx.fillStyle = C.navy;
+    ctx.beginPath();
+    ctx.ellipse(2, 5, 17, 5, -0.05, 0, Math.PI * 2);
+    ctx.fill();
+    // Propeller
+    ctx.fillStyle = C.orange;
+    ctx.beginPath();
+    ctx.arc(35, 0, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = C.orange;
+    ctx.globalAlpha = 0.85;
+    ctx.lineWidth = 3;
+    const bl = 20 * Math.abs(Math.cos(propAngle));
+    ctx.beginPath();
+    ctx.moveTo(36, -bl);
+    ctx.lineTo(36, bl);
+    ctx.stroke();
+    ctx.globalAlpha = 0.25;
+    ctx.beginPath();
+    ctx.moveTo(36, -20);
+    ctx.lineTo(36, 20);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawFx() {
+    for (const p of particles) {
+      ctx.globalAlpha = clamp(p.life / p.max, 0, 1);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const p of popups) {
+      const t = clamp(p.life / p.max, 0, 1);
+      ctx.globalAlpha = t < 0.4 ? t / 0.4 : 1;
+      ctx.font = `${p.size}px ${FONT_DISPLAY}`;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = C.navyDeep;
+      ctx.strokeText(p.text, p.x, p.y);
+      ctx.fillStyle = p.color;
+      ctx.fillText(p.text, p.x, p.y);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawToast(w: number) {
+    if (!toast) return;
+    const t = toast.life / toast.max;
+    const a = t > 0.85 ? (1 - t) / 0.15 : t < 0.2 ? t / 0.2 : 1;
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.font = `22px ${FONT_DISPLAY}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const text = toast.text.toUpperCase();
+    const tw = Math.min(w - 24, ctx.measureText(text).width + 36);
+    const x = w / 2;
+    const y = CEIL_Y + 58;
+    ctx.fillStyle = C.navy;
+    ctx.fillRect(x - tw / 2, y - 20, tw, 40);
+    ctx.strokeStyle = C.orange;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x - tw / 2, y - 20, tw, 40);
+    ctx.fillStyle = C.cream;
+    ctx.fillText(text, x, y + 1, w - 60);
+    ctx.restore();
   }
 
   function draw() {
-    // Sunset-Gradient-Background
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0,    '#0E1825');  // navy-deep top
-    g.addColorStop(0.55, '#1A2A4E');  // navy mid
-    g.addColorStop(0.85, '#E94F0E');  // orange horizon
-    g.addColorStop(1,    '#F5C518');  // yellow ground-line
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-
-    // Wolken (Cream, multiply, parallax)
-    ctx.globalAlpha = 0.15;
-    ctx.fillStyle = '#F5F0E1';
-    for (let i = 0; i < 5; i++) {
-      const cx = (i * 220 - cloudOffset * (i + 1) * 0.3) % (W + 200);
-      const cy = 60 + i * 40;
-      drawCloud(cx, cy, 36 + i * 6);
+    const w = state.w;
+    const dusk = clamp(state.score / 300, 0, 1);
+    let sx = 0;
+    let sy = 0;
+    if (shake > 0) {
+      const amp = (shake / 26) * 9;
+      sx = (Math.random() - 0.5) * amp;
+      sy = (Math.random() - 0.5) * amp;
     }
-    ctx.globalAlpha = 1;
-
-    // Pommes-Berge (orange-deep Säulen)
-    ctx.fillStyle = '#A53408';
-    ctx.strokeStyle = '#F5C518';
-    ctx.lineWidth = 2;
-    for (const p of pipes) {
-      // oben
-      ctx.fillRect(p.x, 0, PIPE_WIDTH, p.gapY);
-      ctx.strokeRect(p.x, 0, PIPE_WIDTH, p.gapY);
-      // unten
-      ctx.fillRect(p.x, p.gapY + PIPE_GAP, PIPE_WIDTH, H - (p.gapY + PIPE_GAP));
-      ctx.strokeRect(p.x, p.gapY + PIPE_GAP, PIPE_WIDTH, H - (p.gapY + PIPE_GAP));
-
-      // Pommes-Strich-Muster pro Säule
-      ctx.strokeStyle = 'rgba(245,197,24,0.35)';
-      ctx.lineWidth = 1.5;
-      for (let y = 6; y < p.gapY; y += 10) {
-        ctx.beginPath();
-        ctx.moveTo(p.x + 8, y);
-        ctx.lineTo(p.x + PIPE_WIDTH - 8, y);
-        ctx.stroke();
-      }
-      for (let y = p.gapY + PIPE_GAP + 6; y < H; y += 10) {
-        ctx.beginPath();
-        ctx.moveTo(p.x + 8, y);
-        ctx.lineTo(p.x + PIPE_WIDTH - 8, y);
-        ctx.stroke();
-      }
-      ctx.strokeStyle = '#F5C518';
-      ctx.lineWidth = 2;
-    }
-
-    // Player — Pilot-Captain als Cream-Dreieck + Navy-Mütze
-    const rot = Math.max(-0.5, Math.min(0.9, vy * 0.06));
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = C.navyDeep;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.save();
-    ctx.translate(PLAYER_X + PLAYER_W / 2, py + PLAYER_H / 2);
-    ctx.rotate(rot);
-    // Body
-    ctx.fillStyle = '#F5F0E1';
+    ctx.setTransform(scale, 0, 0, scale, offsetX + sx * scale, sy * scale);
     ctx.beginPath();
-    ctx.moveTo(-PLAYER_W / 2, -PLAYER_H / 2);
-    ctx.lineTo( PLAYER_W / 2, 0);
-    ctx.lineTo(-PLAYER_W / 2,  PLAYER_H / 2);
-    ctx.closePath();
-    ctx.fill();
-    // Hat-Stripe
-    ctx.fillStyle = '#1A2A4E';
-    ctx.fillRect(-PLAYER_W / 2, -PLAYER_H / 2 - 1, PLAYER_W * 0.6, 6);
-    // Wing-Mark / Akzent
-    ctx.fillStyle = '#E94F0E';
-    ctx.beginPath();
-    ctx.moveTo(-PLAYER_W / 2 + 4, -2);
-    ctx.lineTo(-PLAYER_W / 2 - 4, 4);
-    ctx.lineTo(-PLAYER_W / 2 + 4, 6);
-    ctx.closePath();
-    ctx.fill();
+    ctx.rect(0, 0, w, H);
+    ctx.clip();
+
+    ctx.fillStyle = skyGradient(dusk);
+    ctx.fillRect(0, 0, w, H);
+    drawSun(w, dusk);
+    drawSkyline(w);
+    drawMidClouds(w);
+    for (const i of state.ingredients) drawIngredient(i);
+    for (const b of state.blobs) drawBlob(b);
+    for (const g of state.gulls) drawGull(g);
+    if (state.phase !== 'over' || state.player.y < WATER_Y + 20) drawPlane();
+    drawWater(w);
+    drawCloudDeck(w);
+    drawFx();
+    drawToast(w);
     ctx.restore();
-
-    // Boden-Linie
-    ctx.strokeStyle = '#F5F0E1';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, H - 0.5);
-    ctx.lineTo(W, H - 0.5);
-    ctx.stroke();
   }
 
-  function drawCloud(x: number, y: number, r: number) {
-    ctx.beginPath();
-    ctx.arc(x,           y,     r,     0, Math.PI * 2);
-    ctx.arc(x + r,       y + 4, r * 0.8, 0, Math.PI * 2);
-    ctx.arc(x - r * 0.9, y + 6, r * 0.7, 0, Math.PI * 2);
-    ctx.fill();
+  // ── Loop ───────────────────────────────────────────────────────────────────
+  function frame(ts: number) {
+    if (document.hidden) {
+      lastTs = 0;
+      requestAnimationFrame(frame);
+      return;
+    }
+    if (!lastTs) lastTs = ts;
+    const dt = Math.min((ts - lastTs) / (1000 / 60), 2.5);
+    lastTs = ts;
+    if (!paused) {
+      const before = state.phase;
+      step(state, dt, { tap: tapQueued });
+      tapQueued = false;
+      handleEvents(drainEvents(state) as GameEvent[]);
+      if (before !== 'over' && state.phase === 'over') onGameOver();
+    }
+    updateFx(dt);
+    updateHud();
+    draw();
+    requestAnimationFrame(frame);
   }
 
-  // Input
-  startBtn.addEventListener('click', startGame);
-  restartBtn.addEventListener('click', () => {
-    overlayGameOver.hidden = true;
-    overlayIdle.hidden = false;
-    state = 'idle';
-    reset();
+  // ── Eingabe ────────────────────────────────────────────────────────────────
+  startBtn.addEventListener('click', begin);
+  restartBtn.addEventListener('click', begin);
+  canvas.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    tap();
   });
-
-  canvas.addEventListener('click', jump);
-  canvas.addEventListener('touchstart', (e) => { e.preventDefault(); jump(); }, { passive: false });
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   window.addEventListener('keydown', (e) => {
     if (e.code !== 'Space') return;
-    // P1 fix (supervisor-extended): don't hijack Space on any interactive element
-    // — inputs, textareas, buttons, links, contenteditable — keyboard activation must work
-    const target = e.target as HTMLElement | null;
+    const t = e.target as HTMLElement | null;
     if (
-      target instanceof HTMLInputElement ||
-      target instanceof HTMLTextAreaElement ||
-      target instanceof HTMLButtonElement ||
-      target instanceof HTMLSelectElement ||
-      target instanceof HTMLAnchorElement ||
-      (target && target.isContentEditable)
+      t instanceof HTMLInputElement ||
+      t instanceof HTMLTextAreaElement ||
+      t instanceof HTMLButtonElement ||
+      t instanceof HTMLSelectElement ||
+      t instanceof HTMLAnchorElement ||
+      (t && t.isContentEditable)
     ) return;
+    if (state.phase === 'over' && !paused) return;
     e.preventDefault();
-    jump();
+    if (!e.repeat) tap();
   });
-
-  // Submit
-  scoreForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (state !== 'gameover') return;
-    if (!sessionToken) {
-      formMeta.textContent = 'Session-Fehler. Bitte nochmal spielen und erneut versuchen.';
-      return;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && state.phase === 'playing' && !paused) {
+      paused = true;
+      show('pause');
     }
-    const formData = new FormData(scoreForm);
-    const email = String(formData.get('email') ?? '').trim();
-    const displayName = String(formData.get('display_name') ?? '').trim();
-    const consent = formData.get('consent') === 'on';
-    if (!email || !consent) {
-      formMeta.textContent = 'E-Mail und Einverständnis sind Pflicht.';
-      return;
-    }
+  });
+  if (toFormBtn && form) {
+    toFormBtn.addEventListener('click', () => {
+      form.hidden = false;
+      form.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+      const email = form.querySelector<HTMLInputElement>('input[name="email"]');
+      window.setTimeout(() => email?.focus({ preventScroll: true }), reduceMotion ? 0 : 450);
+    });
+  }
 
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Wird gesendet…';
-    formMeta.textContent = '';
-
-    try {
-      const res = await fetch(`${apiBase}/score/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: sessionToken,
-          email,
-          display_name: displayName,
-          score,
-          duration_ms: durationMs,
-          consent: true,
-        }),
-      });
-      const data = await res.json() as { ok?: boolean; error?: string; masked_email?: string };
-      if (!res.ok || !data.ok) throw new Error(data.error || 'submit failed');
-      submitBtn.textContent = 'Eingereicht ✓';
-      // P0 fix: safe DOM construction, no innerHTML interpolation of user/server data
-      const targetEmail = data.masked_email ?? email;
-      formMeta.replaceChildren(
-        document.createTextNode('Bestätigungs-Mail unterwegs an '),
-        Object.assign(document.createElement('strong'), { textContent: String(targetEmail) }),
-        document.createTextNode('. Klick rein, Score zählt.')
-      );
-      // refresh leaderboard if present
-      window.dispatchEvent(new CustomEvent('leaderboard:refresh'));
-    } catch (err) {
-      console.error('score submit failed', err);
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Score einreichen →';
-      // P1 fix: map backend error codes to specific UX messages
-      const msg = (err instanceof Error ? err.message : String(err ?? '')).toLowerCase();
-      if (msg.includes('session expired') || msg.includes('invalid session') || msg.includes('session already used')) {
-        formMeta.textContent = 'Spiel-Sitzung abgelaufen oder ungültig. Spiel nochmal.';
-      } else if (msg.includes('consent')) {
-        formMeta.textContent = 'Einverständnis fehlt — Haken setzen und nochmal senden.';
-      } else if (msg.includes('implausible') || msg.includes('impossible') || msg.includes('too short')) {
-        formMeta.textContent = 'Score sieht unplausibel aus. Spiel ehrlich nochmal — wir kicken Bots raus.';
-      } else if (msg.includes('invalid email')) {
-        formMeta.textContent = 'E-Mail-Adresse prüfen.';
-      } else {
-        formMeta.textContent = 'Senden fehlgeschlagen. Versuchs gleich nochmal.';
+  // ── Submit an den Worker ───────────────────────────────────────────────────
+  const UNREACHABLE = 'Die Wochenwertung ist gerade nicht erreichbar. Dein Bestwert bleibt hier gespeichert.';
+  if (form && submitBtn && formMeta) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!hasResult) {
+        formMeta.textContent = 'Erst fliegen, dann eintragen.';
+        return;
       }
-    }
-  });
+      const fd = new FormData(form);
+      if (String(fd.get('website') ?? '').trim()) return; // Honeypot
+      const email = String(fd.get('email') ?? '').trim();
+      const displayName = String(fd.get('display_name') ?? '').trim();
+      const terms = fd.get('terms') === 'on';
+      const age = fd.get('age') === 'on';
+      const newsletterOptIn = fd.get('newsletter_opt_in') === 'on';
+      if (!email || !terms || !age) {
+        formMeta.textContent = 'E-Mail, Bedingungen und Alter sind Pflicht.';
+        return;
+      }
+      if (!sessionToken) {
+        formMeta.textContent = sessionFailed || !apiBase
+          ? UNREACHABLE
+          : 'Spiel-Sitzung fehlt. Spiel nochmal, dann klappt das Eintragen.';
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Wird gesendet';
+      formMeta.textContent = '';
+      const score = finalScore;
+      try {
+        const res = await fetch(`${apiBase}/score/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: sessionToken,
+            email,
+            display_name: displayName,
+            score,
+            duration_ms: durationMs,
+            consent: true,
+            age_confirmed: true,
+            terms_version: termsVersion,
+            newsletter_opt_in: newsletterOptIn,
+          }),
+        });
+        const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; masked_email?: string; mail_sent?: boolean };
+        if (!res.ok || !data.ok) throw new Error(data.error || `submit ${res.status}`);
+        sessionToken = null; // Token ist verbraucht
+        submitBtn.textContent = 'Eingetragen';
+        try {
+          sessionStorage.setItem('pp_last_entry', JSON.stringify({ name: displayName, score }));
+        } catch { /* egal */ }
+        if (data.mail_sent === false) {
+          formMeta.textContent = 'Die Bestätigungs-Mail konnte gerade nicht raus. Wir kümmern uns.';
+        } else {
+          formMeta.replaceChildren(
+            document.createTextNode('Bestätigungs-Mail unterwegs an '),
+            Object.assign(document.createElement('strong'), { textContent: String(data.masked_email ?? email) }),
+            document.createTextNode('. Klick rein, dann zählt der Score.'),
+          );
+        }
+        window.dispatchEvent(new CustomEvent('leaderboard:refresh'));
+      } catch (err) {
+        console.error('score submit failed', err);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Score eintragen';
+        const msg = (err instanceof Error ? err.message : String(err ?? '')).toLowerCase();
+        if (err instanceof TypeError || msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('load failed')) {
+          formMeta.textContent = UNREACHABLE;
+        } else if (msg.includes('session expired') || msg.includes('invalid session') || msg.includes('session already used')) {
+          formMeta.textContent = 'Spiel-Sitzung abgelaufen oder ungültig. Spiel nochmal.';
+        } else if (msg.includes('consent') || msg.includes('age')) {
+          formMeta.textContent = 'Einverständnis fehlt. Haken setzen und nochmal senden.';
+        } else if (msg.includes('too short')) {
+          formMeta.textContent = 'Zu kurz geflogen. Ab 5 Sekunden zählt der Score.';
+        } else if (msg.includes('implausible') || msg.includes('impossible')) {
+          formMeta.textContent = 'Score sieht unplausibel aus. Spiel ehrlich nochmal, wir kicken Bots raus.';
+        } else if (msg.includes('invalid email')) {
+          formMeta.textContent = 'E-Mail-Adresse prüfen.';
+        } else {
+          formMeta.textContent = 'Senden fehlgeschlagen. Versuchs gleich nochmal.';
+        }
+      }
+    });
+  }
 
-  // Initial draw + loop
+  // ── Rücksprung aus der Bestätigungs-Mail (?verified=1) ─────────────────────
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('verified') === '1') {
+      // P2-06: Ohne laufende Wochenwertung gibt es nichts zu bestätigen, das Banner bleibt weg.
+      verifiedBanner.hidden = !contestLive;
+      params.delete('verified');
+      const rest = params.toString();
+      window.history.replaceState(null, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`);
+      window.dispatchEvent(new CustomEvent('leaderboard:refresh'));
+    }
+  } catch { /* URL nicht lesbar: kein Banner */ }
+
+  // ── Start ──────────────────────────────────────────────────────────────────
+  fitCanvas();
+  window.addEventListener('resize', fitCanvas);
+  if (typeof ResizeObserver === 'function') new ResizeObserver(() => fitCanvas()).observe(stage);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => draw()).catch(() => {});
+  show('idle');
   draw();
-  rafId = requestAnimationFrame(step);
+  requestAnimationFrame(frame);
 </script>
 
 <style>
-  .game {
-    background: var(--navy-deep, #0E1825);
-    padding: clamp(24px, 5vw, 56px);
-    position: relative;
+  .pp {
+    background: var(--navy-deep, #0e1825);
+    padding: clamp(16px, 4vw, 40px) clamp(16px, 4vw, 40px);
+    box-sizing: border-box;
   }
 
-  /* Screen-reader-only utility for hidden aria-live announcers (P0 fix) */
   .sr-only {
     position: absolute;
     width: 1px;
@@ -468,47 +1349,73 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     border: 0;
   }
 
-  .game-frame {
-    max-width: 880px;
+  .pp-banner {
+    max-width: 960px;
+    margin: 0 auto 16px;
+    background: var(--green);
+    color: var(--cream);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    padding: 12px 16px;
+    border-left: 4px solid var(--yellow);
+  }
+
+  .pp-stage {
+    max-width: 960px;
     margin: 0 auto;
     position: relative;
     border: 2px solid var(--cream);
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+    background: var(--navy-deep);
   }
 
-  .game-canvas {
+  .pp-canvas {
     display: block;
     width: 100%;
-    height: auto;
-    background: var(--navy-deep, #0E1825);
+    aspect-ratio: 16 / 9;
+    background: var(--navy-deep);
     cursor: pointer;
-    image-rendering: optimizeQuality;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .game-hud {
+  .pp-canvas:focus-visible {
+    outline: 3px solid var(--orange);
+    outline-offset: -3px;
+  }
+
+  .pp-hud {
     position: absolute;
-    inset: 12px 14px auto auto;
+    top: 10px;
+    left: 10px;
+    right: 58px;
     display: flex;
-    gap: 12px;
+    gap: 8px;
+    flex-wrap: wrap;
     pointer-events: none;
     z-index: 2;
   }
 
   .hud-cell {
-    background: rgba(26, 42, 78, 0.85);
+    background: rgba(26, 42, 78, 0.86);
     border: 1px solid var(--cream);
-    padding: 6px 12px;
+    padding: 5px 10px;
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    align-items: flex-start;
+    min-width: 72px;
   }
 
   .hud-label {
     font-family: var(--font-mono);
-    font-size: 0.56rem;
-    letter-spacing: 0.2em;
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: color-mix(in oklab, var(--cream) 80%, transparent);
+    color: color-mix(in oklab, var(--cream) 82%, transparent);
+    line-height: 1.2;
   }
 
   .hud-value {
@@ -518,54 +1425,127 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     line-height: 1;
   }
 
-  .game-overlay {
+  .hud-set-name {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hud-dots {
+    display: inline-flex;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .hud-dots i {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--cream);
+    background: transparent;
+    transition: background var(--duration-fast) var(--ease-out);
+  }
+
+  .hud-dots i.is-on {
+    background: var(--yellow);
+    border-color: var(--yellow);
+  }
+
+  .pp-sound {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    background: rgba(26, 42, 78, 0.86);
+    border: 1px solid var(--cream);
+    color: var(--cream);
+    cursor: pointer;
+    z-index: 4;
+    padding: 0;
+  }
+
+  .pp-sound svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  .pp-sound .snd-body { fill: currentColor; }
+  .pp-sound .snd-wave { display: none; }
+  .pp-sound.is-on .snd-wave { display: block; }
+  .pp-sound.is-on .snd-off { display: none; }
+  .pp-sound:hover, .pp-sound.is-on { color: var(--yellow); }
+  .pp-sound:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
+
+  .pp-overlay {
     position: absolute;
     inset: 0;
     background: rgba(14, 24, 37, 0.78);
     backdrop-filter: blur(2px);
     display: grid;
     place-items: center;
-    padding: 20px;
+    padding: 16px;
     z-index: 3;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
-  .overlay-card {
+  .pp-overlay[hidden] { display: none; }
+
+  .pp-card {
     background: var(--cream);
     color: var(--ink);
-    padding: 28px 32px;
-    max-width: 480px;
+    padding: 24px 28px;
+    max-width: 460px;
     width: 100%;
+    box-sizing: border-box;
     text-align: center;
     border: 2px solid var(--navy);
+    max-height: 100%;
+    overflow-y: auto;
   }
 
-  .overlay-eyebrow {
+  .pp-card--slim { max-width: 360px; }
+
+  .pp-eyebrow {
+    display: block;
     font-family: var(--font-mono);
     font-size: 0.72rem;
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--orange-deep);
     margin-bottom: 8px;
   }
 
-  .overlay-card h3 {
+  .pp-card h3,
+  .pp-form h3,
+  .pp-soon h3 {
     font-family: var(--font-display);
-    font-size: clamp(1.5rem, 4vw, 2rem);
+    font-size: clamp(1.4rem, 4vw, 2rem);
     text-transform: uppercase;
     line-height: 1.05;
-    margin: 0 0 14px;
+    margin: 0 0 12px;
     color: var(--ink);
     letter-spacing: -0.3px;
   }
 
-  .overlay-card p {
+  .pp-card p {
     font-family: var(--font-body);
     font-size: 1rem;
     line-height: 1.5;
-    margin: 0 0 18px;
+    margin: 0 0 16px;
   }
 
-  .overlay-card kbd {
+  .pp-card kbd,
+  .pp-soon kbd {
     background: var(--navy);
     color: var(--cream);
     padding: 2px 8px;
@@ -574,127 +1554,165 @@ const { apiBase = "https://fryhigh-game.fryhigh.workers.dev" } = Astro.props;
     border-radius: 3px;
   }
 
-  .overlay-mini {
-    margin-top: 14px;
+  /* D-19: Auf Touch-Geräten gibt es keine Leertaste; der Hinweis verschwindet mitsamt „oder“. */
+  @media (hover: none) {
+    .kbd-hint { display: none; }
+  }
+
+  .pp-mini {
+    margin: 14px 0 0;
     font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
-    color: color-mix(in oklab, var(--ink) 60%, transparent);
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    color: color-mix(in oklab, var(--ink) 70%, transparent);
+    line-height: 1.45;
   }
 
-  .game-btn {
-    background: var(--accent);
-    color: var(--cream);
-    border: none;
-    padding: 14px 28px;
-    font-family: var(--font-display);
-    font-size: 1.125rem;
-    letter-spacing: 1.5px;
+  .pp-note {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    cursor: pointer;
-    transition: background var(--duration-fast) var(--ease-out);
-    margin-top: 8px;
+    color: var(--green);
   }
 
-  .game-btn:hover:not(:disabled) {
-    background: color-mix(in oklab, var(--accent) 88%, black);
-  }
-
-  .game-btn:disabled {
-    background: var(--green);
-    cursor: default;
-  }
-
-  .game-btn--ghost {
-    background: transparent;
-    color: var(--ink);
-    border: 1.5px solid var(--ink);
-    font-size: 0.95rem;
-    padding: 10px 22px;
-    margin-top: 14px;
-  }
-
-  .game-btn--ghost:hover {
-    background: var(--ink);
-    color: var(--cream);
-  }
-
-  .score-form {
-    text-align: left;
-    margin-top: 18px;
-    padding-top: 18px;
-    border-top: 1px dashed color-mix(in oklab, var(--ink) 25%, transparent);
-  }
-
-  .form-lead {
+  .pp-rank {
     font-family: var(--font-body);
-    font-size: 0.95rem;
-    color: color-mix(in oklab, var(--ink) 75%, transparent);
-    margin: 0 0 14px;
+    color: var(--ink);
   }
 
-  .form-field {
+  .pp-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .pp-form,
+  .pp-soon {
+    max-width: 560px;
+    margin: 20px auto 0;
+    background: var(--cream);
+    color: var(--ink);
+    padding: clamp(20px, 3vw, 28px);
+    border: 2px solid var(--cream);
+    box-sizing: border-box;
+  }
+
+  .pp-form[hidden] { display: none; }
+
+  .pp-form-lead,
+  .pp-soon p {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.5;
+    margin: 0 0 16px;
+    color: color-mix(in oklab, var(--ink) 85%, transparent);
+  }
+
+  .pp-field {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
   }
 
-  .form-label {
+  .pp-label {
     font-family: var(--font-mono);
-    font-size: 0.56rem;
-    letter-spacing: 0.16em;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: color-mix(in oklab, var(--ink) 60%, transparent);
+    color: color-mix(in oklab, var(--ink) 70%, transparent);
   }
 
-  .form-field input {
+  .pp-field input {
     background: transparent;
     border: none;
     border-bottom: 1.5px solid var(--ink);
-    padding: 6px 0;
+    padding: 8px 0;
     font-family: var(--font-body);
-    font-size: 1rem;
+    font-size: 1.05rem;
     color: var(--ink);
     width: 100%;
     border-radius: 0;
     outline: none;
+    min-height: 40px;
   }
 
-  .form-field input:focus {
+  .pp-field input:focus-visible {
     border-bottom-color: var(--accent);
+    outline: 3px solid var(--accent);
+    outline-offset: 4px;
   }
 
-  .form-consent {
+  .pp-hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+
+  .pp-check {
     display: flex;
     gap: 10px;
     align-items: flex-start;
     font-family: var(--font-body);
-    font-size: 0.82rem;
-    line-height: 1.4;
-    color: color-mix(in oklab, var(--ink) 80%, transparent);
-    margin: 12px 0 14px;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    color: color-mix(in oklab, var(--ink) 88%, transparent);
+    margin: 10px 0;
   }
 
-  .form-consent input { margin-top: 4px; }
+  .pp-check input {
+    margin-top: 4px;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+    flex: 0 0 auto;
+  }
 
-  .form-consent a {
+  .pp-check span { min-width: 0; overflow-wrap: anywhere; }
+
+  .pp-check a {
     color: var(--accent);
     text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
-  .form-meta {
-    margin-top: 10px;
+  .pp-form .fh-btn { margin-top: 10px; }
+
+  .pp-meta {
+    margin: 12px 0 0;
     font-family: var(--font-mono);
     font-size: 0.78rem;
     color: var(--accent);
-    line-height: 1.4;
+    line-height: 1.45;
     min-height: 1.2em;
   }
 
+  .pp-soon .fh-link { display: inline-block; margin-top: 4px; }
+
   @media (max-width: 720px) {
-    .overlay-card { padding: 22px 18px; }
+    .pp { padding: 12px 16px 24px; }
+    .pp-card { padding: 20px 16px; }
     .hud-value { font-size: 1.2rem; }
-    .game-canvas { cursor: default; }
+    .hud-cell { min-width: 0; padding: 4px 8px; }
+    .hud-set-name { max-width: 72px; }
+    /* P1-03: HUD bleibt einzeilig; eine zweite Zeile deckte sonst die Flugbahn und den Set-Toast. */
+    .pp-hud { right: 54px; gap: 6px; flex-wrap: nowrap; }
+    .pp-canvas { cursor: default; }
+  }
+
+  @media (max-width: 720px) and (orientation: portrait) {
+    .pp-canvas {
+      aspect-ratio: auto;
+      height: 60vh;
+      height: 60svh;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pp-overlay { backdrop-filter: none; }
   }
 </style>

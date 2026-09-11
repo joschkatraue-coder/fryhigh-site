@@ -1,6 +1,6 @@
 ---
-eyebrow: "Junior Crew · Kindergeburtstag ab 4 Jahre · direkt am Zoo am Meer"
-headline: "Crew anheuern."
-headline_accent: "Kapitänsmütze inklusive."
-intro: "Für Crews von 4 bis 18 Kindern. Kindgerechte Pommes-Karte, Pommes-Mal-Aktion auf Bambusschalen, Foto-Bereich mit Kapitäns-Equipment. Und das Beste: Zoo am Meer ist 5 Minuten zu Fuß weg — wir kombinieren Geburtstag und Zoo-Tag, blocken Crew und Karte für euch, ihr geht zwischendurch zu den Pinguinen und kommt zurück für die Eis-Runde."
+eyebrow: "Geburtstag im Zoo am Meer"
+headline: "Geburtstag bei uns."
+headline_accent: "Pommes für die ganze Bande."
+intro: "Kleiner Eisbär, Baby-Pinguin, Mini-Pilot: Die Kids-Karte hat drei Teller, und die Tiere sind nebenan. Frag einen Tisch an, Anlass Geburtstag, und schreib Allergien gleich dazu. Die Crew meldet sich per Mail, den Rest klären wir zusammen."
 ---

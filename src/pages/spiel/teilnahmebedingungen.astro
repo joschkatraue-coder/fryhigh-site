@@ -1,0 +1,236 @@
+---
+import MarketingLayout from "../../layouts/MarketingLayout.astro";
+import { getEntry } from "astro:content";
+
+// Version der Bedingungen; das Spiel-Formular schickt sie als terms_version an den Worker.
+const TERMS_VERSION = "2026-09-11";
+
+// contest_live aus src/content/spiel.md (Singleton, Kollektion "spiel"). Fehlt Datei oder Kollektion,
+// gilt "nicht scharf": Hinweisabsatz oben bleibt sichtbar. Casts, weil die Kollektion aus einem anderen
+// Schreibbereich kommt und beim Bau dieser Seite noch fehlen kann.
+let contestLive = false;
+try {
+  const entry = (await getEntry("spiel" as never, "spiel" as never)) as unknown as
+    | { data?: { contest_live?: boolean } }
+    | undefined;
+  contestLive = entry?.data?.contest_live === true;
+} catch {
+  contestLive = false;
+}
+---
+<MarketingLayout
+  title="Teilnahmebedingungen Pommespilot · Fry High"
+  description="Teilnahmebedingungen für das Mini-Spiel Pommespilot auf fryhigh.de: Wochenwertung, Gewinn, Einlösung, Ausschluss, Datenschutz."
+>
+  <article class="legal">
+    <header class="legal-head">
+      <span class="eyebrow">Gewinnspiel · Wochenwertung</span>
+      <h1>Teilnahme&shy;bedingungen Pommespilot.</h1>
+      <p class="legal-meta">Stand: <time datetime="2026-09-11">11.09.2026</time> · Version {TERMS_VERSION}</p>
+    </header>
+
+    {!contestLive && (
+      <section class="notice" aria-label="Hinweis zum Status der Wochenwertung">
+        <p>
+          <strong>Die Wochenwertung startet, sobald wir sie freischalten; bis dahin ist das Spiel nur zum Spielen da.</strong>
+          Solange sie nicht läuft, gibt es keine Rangliste, keinen Wochengewinn und kein Formular für deinen Score.
+        </p>
+      </section>
+    )}
+
+    <section>
+      <p>
+        Der Pommespilot ist ein Mini-Spiel auf fryhigh.de mit einer wöchentlichen Wertung. Es ist ein Gewinnspiel mit Werbecharakter der Fry High GbR. Du spielst ohne Einsatz; es geht um Geschicklichkeit, nicht um Glück. Wer mitmacht, akzeptiert diese Bedingungen.
+      </p>
+    </section>
+
+    <section>
+      <h2>1. Veranstalter</h2>
+      <p>
+        Veranstalter ist die <strong>Fry High GbR</strong>, H.-H.-Meier-Straße 7, 27568 Bremerhaven, E-Mail <a href="mailto:info@fryhigh.de">info@fryhigh.de</a>. Weitere Angaben stehen im <a href="/impressum">Impressum</a>.
+      </p>
+    </section>
+
+    <section>
+      <h2>2. Wer mitmachen kann</h2>
+      <p>
+        Mitmachen kann, wer mindestens 18 Jahre alt ist und in Deutschland wohnt. Beim Eintragen deines Scores bestätigst du das mit einem Haken. Crew und Angehörige der Fry High GbR dürfen spielen, gewinnen aber nicht.
+      </p>
+    </section>
+
+    <section>
+      <h2>3. Zeitraum</h2>
+      <p>
+        Gespielt wird in Wochenrunden von Montag 00:00 Uhr bis Sonntag 23:59 Uhr (Zeit in Berlin). Das Spiel läuft in der Zoo-Saison von April bis Oktober. Wir können es jederzeit pausieren oder beenden; eine laufende Woche werten wir dann noch aus.
+      </p>
+    </section>
+
+    <section>
+      <h2>4. Gewinn</h2>
+      <p>
+        Pro Woche gibt es einen Gewinn: einen Gutschein über 15 € für Fry High. Alles darüber hinaus zahlst du normal. Restbeträge zahlen wir nicht aus.
+      </p>
+    </section>
+
+    <section>
+      <h2>5. Ermittlung des Gewinners und Gleichstand</h2>
+      <p>
+        Gewonnen hat, wer am Sonntag um 23:59 Uhr den höchsten bestätigten Score der Woche hat. Bei Gleichstand gewinnt, wer den Score früher eingereicht hat. Du darfst so oft spielen, wie du willst; es zählt dein höchster Score.
+      </p>
+      <p>
+        Nur Scores zählen, die du über den Link in unserer Bestätigungsmail bestätigt hast. Der Link gilt 7 Tage. Ein Score, der erst nach Ende der Woche bestätigt wird, zählt nicht mehr für diese Woche.
+      </p>
+    </section>
+
+    <section>
+      <h2>6. Benachrichtigung</h2>
+      <p>
+        Der Gewinner bekommt den Gutschein-Code automatisch per E-Mail an die eingetragene Adresse, in der Nacht auf Montag. In der öffentlichen Rangliste steht nur dein Spitzname oder, wenn du keinen angibst, ein Platzhalter wie „Pilot #4A2F“.
+      </p>
+    </section>
+
+    <section>
+      <h2>7. Einlösung</h2>
+      <p>
+        Der Code gilt 30 Tage ab Versand und genau einmal. Du löst ihn an der Kasse im Fry High im Zoo am Meer (H.-H.-Meier-Straße 7, 27568 Bremerhaven) zu den Zoo-Öffnungszeiten ein oder am Foodtruck bei einem öffentlichen Event. Die Crew prüft den Code, du bestellst, was du magst. Der Zoo-Eintritt ist nicht enthalten.
+      </p>
+      <p>
+        Endet die Saison, bevor du einlösen konntest, schreib an <a href="mailto:info@fryhigh.de">info@fryhigh.de</a>. Wir verlängern den Code dann bis zum Saisonstart.
+      </p>
+    </section>
+
+    <section>
+      <h2>8. Ausschluss</h2>
+      <p>
+        Wer mit Bots, Skripten oder manipulierten Scores spielt, fliegt raus. Solche Einträge löschen wir ohne Nachricht; unser Plausibilitätscheck entscheidet. Spitznamen, die beleidigen oder gegen Gesetze verstoßen, blenden wir aus oder ersetzen sie durch einen Platzhalter.
+      </p>
+    </section>
+
+    <section>
+      <h2>9. Keine Barauszahlung, keine Übertragung</h2>
+      <p>
+        Der Gewinn wird nicht in bar ausgezahlt, nicht getauscht und nicht mit anderen Aktionen kombiniert. Du darfst den Code an eine andere Person weitergeben, aber nicht verkaufen.
+      </p>
+    </section>
+
+    <section>
+      <h2>10. Datenschutz</h2>
+      <p>
+        Was wir mit E-Mail-Adresse, Spitzname, Score und Spieldauer machen, wie lange wir es speichern und wie du deine Einwilligung widerrufst, steht in der <a href="/datenschutz#spiel">Datenschutzerklärung, Abschnitt „Mini-Spiel Pommespilot“</a>.
+      </p>
+    </section>
+
+    <section>
+      <h2>11. Rechtsweg und Änderungen</h2>
+      <p>
+        Der Rechtsweg ist ausgeschlossen. Wir dürfen diese Bedingungen ändern oder das Spiel beenden, wenn es technische oder rechtliche Gründe gibt. Eine laufende Woche werten wir dann fair nach den bisherigen Regeln aus. Die jeweils gültige Fassung steht auf dieser Seite mit Datum und Versionsnummer.
+      </p>
+    </section>
+
+    <section>
+      <h2>12. Kennzeichnung</h2>
+      <p>
+        Das Spiel ist auf der Spielseite als Gewinnspiel mit Wochenwertung gekennzeichnet. Diese Bedingungen sind von dort, aus dem Eintrag-Formular und aus der Bestätigungsmail verlinkt.
+      </p>
+    </section>
+
+    <footer class="legal-foot">
+      <a href="/spiel">← Zurück zum Spiel</a>
+    </footer>
+  </article>
+</MarketingLayout>
+
+<style>
+  .legal {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: clamp(48px, 8vw, 96px) clamp(20px, 5vw, 40px);
+    font-family: var(--font-body);
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    color: var(--ink);
+  }
+
+  .legal-head {
+    margin-bottom: 56px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid color-mix(in oklab, var(--ink) 12%, transparent);
+  }
+
+  .legal-head h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 6vw, 4rem);
+    hyphens: manual;
+    line-height: 0.95;
+    margin: 14px 0 12px;
+    color: var(--navy);
+  }
+
+  .legal-meta {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+    opacity: 0.55;
+    margin: 0;
+  }
+
+  .notice {
+    border-left: 4px solid var(--orange);
+    background: var(--cream-warm);
+    padding: 16px 20px;
+  }
+
+  .notice p {
+    margin: 0;
+  }
+
+  .legal section {
+    margin-bottom: 36px;
+  }
+
+  .legal h2 {
+    font-family: var(--font-display);
+    font-size: 1.375rem;
+    line-height: 1.1;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--navy);
+    margin: 0 0 14px;
+  }
+
+  .legal p {
+    margin: 0 0 14px;
+  }
+
+  .legal a {
+    color: var(--orange);
+    border-bottom: 1px solid color-mix(in oklab, var(--orange) 35%, transparent);
+    transition: border-color var(--duration-fast) var(--ease-out);
+  }
+
+  .legal a:hover,
+  .legal a:focus-visible {
+    border-bottom-color: var(--orange);
+  }
+
+  .legal strong {
+    font-weight: 600;
+    color: var(--navy-deep);
+  }
+
+  .legal-foot {
+    margin-top: 64px;
+    padding-top: 32px;
+    border-top: 1px solid color-mix(in oklab, var(--ink) 12%, transparent);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .legal-foot a {
+    border-bottom: none;
+  }
+</style>

@@ -4,6 +4,7 @@
 @import "@fontsource/crimson-pro/600.css";
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/700.css";
 
 @import "./reset.css";
 @import "./tokens.css";
@@ -46,3 +47,116 @@ h3 { font-size: var(--t-h3); }
 }
 
 .accent { color: var(--accent); }
+
+/* ── Button-Familien (Design-Audit §2.5, Launch-Umbau 2026-09-11) ─────────────
+   .fh-btn                Primär: Anton, Uppercase, Cream auf Orange, kein Radius
+   .fh-btn.fh-btn--ghost  Sekundär: JetBrains Mono, transparent, 1,5-px-Rahmen in currentColor
+   .fh-link               Textlink: Mono mit 2-px-Orange-Underline
+   Alle drei erben ihre Farbe (Ghost, Link) bzw. bringen sie mit (Primär) und funktionieren
+   auf Cream wie auf Navy. Hover-Shift bleibt bei 2 px (CI v1 §8.1). */
+.fh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  min-height: 48px;
+  padding: 12px 26px;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  text-align: center;
+  color: var(--cream);
+  background: var(--orange);
+  border: 1.5px solid var(--orange);
+  border-radius: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.fh-btn:hover {
+  background: var(--orange-deep);
+  border-color: var(--orange-deep);
+  transform: translateY(-2px);
+}
+
+.fh-btn:active {
+  transform: translateY(0);
+}
+
+.fh-btn:focus-visible {
+  outline: 3px solid var(--orange);
+  outline-offset: 3px;
+}
+
+.fh-btn[disabled],
+.fh-btn[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.fh-btn.fh-btn--ghost {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  padding: 12px 22px;
+  color: inherit;
+  background: transparent;
+  border: 1.5px solid currentColor;
+}
+
+.fh-btn.fh-btn--ghost:hover {
+  background: color-mix(in oklab, currentColor 12%, transparent);
+  border-color: currentColor;
+  transform: translateY(-2px);
+}
+
+.fh-btn.fh-btn--ghost:focus-visible {
+  outline: 3px solid var(--orange);
+  outline-offset: 3px;
+}
+
+.fh-link {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-decoration-color: var(--orange);
+  text-underline-offset: 5px;
+  transition: color 150ms ease, text-decoration-color 150ms ease;
+}
+
+.fh-link:hover {
+  color: var(--orange);
+}
+
+.fh-link:focus-visible {
+  outline: 3px solid var(--orange);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fh-btn,
+  .fh-btn:hover,
+  .fh-btn.fh-btn--ghost:hover,
+  .fh-link {
+    transition: none;
+    transform: none;
+  }
+}

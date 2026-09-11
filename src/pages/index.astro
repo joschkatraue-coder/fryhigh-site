@@ -2,14 +2,14 @@
 import { getCollection, getEntry } from "astro:content";
 import MarketingLayout from "../layouts/MarketingLayout.astro";
 import Hero from "../components/Hero.astro";
-import StatsStrip from "../components/StatsStrip.astro";
-import LiveBoard from "../components/LiveBoard.astro";
-import MascotMenu from "../components/MascotMenu.astro";
 import StandortGrid from "../components/StandortGrid.astro";
-import Dusk from "../components/Dusk.astro";
-import Catering from "../components/Catering.astro";
-import TableReservation from "../components/TableReservation.astro";
+import Karte from "../components/Karte.astro";
+import StatsStrip from "../components/StatsStrip.astro";
 import Kinder from "../components/Kinder.astro";
+import TableReservation from "../components/TableReservation.astro";
+import Winter from "../components/Winter.astro";
+import Catering from "../components/Catering.astro";
+import SpielTeaser from "../components/SpielTeaser.astro";
 import Pantry from "../components/Pantry.astro";
 import Story from "../components/Story.astro";
 import NewsletterCTA from "../components/NewsletterCTA.astro";
@@ -17,14 +17,20 @@ import NewsletterCTA from "../components/NewsletterCTA.astro";
 const home = await getEntry("home", "home");
 if (!home) throw new Error("src/content/home.md fehlt — Home-Singleton ist Pflicht.");
 
-const dusk = await getEntry("dusk", "dusk");
-if (!dusk) throw new Error("src/content/dusk.md fehlt — Dusk-Singleton ist Pflicht.");
+const karte = await getEntry("karte", "karte");
+if (!karte) throw new Error("src/content/karte.md fehlt — Karte-Singleton ist Pflicht.");
 
 const catering = await getEntry("catering", "catering");
 if (!catering) throw new Error("src/content/catering.md fehlt — Catering-Singleton ist Pflicht.");
 
 const tisch = await getEntry("tisch", "tisch");
 if (!tisch) throw new Error("src/content/tisch.md fehlt — Tisch-Singleton ist Pflicht.");
+
+const winter = await getEntry("winter", "winter");
+if (!winter) throw new Error("src/content/winter.md fehlt — Winter-Singleton ist Pflicht.");
+
+const spiel = await getEntry("spiel", "spiel");
+if (!spiel) throw new Error("src/content/spiel.md fehlt — Spiel-Singleton ist Pflicht.");
 
 const pantry = await getEntry("pantry", "pantry");
 if (!pantry) throw new Error("src/content/pantry.md fehlt — Pantry-Singleton ist Pflicht.");
@@ -36,50 +42,41 @@ const story = await getEntry("story", "story");
 if (!story) throw new Error("src/content/story.md fehlt — Story-Singleton ist Pflicht.");
 
 const { hero, stats, newsletter } = home.data;
-const standorte = await getCollection("standorte");
-const duskPrograms = await getCollection("dusk-programs");
+
+// Der Saison-Stat („Apr–Okt“) verlinkt auf die Standort-Sektion.
+const statsWithLinks = stats.map((stat) =>
+  /saison/i.test(stat.label) || /apr/i.test(stat.value) ? { ...stat, href: "#standorte" } : stat,
+);
+
+const standorte = (await getCollection("standorte")).filter(
+  (entry) => entry.data.slug !== "hafentruck",
+);
 const pantrySkus = await getCollection("pantry-skus");
-const kinderPakete = await getCollection("kinder-pakete");
 const crew = await getCollection("crew");
 ---
 <MarketingLayout
-  title="Fry High — First Class Fritten · Bremerhaven seit 2020"
-  description="Loaded Fries, Smashburger, Catering. Eigene Kreationen aus dem Foodtruck und vom Zoo am Meer."
+  title="Fry High · Loaded Fries & Smashburger im Zoo am Meer, Bremerhaven"
+  description="Loaded Fries, Smashburger und eigene Saucen im Restaurant im Zoo am Meer, Bremerhaven. Saison April bis Oktober. Catering mit Foodtruck, Tisch anfragen, Winter mit Grünkohl."
 >
   <Hero
     eyebrow={hero.eyebrow}
     headline_lines={hero.headline_lines}
     lead={hero.lead}
+    location_line={hero.location_line}
     ctas={hero.ctas}
   />
 
-  <StatsStrip stats={stats} />
-
-  <LiveBoard />
-
-  <MascotMenu />
-
   <StandortGrid standorte={standorte} />
 
-  <Dusk
-    eyebrow={dusk.data.eyebrow}
-    headline={dusk.data.headline}
-    headline_accent={dusk.data.headline_accent}
-    clock_pill={dusk.data.clock_pill}
-    intro={dusk.data.intro}
-    honesty_note={dusk.data.honesty_note}
-    honesty_cta_label={dusk.data.honesty_cta_label}
-    honesty_cta_href={dusk.data.honesty_cta_href}
-    tonight={dusk.data.tonight}
-    programs={duskPrograms}
-  />
+  <Karte {...karte.data} />
 
-  <Catering
-    eyebrow={catering.data.eyebrow}
-    headline={catering.data.headline}
-    intro={catering.data.intro}
-    features={catering.data.features}
-    form={catering.data.form}
+  <StatsStrip stats={statsWithLinks} />
+
+  <Kinder
+    eyebrow={kinder.data.eyebrow}
+    headline={kinder.data.headline}
+    headline_accent={kinder.data.headline_accent}
+    intro={kinder.data.intro}
   />
 
   <TableReservation
@@ -90,13 +87,21 @@ const crew = await getCollection("crew");
     form={tisch.data.form}
   />
 
-  <Kinder
-    eyebrow={kinder.data.eyebrow}
-    headline={kinder.data.headline}
-    headline_accent={kinder.data.headline_accent}
-    intro={kinder.data.intro}
-    pakete={kinderPakete}
+  <Winter {...winter.data} />
+
+  <Catering
+    eyebrow={catering.data.eyebrow}
+    headline={catering.data.headline}
+    intro={catering.data.intro}
+    threshold_text={catering.data.threshold_text}
+    features={catering.data.features}
+    packages={catering.data.packages}
+    references={catering.data.references}
+    response_promise={catering.data.response_promise}
+    form={catering.data.form}
   />
+
+  <SpielTeaser {...spiel.data} />
 
   <Pantry
     status={pantry.data.status}

@@ -1,144 +1,276 @@
 ---
-interface Opening {
-  days: string;
-  hours: string;
-  season?: string;
-}
+/* Standort-Karte. Zwei Größen: "large" (Zoo, mit Foto, 2/3 Breite im Grid) und "small"
+   (Foodtruck, schmal, Link auf #catering). Radius 12 px, Status-Pill, Mono-Weg-Zeile.
+   Texte kommen aus src/content/standorte/*.md und copy-master.md §4. */
+import { Picture } from "astro:assets";
+import type { ImageMetadata } from "astro";
+
+type Status = "open" | "seasonal" | "coming-soon" | "closed";
 
 interface Props {
-  gate: string;
-  gate_subtitle?: string;
+  weg: string;                 // z. B. "Weg 01"
+  weg_subtitle?: string;       // z. B. "Restaurant"
   name: string;
-  slug: string;
   address?: string;
-  opening?: Opening;
+  hours_line?: string;
+  access_line?: string;
+  route_url?: string;
+  contact_label?: string;      // z. B. "WhatsApp: 0160 96 47 78 23"
+  contact_href?: string;
+  contact_aria?: string;
+  photo?: ImageMetadata;
+  photo_alt?: string;
+  photo_position?: string;     // object-position, z. B. "50% 58%"
   description: string;
   modes: string[];
-  status: "open" | "seasonal" | "coming-soon" | "closed";
+  status: Status;
+  link_href?: string;          // Sekundär-Link (Foodtruck → #catering)
+  link_label?: string;
+  size?: "large" | "small";
 }
 
-const { gate, gate_subtitle, name, slug, address, opening, description, modes, status } = Astro.props;
+const {
+  weg,
+  weg_subtitle,
+  name,
+  address,
+  hours_line,
+  access_line,
+  route_url,
+  contact_label,
+  contact_href,
+  contact_aria,
+  photo,
+  photo_alt,
+  photo_position = "50% 55%",
+  description,
+  modes,
+  status,
+  link_href,
+  link_label,
+  size = "small",
+} = Astro.props;
 
-const statusCopy: Record<Props["status"], string> = {
-  open: "Geöffnet",
-  seasonal: "Saisonal",
-  "coming-soon": "Im Aufbau",
+const statusCopy: Record<Status, string> = {
+  open: "Buchbar",
+  seasonal: "Saison April bis Oktober",
+  "coming-soon": "In der Mache",
   closed: "Geschlossen",
 };
+
+const headingId = `standort-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+const hasFacts = Boolean(address || hours_line || access_line);
+const hasActions = Boolean(route_url || (contact_href && contact_label) || (link_href && link_label));
+const contactExternal = Boolean(contact_href && /^https?:/i.test(contact_href));
 ---
-<article class:list={["standort-card", `is-${status}`]}>
-  <header>
-    <span class="gate">{gate}{gate_subtitle && ` · ${gate_subtitle}`}</span>
-    <span class:list={["status-pill", `pill-${status}`]}>{statusCopy[status]}</span>
-  </header>
-
-  <h3>{name}</h3>
-
-  {address && <p class="meta">{address}</p>}
-  {opening && (
-    <p class="meta">
-      {opening.days} · {opening.hours}
-      {opening.season && <span class="meta-sub"> · {opening.season}</span>}
-    </p>
+<article class:list={["standort-card", `is-${status}`, `is-${size}`]} aria-labelledby={headingId}>
+  {photo && (
+    <div class="photo" style={`--photo-pos:${photo_position}`}>
+      <Picture
+        src={photo}
+        alt={photo_alt ?? ""}
+        widths={[480, 800, 1200]}
+        sizes="(max-width: 860px) 100vw, 38vw"
+        formats={["avif", "webp"]}
+        quality={80}
+        loading="lazy"
+        decoding="async"
+      />
+    </div>
   )}
 
-  <p class="desc">{description}</p>
+  <div class="body">
+    <header class="card-head">
+      <span class="weg">{weg}{weg_subtitle && ` · ${weg_subtitle}`}</span>
+      <span class:list={["status-pill", `pill-${status}`]}>{statusCopy[status]}</span>
+    </header>
 
-  {modes.length > 0 && (
-    <ul class="modes">
-      {modes.map((m) => <li>{m}</li>)}
-    </ul>
-  )}
+    <h3 id={headingId}>{name}</h3>
 
-  <a class="more" href={`/standorte/${slug}`}>
-    Mehr zu {name} <span aria-hidden="true">→</span>
-  </a>
+    <p class="desc">{description}</p>
+
+    {hasFacts && (
+      <dl class="facts">
+        {address && (
+          <div class="fact">
+            <dt>Adresse</dt>
+            <dd>{address}</dd>
+          </div>
+        )}
+        {hours_line && (
+          <div class="fact">
+            <dt>Saison &amp; Zeiten</dt>
+            <dd>{hours_line}</dd>
+          </div>
+        )}
+        {access_line && (
+          <div class="fact">
+            <dt>Zugang</dt>
+            <dd>{access_line}</dd>
+          </div>
+        )}
+      </dl>
+    )}
+
+    {modes.length > 0 && (
+      <ul class="modes" aria-label="Angebot">
+        {modes.map((m) => <li>{m}</li>)}
+      </ul>
+    )}
+
+    {hasActions && (
+      <div class="actions">
+        {route_url && (
+          <a class="fh-btn fh-btn--ghost" href={route_url} target="_blank" rel="noopener">Route planen</a>
+        )}
+        {contact_href && contact_label && (
+          <a
+            class="fh-link"
+            href={contact_href}
+            aria-label={contact_aria}
+            target={contactExternal ? "_blank" : undefined}
+            rel={contactExternal ? "noopener" : undefined}
+          >{contact_label}</a>
+        )}
+        {link_href && link_label && (
+          <a class="fh-link" href={link_href}>{link_label}</a>
+        )}
+      </div>
+    )}
+  </div>
 </article>
 
 <style>
   .standort-card {
-    background: var(--surface);
-    padding: var(--space-6);
-    border-radius: var(--r-lg);
+    background: var(--cream-warm);
+    border: 1px solid color-mix(in oklab, var(--navy) 14%, transparent);
+    border-radius: var(--r-md);
+    overflow: hidden;
     display: grid;
-    gap: var(--space-4);
     align-content: start;
-    border: 1px solid color-mix(in oklab, var(--ink) 8%, transparent);
-    transition: transform var(--duration-base) var(--ease-out),
-                box-shadow var(--duration-base) var(--ease-out);
+    transition:
+      transform var(--duration-base) var(--ease-out),
+      box-shadow var(--duration-base) var(--ease-out);
   }
 
   .standort-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 32px -16px color-mix(in oklab, var(--ink) 35%, transparent);
+    transform: translateY(-2px);
+    box-shadow: 0 16px 36px -20px color-mix(in oklab, var(--navy) 45%, transparent);
   }
 
-  header {
+  .is-large {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: stretch;
+  }
+
+  .photo {
+    position: relative;
+    background: var(--navy);
+    aspect-ratio: 4 / 3;
+  }
+
+  .is-large .photo {
+    aspect-ratio: auto;
+    min-height: 100%;
+  }
+
+  .photo :global(picture),
+  .photo :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: var(--photo-pos, 50% 55%);
+  }
+
+  .body {
+    padding: clamp(20px, 3vw, 36px);
+    display: grid;
+    gap: var(--space-4);
+    align-content: start;
+  }
+
+  .card-head {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: var(--space-3);
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
   }
 
-  .gate {
+  .weg {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: var(--t-mono-min);
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    opacity: 0.65;
+    color: var(--ink-soft);
   }
 
   .status-pill {
     font-family: var(--font-mono);
-    font-size: 0.65rem;
-    letter-spacing: 0.16em;
+    font-size: var(--t-mono-min);
+    font-weight: 700;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    padding: var(--space-1) var(--space-3);
+    line-height: 1;
+    padding: 7px 12px;
     border-radius: var(--r-sm);
+    white-space: nowrap;
+  }
+
+  .pill-seasonal {
+    background: var(--green);
+    color: var(--cream);
   }
 
   .pill-open {
-    background: var(--green);
+    background: var(--navy);
     color: var(--cream);
   }
 
   .pill-coming-soon {
     background: var(--yellow);
-    color: var(--ink);
-  }
-
-  .pill-seasonal {
-    background: var(--orange);
-    color: var(--cream);
+    color: var(--navy);
   }
 
   .pill-closed {
-    background: color-mix(in oklab, var(--ink) 50%, transparent);
+    background: var(--ink-soft);
     color: var(--cream);
   }
 
   .is-coming-soon {
-    background: color-mix(in oklab, var(--yellow) 12%, var(--surface));
     border-style: dashed;
   }
 
   h3 {
-    color: var(--ink);
-  }
-
-  .meta {
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    line-height: 1.5;
-    opacity: 0.85;
-  }
-
-  .meta-sub {
-    opacity: 0.7;
+    color: var(--navy);
+    font-size: clamp(1.75rem, 2.8vw, 2.5rem);
   }
 
   .desc {
     line-height: 1.55;
+    color: var(--ink);
+  }
+
+  .facts {
+    display: grid;
+    gap: var(--space-3);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--cream-hairline);
+  }
+
+  .fact dt {
+    font-family: var(--font-mono);
+    font-size: var(--t-mono-min);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 2px;
+  }
+
+  .fact dd {
+    font-family: var(--font-body);
+    line-height: 1.5;
     color: var(--ink);
   }
 
@@ -150,27 +282,39 @@ const statusCopy: Record<Props["status"], string> = {
 
   .modes li {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: var(--t-mono-min);
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    padding: var(--space-1) var(--space-3);
+    padding: 5px 10px;
     border-radius: var(--r-sm);
-    background: color-mix(in oklab, var(--ink) 8%, transparent);
+    background: color-mix(in oklab, var(--navy) 8%, transparent);
+    color: var(--navy);
   }
 
-  .more {
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--accent);
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4) var(--space-5);
     margin-top: var(--space-2);
-    align-self: end;
   }
 
-  .more:hover,
-  .more:focus-visible {
-    text-decoration: underline;
-    text-underline-offset: 4px;
+  @media (max-width: 860px) {
+    .is-large {
+      grid-template-columns: 1fr;
+    }
+
+    .is-large .photo {
+      aspect-ratio: 16 / 10;
+      min-height: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .standort-card,
+    .standort-card:hover {
+      transition: none;
+      transform: none;
+    }
   }
 </style>

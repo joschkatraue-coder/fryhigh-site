@@ -1,10 +1,13 @@
 ---
+/* 404. Texte aus copy-master.md §15: der Pilot bleibt Erzählanker, Airline-Wörter sind raus;
+   „Fryheit“ nur hier als Easter-Egg (F41). Strip einzeilig, Buttons .fh-btn / .fh-btn--ghost,
+   Mascot nur ab 1024 px. */
 import MarketingLayout from "../layouts/MarketingLayout.astro";
 import FloatingMascot from "../components/FloatingMascot.astro";
 ---
 <MarketingLayout
-  title="Falsches Gate · Fry High"
-  description="Diese Seite existiert nicht. Zurück zum Boarding."
+  title="Seite verloren · Fry High"
+  description="Diese Seite gibt es nicht. Zurück zur Karte, da gibt es Loaded Fries."
   noindex={true}
 >
   <section class="four-oh-four has-mascot">
@@ -12,41 +15,42 @@ import FloatingMascot from "../components/FloatingMascot.astro";
       image="08_Seehund_Fries_Garnelen.png"
       size={160}
       rotate={-10}
-      top="12%"
-      right="8%"
+      top="10%"
+      right="6%"
     />
 
     <div class="strip">
-      <span>✈ Boarding · Lost &amp; Found</span>
-      <span class="rule"></span>
-      <span>Error 404</span>
+      <span>Fehler 404</span>
     </div>
 
     <div class="frame">
-      <span class="eyebrow">Falsches Gate</span>
+      <span class="eyebrow">Hier gibt es nichts zu essen</span>
       <h1>
         Seite<br />
         <span class="acc">verloren.</span>
       </h1>
       <p class="lead">
-        Der Pilot hat diese Route nicht im Logbuch. Vielleicht abgehoben, vielleicht nie gelandet. Zurück zum Boarding — da gibt&apos;s Loaded Fries.
+        Der Pilot war hier noch nicht. Vielleicht kommt er mal vorbei, vielleicht nie. Zurück zur Karte, da gibt es Loaded Fries.
       </p>
 
       <div class="actions">
-        <a class="btn btn-primary" href="/">← Zurück zur Startseite</a>
-        <a class="btn btn-secondary" href="/#standorte">Standorte ansehen</a>
+        <a class="fh-btn" href="/">Zurück zur Startseite</a>
+        <a class="fh-btn fh-btn--ghost" href="/#karte">Zur Karte</a>
       </div>
 
       <div class="hints">
         <span class="hints-eyebrow">Du suchst vielleicht:</span>
         <ul>
-          <li><a href="/#menu">Kreationen</a></li>
-          <li><a href="/#abend">Abendgeschäft</a></li>
+          <li><a href="/#karte">Karte</a></li>
+          <li><a href="/#standorte">Standort</a></li>
           <li><a href="/#catering">Catering</a></li>
-          <li><a href="/#kinder">Kindergeburtstag</a></li>
-          <li><a href="/#pantry">Pommesgewürz</a></li>
+          <li><a href="/#winter">Winter</a></li>
         </ul>
       </div>
+
+      <p class="egg">
+        <a class="fh-link" href="https://instagram.com/fry_high2020" target="_blank" rel="noopener">Folge der Fryheit.</a>
+      </p>
     </div>
   </section>
 </MarketingLayout>
@@ -67,25 +71,18 @@ import FloatingMascot from "../components/FloatingMascot.astro";
   }
 
   .strip {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 16px;
-    padding: 12px 18px;
+    justify-self: start;
+    padding: 10px 16px;
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: var(--t-mono-min);
     font-weight: 700;
     letter-spacing: 0.22em;
     text-transform: uppercase;
+    white-space: nowrap;
     color: var(--yellow);
     border: 1px solid color-mix(in oklab, var(--yellow) 35%, transparent);
-    border-radius: 4px;
-    max-width: 520px;
-  }
-
-  .strip .rule {
-    flex: 1;
-    height: 1px;
-    background: color-mix(in oklab, var(--yellow) 35%, transparent);
   }
 
   .frame {
@@ -102,6 +99,7 @@ import FloatingMascot from "../components/FloatingMascot.astro";
     letter-spacing: 0.28em;
     text-transform: uppercase;
     color: var(--yellow);
+    opacity: 1;
     display: inline-block;
     margin-bottom: 18px;
   }
@@ -139,35 +137,6 @@ import FloatingMascot from "../components/FloatingMascot.astro";
     margin-bottom: 56px;
   }
 
-  .btn {
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    padding: 16px 22px;
-    border-radius: 4px;
-    transition: transform var(--duration-fast) var(--ease-out),
-                box-shadow var(--duration-fast) var(--ease-out);
-  }
-
-  .btn-primary {
-    color: var(--cream);
-    background: var(--orange);
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
-  }
-
-  .btn-secondary {
-    color: var(--cream);
-    border: 1px solid color-mix(in oklab, var(--cream) 35%, transparent);
-  }
-
-  .btn:hover,
-  .btn:focus-visible {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
-  }
-
   .hints {
     padding-top: 28px;
     border-top: 1px dashed color-mix(in oklab, var(--cream) 22%, transparent);
@@ -175,10 +144,10 @@ import FloatingMascot from "../components/FloatingMascot.astro";
 
   .hints-eyebrow {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: var(--t-mono-min);
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: color-mix(in oklab, var(--cream) 60%, transparent);
+    color: color-mix(in oklab, var(--cream) 70%, transparent);
     display: block;
     margin-bottom: 12px;
   }
@@ -195,17 +164,39 @@ import FloatingMascot from "../components/FloatingMascot.astro";
 
   .hints a {
     font-family: var(--font-body);
-    font-size: 0.96rem;
+    font-size: 1rem;
     color: var(--cream);
     border-bottom: 1px solid color-mix(in oklab, var(--orange) 50%, transparent);
     padding-bottom: 2px;
-    transition: color var(--duration-fast) var(--ease-out),
-                border-color var(--duration-fast) var(--ease-out);
+    transition:
+      color var(--duration-fast) var(--ease-out),
+      border-color var(--duration-fast) var(--ease-out);
   }
 
   .hints a:hover,
   .hints a:focus-visible {
     color: var(--orange);
     border-bottom-color: var(--orange);
+  }
+
+  .egg {
+    margin-top: 36px;
+  }
+
+  .egg .fh-link {
+    font-size: var(--t-mono-min);
+    opacity: 0.8;
+  }
+
+  .egg .fh-link:hover,
+  .egg .fh-link:focus-visible {
+    opacity: 1;
+  }
+
+  /* Mascot nur ab 1024 px: darunter kollidiert es mit der zentrierten Textspalte. */
+  @media (max-width: 1023px) {
+    .four-oh-four > :global(.mascot) {
+      display: none;
+    }
   }
 </style>
