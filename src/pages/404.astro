@@ -137,6 +137,12 @@ import FloatingMascot from "../components/FloatingMascot.astro";
     margin-bottom: 56px;
   }
 
+  /* D-20: Untereinander gestapelt sahen die beiden Knoepfe mit 240 und 130 px wie ein Fehler aus. */
+  @media (max-width: 560px) {
+    .actions { display: flex; flex-direction: column; align-items: center; width: 100%; }
+    .actions a { width: min(100%, 320px); text-align: center; }
+  }
+
   .hints {
     padding-top: 28px;
     border-top: 1px dashed color-mix(in oklab, var(--cream) 22%, transparent);

@@ -80,7 +80,6 @@ const kids: KidsItem[] = kidsProp ?? karte?.data.kids.items ?? [];
             <li>
               <span class="k-name">{k.name}</span>
               <span class="k-desc">{k.desc}</span>
-              {k.price && <span class="k-price">{k.price}</span>}
             </li>
           ))}
         </ul>
@@ -138,7 +137,7 @@ const kids: KidsItem[] = kidsProp ?? karte?.data.kids.items ?? [];
     --muted: color-mix(in oklab, var(--ink) 75%, transparent);
     position: relative;
     overflow: hidden;
-    padding: clamp(56px, 7vw, 88px) clamp(20px, 6vw, 80px);
+    padding: clamp(64px, 7vw, 88px) clamp(20px, 6vw, 80px);
     background: var(--cream);
     color: var(--ink);
   }

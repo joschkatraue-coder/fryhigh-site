@@ -348,6 +348,9 @@ const {
 
   function show(which: keyof typeof overlays | null) {
     for (const [key, el] of Object.entries(overlays)) el.hidden = key !== which;
+    // P2-16: Nur im laufenden Spiel schluckt der Canvas Wischgesten. Im Leerlauf,
+    // in der Pause und nach dem Absturz scrollt das Handy wieder normal weiter.
+    ROOT!.dataset.playing = which === null ? "1" : "0";
   }
 
   async function requestSession() {
@@ -716,7 +719,7 @@ const {
     ctx.restore();
     // Buchstabentag (Mono) unter dem Badge
     ctx.save();
-    ctx.font = `700 12px ${FONT_MONO}`;
+    ctx.font = `700 13px ${FONT_MONO}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const tw = ctx.measureText(ing.tag).width + 8;
@@ -1201,6 +1204,9 @@ const {
       t instanceof HTMLAnchorElement ||
       (t && t.isContentEditable)
     ) return;
+    // P2-05: Im Leerlauf startet die Leertaste nur, wenn das Spielfeld den Fokus hat.
+    // Sonst sprang das Spiel an, während jemand weiter unten auf der Seite las.
+    if (state.phase === 'idle' && document.activeElement !== canvas) return;
     if (state.phase === 'over' && !paused) return;
     e.preventDefault();
     if (!e.repeat) tap();
@@ -1375,15 +1381,20 @@ const {
     aspect-ratio: 16 / 9;
     background: var(--navy-deep);
     cursor: pointer;
-    touch-action: none;
+    touch-action: pan-y;
     user-select: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
 
+  .pp[data-playing="1"] .pp-canvas {
+    touch-action: none;
+  }
+
   .pp-canvas:focus-visible {
+    /* P2-04: Nach innen versetzt lag der Rahmen unter dem Overlay und war unsichtbar. */
     outline: 3px solid var(--orange);
-    outline-offset: -3px;
+    outline-offset: 2px;
   }
 
   .pp-hud {

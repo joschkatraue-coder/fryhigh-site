@@ -95,7 +95,7 @@ try {
         Der Code gilt 30 Tage ab Versand und genau einmal. Du löst ihn an der Kasse im Fry High im Zoo am Meer (H.-H.-Meier-Straße 7, 27568 Bremerhaven) zu den Zoo-Öffnungszeiten ein oder am Foodtruck bei einem öffentlichen Event. Die Crew prüft den Code, du bestellst, was du magst. Der Zoo-Eintritt ist nicht enthalten.
       </p>
       <p>
-        Endet die Saison, bevor du einlösen konntest, schreib an <a href="mailto:info@fryhigh.de">info@fryhigh.de</a>. Wir verlängern den Code dann bis zum Saisonstart.
+        Endet die Saison, bevor du einlösen konntest, schreib an <a href="mailto:info@fryhigh.de">info@fryhigh.de</a>. Dann finden wir eine Lösung.
       </p>
     </section>
 
@@ -205,8 +205,9 @@ try {
   }
 
   .legal a {
-    color: var(--orange);
-    border-bottom: 1px solid color-mix(in oklab, var(--orange) 35%, transparent);
+    /* D-18: Orange auf Cream erreicht im Fliesstext nur 3,3:1; orange-deep liegt bei 5,96:1. */
+    color: var(--orange-deep);
+    border-bottom: 1px solid color-mix(in oklab, var(--orange) 45%, transparent);
     transition: border-color var(--duration-fast) var(--ease-out);
   }
 

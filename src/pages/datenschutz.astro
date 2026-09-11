@@ -242,8 +242,9 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
   }
 
   .legal a {
-    color: var(--orange);
-    border-bottom: 1px solid color-mix(in oklab, var(--orange) 35%, transparent);
+    /* D-18: Orange auf Cream erreicht im Fliesstext nur 3,3:1; orange-deep liegt bei 5,96:1. */
+    color: var(--orange-deep);
+    border-bottom: 1px solid color-mix(in oklab, var(--orange) 45%, transparent);
     transition: border-color var(--duration-fast) var(--ease-out);
   }
 

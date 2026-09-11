@@ -285,7 +285,9 @@ async function sessionStart(request, env, origin) {
 
 async function rankFor(env, wk, score) {
   const row = await env.DB.prepare(
-    `SELECT SUM(CASE WHEN score > ? THEN 1 ELSE 0 END) AS above, COUNT(*) AS total
+    // P2-12: Bei Gleichstand gewinnt der frueher eingereichte Score, die Rangliste sortiert
+    // entsprechend. Mit '>' bekaeme ein neuer Gleichstand Platz N, stuende aber auf N+1.
+    `SELECT SUM(CASE WHEN score >= ? THEN 1 ELSE 0 END) AS above, COUNT(*) AS total
      FROM scores WHERE week_key = ? AND verified = 1 AND hidden = 0`
   ).bind(score, wk).first();
   return { rank: Number(row?.above ?? 0) + 1, total: Number(row?.total ?? 0) };
