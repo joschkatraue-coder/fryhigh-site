@@ -19,6 +19,7 @@ compatibility_date = "2026-05-17"
 crons = ["0 23 * * SUN"]
 
 [vars]
+CONTEST_LIVE         = "false"                 # Erst nach Mail-/Gutschein-Abnahme zusammen mit src/content/spiel.md aktivieren.
 FROM_EMAIL           = "spiel@fryhigh.de"      # in Resend unter der verifizierten Domain fryhigh.de
 TO_EMAIL_OPS         = "info@fryhigh.de"       # Crew-Mail bei Gewinner-Ausgabe
 ALLOW_ORIGIN         = "https://fryhigh.de,https://www.fryhigh.de,https://fryhigh.pages.dev"   # Liste; Origin-Echo nur bei Treffer (Pages-Projekt 'fryhigh', Konto joschkatraue, 11.09.)

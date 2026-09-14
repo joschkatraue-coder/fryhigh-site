@@ -72,6 +72,8 @@ const escape = (s) =>
 const isEmail = (s) => typeof s === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 const uuid = () => crypto.randomUUID();
 const now = () => Date.now();
+// Erst nach vollständiger Mail-/Gutschein-Abnahme aktivieren; der Frontend-Schalter allein schützt die API nicht.
+const contestReady = (env) => env.CONTEST_LIVE === 'true' && Boolean(env.RESEND_API_KEY) && Boolean(env.CREW_PIN);
 
 // ─── Zeit: Europe/Berlin ──────────────────────────────────────────────────
 
@@ -316,13 +318,14 @@ async function scoreSubmit(request, env, origin) {
   const durationMs = Math.floor(Number(data.duration_ms));
   const consent = data.consent === true;
   const newsletterOptIn = data.newsletter_opt_in === true;
-  // Neu 2026-09-11, optional: Nachweis für Alter und Bedingungen-Version.
+  // Teilnahme ab 18: Die Bestätigung muss auch bei direkten API-Aufrufen vorliegen.
   const ageConfirmed = data.age_confirmed === true;
   const termsVersion = String(data.terms_version ?? '').trim().slice(0, 32) || cfg.termsVersion;
 
   if (!token) return json({ error: 'missing session token' }, 422, origin);
   if (!isEmail(email)) return json({ error: 'invalid email' }, 422, origin);
   if (!consent) return json({ error: 'consent required (score-storage)' }, 422, origin);
+  if (!ageConfirmed) return json({ error: 'age confirmation required (18+)' }, 422, origin);
   if (!Number.isFinite(score) || score < 0) return json({ error: 'invalid score' }, 422, origin);
   if (!Number.isFinite(durationMs) || durationMs < 0) return json({ error: 'invalid duration' }, 422, origin);
 
@@ -661,6 +664,7 @@ async function retryWinnerMail(request, env, origin) {
 // ─── Scheduled (Cron) ─────────────────────────────────────────────────────
 
 async function runWeeklyVoucher(env) {
+  if (!contestReady(env)) return;
   // Zielwoche = die Berliner Woche, die gerade zu Ende ging (Offset siehe CRON_WEEK_OFFSET_MS).
   // Achtung bei manuellem Trigger unter der Woche: friert die laufende Woche ein.
   const wk = weekKey(new Date(Date.now() - CRON_WEEK_OFFSET_MS));
@@ -777,6 +781,14 @@ export default {
     }
 
     try {
+      if (!contestReady(env) && (
+        (path === '/session/start' && request.method === 'POST') ||
+        (path === '/score/submit' && request.method === 'POST') ||
+        (path === '/verify' && request.method === 'GET')
+      )) {
+        if (path === '/verify') return html(verifyPage('Die Wochenwertung ist noch nicht gestartet. Du kannst schon ohne Gewinnwertung spielen.', false, prizeConfig(env).siteBase), 503);
+        return json({ ok: false, error: 'contest unavailable' }, 503, origin);
+      }
       if (path === '/session/start' && request.method === 'POST') return await sessionStart(request, env, origin);
       if (path === '/score/submit' && request.method === 'POST')  return await scoreSubmit(request, env, origin);
       if (path === '/verify' && request.method === 'GET')         return await verify(request, env);
