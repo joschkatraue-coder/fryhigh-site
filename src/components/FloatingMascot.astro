@@ -5,7 +5,9 @@
    Positionen gehören an die Ränder außerhalb der Textspalte; ein Mascot darf nie Text überdecken.
    Mobil (≤ 720 px) ist ein Mascot standardmäßig ausgeblendet (mobile="hide");
    mobile="show" zeigt es mit höchstens 90 px. Reveal läuft weiter über den
-   IntersectionObserver in scripts/mascot.ts (.in-view auf der Sektion). */
+   IntersectionObserver in scripts/mascot.ts (.in-view auf der Sektion).
+   Ausgeliefert wird die WebP-Fassung (alle Cutouts 480 × 600) mit festen Maßen gegen
+   Layoutsprünge, wie seit dem Bildpaket vom 06.10.2026 live. */
 interface Props {
   image: string;                 // Dateiname in public/cutouts/
   size?: number;                 // px auf Desktop, default 130
@@ -46,7 +48,7 @@ const positionStyle = [
 ].filter(Boolean).join(";");
 ---
 <div class="mascot" data-mascot data-mobile={mobile} style={positionStyle} aria-hidden="true">
-  <img src={`/cutouts/${image}`} alt={alt} loading="lazy" decoding="async" />
+  <img width="480" height="600" src={`/cutouts/${image.replace(/\.png$/, ".webp")}`} alt={alt} loading="lazy" decoding="async" />
 </div>
 
 <style>

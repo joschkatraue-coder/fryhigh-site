@@ -1,5 +1,6 @@
 ---
 import OfferPage from "../components/OfferPage.astro";
+import ChristmasBudget from "../components/ChristmasBudget.astro";
 
 const requestText = "Moin Fry High,\n\nwir möchten eine Weihnachtsfeier 2026 am Zoo anfragen.\nDatum / Ausweichdatum:\nOrt: Restaurant im Zoo am Meer\nGästezahl:\nPaketwunsch:\nWünsche zu Getränken und Ablauf:\nBesondere Anforderungen:\n";
 const cateringLink = { href: "/catering-bremerhaven/#weihnachtscatering", label: "Weihnachts-Catering bei euch" };
@@ -64,7 +65,7 @@ const faq = [
   title="Weihnachtsfeier Bremerhaven 2026: Pakete ab 29,90 € | Fry High"
   description="Weihnachtsfeier 2026 am Zoo: drei Tischbuffet-Pakete ab 29,90 € p. P. Ganzer Laden ab 30 Personen; kleine Runden ab 13.11. Do–Sa ab 18 Uhr."
   label="Weihnachtsfeier am Zoo"
-  eyebrow="Weihnachten 2026 im Restaurant im Zoo am Meer"
+  eyebrow="Weihnachten im Restaurant im Zoo am Meer"
   headline={["Weihnachtsfeier", "in Bremerhaven", "am Zoo."]}
   mark="Ein Tisch. Alle greifen zu."
   lead="Drei Tischbuffet-Pakete für eure Weihnachtsfeier 2026 im Restaurant im Zoo am Meer. Ab 30 Personen gehört euch der ganze Laden; kleinere Teams kommen ab 13.11. ins Abendgeschäft, donnerstags bis samstags ab 18 Uhr."
@@ -81,4 +82,7 @@ const faq = [
   requestIntro="Schickt uns für eure exklusive Feier ab 30 Personen Datum und möglichst ein Ausweichdatum, Gästezahl und Paketwunsch. Ergänzt Wünsche zu Getränken und Ablauf. Kleinere Runden kommen ab 13.11. donnerstags bis samstags ab 18 Uhr ins Abendgeschäft. Für eine Feier an eurem Ort nutzt ihr den separaten Weihnachts-Catering-Weg."
   {requestText}
   related={{ href: "/catering-bremerhaven/#weihnachtscatering", label: "Zum Weihnachts-Catering bei euch", title: "Eure Weihnachtsfeier findet bei euch statt?", text: "Hier erfahrt ihr mehr über Speisen, Foodtruck oder Crew und Catering am Kundenstandort." }}
-/>
+  insertAfterSection={2}
+>
+  <ChristmasBudget slot="after-section" />
+</OfferPage>

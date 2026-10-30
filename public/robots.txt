@@ -1,5 +1,9 @@
 User-agent: *
 Allow: /
 Disallow: /crew/
+Allow: /crew/leaderboard$
+Allow: /crew/leaderboard/$
+Allow: /crew/vouchers$
+Allow: /crew/vouchers/$
 
 Sitemap: https://fryhigh.de/sitemap-index.xml

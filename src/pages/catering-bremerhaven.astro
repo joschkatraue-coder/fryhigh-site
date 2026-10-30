@@ -1,5 +1,6 @@
 ---
 import OfferPage from "../components/OfferPage.astro";
+import CateringInquiry from "../components/CateringInquiry.astro";
 
 const requestText = "Moin Fry High,\n\nwir möchten Catering anfragen.\nDatum / Ausweichdatum:\nOrt / Adresse:\nGästezahl:\nAnlass:\nGewünschter Ausgabeort:\nVorhandene Ausstattung:\nWünsche zu Essen und Ablauf:\nBesondere Anforderungen:\n";
 const christmasRequest = requestText.replace("Catering anfragen", "Weihnachts-Catering anfragen");
@@ -21,7 +22,7 @@ const sections = [
   },
   {
     title: "Euer Ort liegt nicht in Bremerhaven?",
-    paragraphs: ["Schickt uns trotzdem die genaue Adresse. Wir prüfen Termin, Anfahrt und welche Umsetzung vor Ort möglich ist. Ob wir euren Ort bedienen und welche Anfahrt dazugehört, steht anschließend im Angebot."],
+    paragraphs: ["Fry High prüft Cateringanfragen von Bremen bis Cuxhaven. Hamburg ist auf Anfrage ebenfalls möglich. Schickt uns die genaue Adresse und euren Wunschtermin. Welche Umsetzung vor Ort möglich ist und welche Anfahrt dazugehört, klären wir im Angebot."],
   },
   {
     id: "weihnachtscatering",
@@ -43,7 +44,7 @@ const faq = [
   { question: "Gibt es vegetarische oder vegane Optionen?", answer: "Ja, nach Abstimmung. Nennt uns die gewünschten Varianten und die ungefähre Anzahl. Allergien und Unverträglichkeiten besprechen wir vor dem Angebot; schreibt eure Anforderungen direkt in die Anfrage." },
   { question: "Ist beim Catering automatisch ein Foodtruck dabei?", answer: "Nein. Wir prüfen Foodtruck, Crew oder Tischbuffet passend zu eurem Ort und Wunschtermin. Schreibt den gewünschten Ausgabeort und die vorhandene Ausstattung direkt in die Anfrage." },
   { question: "Was kostet das Catering, und was ist enthalten?", answer: "Ihr erhaltet ein individuelles Angebot. Nennt auch Wünsche zu Getränken, Geschirr oder Betreuung, damit wir prüfen können, was wir anbieten. Solche Leistungen sind nicht automatisch enthalten." },
-  { question: "Kommt ihr auch außerhalb von Bremerhaven?", answer: "Anfragen sind möglich, eine pauschale Lieferzusage gibt es nicht. Schickt uns die genaue Adresse. Ob wir euren Ort bedienen und welche Anfahrt dazugehört, klären wir im Angebot." },
+  { question: "Kommt ihr auch außerhalb von Bremerhaven?", answer: "Wir prüfen Cateringanfragen von Bremen bis Cuxhaven; Hamburg ist auf Anfrage möglich. Schickt uns die genaue Adresse und euren Wunschtermin. Machbarkeit und Anfahrt klären wir im Angebot." },
 ];
 ---
 <OfferPage
@@ -66,4 +67,6 @@ const faq = [
   requestIntro="Für eure Anfrage brauchen wir: Datum, Veranstaltungsort mit Adresse, ungefähre Gästezahl, Anlass, gewünschten Ausgabeort und vorhandene Ausstattung. Ergänzt Essenswünsche, besondere Anforderungen und möglichst ein Ausweichdatum."
   {requestText}
   related={{ href: "/weihnachtsfeier-bremerhaven/", label: "Weihnachtsfeier am Zoo ansehen", title: "Ihr sucht einen Ort für eure Weihnachtsfeier?", text: "Plant euren Abend bei uns im Restaurant im Zoo am Meer." }}
-/>
+>
+  <CateringInquiry slot="request" />
+</OfferPage>

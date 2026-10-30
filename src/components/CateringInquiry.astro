@@ -1,0 +1,150 @@
+---
+// Anfragehilfe im Anfragebereich der Catering-Seite (Maßnahme 084, SEO-Welle 7), aus dem
+// Live-Stand zurückgeholt. Baut aus Eckdaten einen WhatsApp- oder Mailtext; gesendet oder gespeichert wird nichts.
+// shortcut: data-astro-cid-dmubfjji bindet die scoped Styles von OfferPage.astro; wenn sich Pfad oder Name von OfferPage ändert, Attribut aus dem Build neu übernehmen.
+---
+<!-- FH-ANFRAGEHILFE:START -->
+<div class="offer-wrap fh-inquiry" id="catering-anfragehilfe" data-astro-cid-dmubfjji hidden>
+  <details>
+    <summary>Eckdaten eintragen und Nachricht vorbereiten</summary>
+    <div class="fh-inquiry-body">
+      <p>Datum, Runde, Ort, Wunschformat. Daraus machen wir einen Nachrichtentext, den ihr vor dem Senden selbst prüfen könnt. Was noch nicht feststeht, bleibt offen.</p>
+      <form id="fh-inquiry-form" novalidate>
+        <div class="fh-inquiry-grid">
+          <div><label for="fh-inquiry-date">Wunschdatum</label><input id="fh-inquiry-date" type="date" aria-describedby="fh-inquiry-date-hint"><small id="fh-inquiry-date-hint">Noch offen? Einfach leer lassen.</small></div>
+          <div><label for="fh-inquiry-guests">Ungefähre Gästezahl</label><input id="fh-inquiry-guests" type="text" inputmode="numeric" maxlength="8" aria-describedby="fh-inquiry-guests-hint" placeholder="z. B. 60"><small id="fh-inquiry-guests-hint">Ganze Zahl oder leer lassen. Catering ab 50, kleinere Runden auf Anfrage.</small></div>
+          <div><label for="fh-inquiry-place">Ort / genaue Adresse</label><input id="fh-inquiry-place" type="text" maxlength="120" placeholder="PLZ, Ort und möglichst Straße"><small>Die genaue Adresse brauchen wir, um Anfahrt und Umsetzung zu prüfen.</small></div>
+          <div><label for="fh-inquiry-format">Euer Wunschformat</label><select id="fh-inquiry-format"><option value="offen">Noch offen – gemeinsam klären</option><option value="foodtruck">Foodtruck</option><option value="crew">Crew</option><option value="tischbuffet">Tischbuffet</option><option value="weihnachtstruck">Weihnachts-Truck 2026</option></select><small>Was an eurem Ort möglich ist, bestätigen wir im Angebot.</small></div>
+        </div>
+        <fieldset id="fh-inquiry-truck" hidden>
+          <legend>Nur für den Weihnachts-Truck 2026</legend>
+          <p>Für dieses Angebot braucht ihr eine ebene Fläche mit Zufahrt, 16-A-Strom und einen wettergeschützten Essplatz. Was ist schon geklärt?</p>
+          <div class="fh-inquiry-grid">
+            <div><label for="fh-inquiry-access">Ebene Fläche mit Zufahrt</label><select id="fh-inquiry-access"><option value="offen">Noch zu prüfen</option><option value="ja">Vorhanden</option><option value="nein">Nicht vorhanden</option></select></div>
+            <div><label for="fh-inquiry-power">16-A-Strom</label><select id="fh-inquiry-power"><option value="offen">Noch zu prüfen</option><option value="ja">Vorhanden</option><option value="nein">Nicht vorhanden</option></select></div>
+            <div><label for="fh-inquiry-shelter">Wettergeschützter Essplatz</label><select id="fh-inquiry-shelter"><option value="offen">Noch zu prüfen</option><option value="ja">Vorhanden</option><option value="nein">Nicht vorhanden</option></select></div>
+          </div>
+        </fieldset>
+        <div class="fh-inquiry-notes"><label for="fh-inquiry-notes">Was ist euch noch wichtig? (optional)</label><textarea id="fh-inquiry-notes" rows="3" maxlength="250" placeholder="Anlass, Ausweichdatum, Essenszeit, Ausgabeort, vorhandene Ausstattung, Essenswünsche oder besondere Anforderungen"></textarea></div>
+        <p class="fh-inquiry-note">Hier wird nichts abgeschickt. Erst wenn ihr einen Kontaktweg öffnet, wird der Text an WhatsApp oder euer Mailprogramm übergeben. Dort könnt ihr ihn ändern und selbst senden.</p>
+        <p id="fh-inquiry-error" role="alert" hidden></p>
+        <button class="fh-btn" type="submit">Nachricht vorbereiten</button>
+      </form>
+      <div id="fh-inquiry-result" hidden>
+        <h3 id="fh-inquiry-result-title" tabindex="-1">Euer Nachrichtentext</h3>
+        <label for="fh-inquiry-message">Prüfen und bei Bedarf im gewählten Kontaktweg ergänzen:</label>
+        <textarea id="fh-inquiry-message" rows="10" readonly></textarea>
+        <p id="fh-inquiry-small" hidden>Auch kleine Runden können anfragen. Ob und wie wir sie übernehmen können, klären wir anhand von Termin, Ort und Umfang.</p>
+        <div class="fh-inquiry-actions"><a id="fh-inquiry-whatsapp" class="fh-btn" target="_blank" rel="noopener noreferrer">WhatsApp-Entwurf öffnen</a><a id="fh-inquiry-email" class="fh-btn fh-btn--ghost">E-Mail-Entwurf öffnen</a></div>
+        <p class="fh-inquiry-note">Die Anfrage bestätigt weder Termin noch Platz für eure Gästezahl. Leistungen, Machbarkeit und Preis stehen erst im Angebot.</p>
+      </div>
+    </div>
+  </details>
+</div>
+<style is:inline>
+  .fh-inquiry[hidden],.fh-inquiry [hidden]{display:none!important}
+  .fh-inquiry{margin-top:32px;font-size:1rem;line-height:1.55}
+  .fh-inquiry details{border:1px solid currentColor;border-radius:4px}
+  .fh-inquiry summary{padding:18px 20px;cursor:pointer;font-weight:700}
+  .fh-inquiry-body{padding:0 20px 20px}
+  .fh-inquiry p{max-width:70ch;margin:0 0 16px}
+  .fh-inquiry-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 24px}
+  .fh-inquiry label{display:block;font-weight:700;margin-bottom:6px}
+  .fh-inquiry input,.fh-inquiry select,.fh-inquiry textarea{display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;border:2px solid var(--cream);border-radius:3px;background:var(--cream);color:var(--navy);font:inherit;font-size:16px;padding:10px 12px;line-height:1.5;color-scheme:light}
+  .fh-inquiry input,.fh-inquiry select{min-height:48px}
+  .fh-inquiry textarea{resize:vertical}
+  .fh-inquiry small{display:block;margin-top:6px;line-height:1.45}
+  .fh-inquiry fieldset{min-width:0;margin:22px 0 0;padding:16px;border:1px solid currentColor}
+  .fh-inquiry legend{font-weight:700;padding:0 6px}
+  .fh-inquiry-notes{margin:22px 0 16px}
+  .fh-inquiry .fh-inquiry-note{font-size:.9rem;line-height:1.5;margin-top:16px}
+  .fh-inquiry :focus-visible{outline:3px solid var(--orange,#f97316);outline-offset:4px}
+  .fh-inquiry [aria-invalid="true"]{border-color:#ff8c66}
+  .fh-inquiry .fh-btn{white-space:normal;text-align:center;min-height:48px;max-width:100%}
+  #fh-inquiry-error{font-weight:700;border-left:4px solid #ff8c66;padding-left:12px}
+  #fh-inquiry-result{border-top:1px solid currentColor;padding-top:24px;margin-top:24px}
+  #fh-inquiry-result h3{color:inherit;margin:0 0 12px}
+  #fh-inquiry-small{margin-top:16px}
+  .fh-inquiry-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
+  @media(max-width:600px){.fh-inquiry-grid{grid-template-columns:1fr}.fh-inquiry summary{padding:16px}.fh-inquiry-body{padding:0 16px 16px}.fh-inquiry fieldset{padding:12px}.fh-inquiry-actions{display:grid}.fh-inquiry .fh-btn{width:100%}}
+</style>
+<script is:inline id="fh-inquiry-script">
+(() => {
+  'use strict';
+  // FH-INQUIRY-MATH:START
+  function prepareCatering(input, today) {
+    const formats = {offen:'Noch offen – gemeinsam klären',foodtruck:'Foodtruck',crew:'Crew',tischbuffet:'Tischbuffet',weihnachtstruck:'Weihnachts-Truck 2026'};
+    const answers = {offen:'Noch zu prüfen',ja:'Vorhanden',nein:'Nicht vorhanden'};
+    const date = String(input.date || '').trim();
+    const guests = String(input.guests || '').trim();
+    const place = String(input.place || '').trim();
+    const notes = String(input.notes || '').replace(/\r\n?/g,'\n').trim();
+    if (!Object.hasOwn(formats,input.format)) return {field:'format',error:'Bitte wählt eines der Wunschformate.'};
+    if (date) {
+      const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+      if (!parts) return {field:'date',error:'Bitte gebt ein gültiges Datum ein oder lasst das Feld offen.'};
+      const [,year,month,day] = parts.map(Number);
+      if (year < 1000 || month < 1 || month > 12 || day < 1 || day > new Date(Date.UTC(year,month,0)).getUTCDate()) return {field:'date',error:'Dieses Datum gibt es nicht. Bitte prüft die Eingabe.'};
+      if (date < today) return {field:'date',error:'Das Datum liegt in der Vergangenheit. Bitte wählt einen kommenden Termin oder lasst es offen.'};
+      if (input.format === 'weihnachtstruck' && year !== 2026) return {field:'date',error:'Das Weihnachts-Truck-Angebot gilt für 2026. Für einen anderen Zeitraum könnt ihr Foodtruck wählen und eure Wünsche ergänzen.'};
+    }
+    if (guests && (!/^\d{1,8}$/.test(guests) || Number(guests) < 1)) return {field:'guests',error:'Bitte gebt eine ganze Gästezahl ab 1 ein oder lasst das Feld offen.'};
+    if (place.length > 120 || /[\r\n]/.test(place)) return {field:'place',error:'Bitte kürzt Ort und Adresse auf eine Zeile mit höchstens 120 Zeichen.'};
+    if (notes.length > 250) return {field:'notes',error:'Bitte kürzt die Ergänzung auf höchstens 250 Zeichen.'};
+    const lines = ['Moin Fry High,','','wir möchten Catering an unserem Veranstaltungsort anfragen.','Wunschdatum: '+(date ? date.split('-').reverse().join('.') : 'noch offen'),'Ungefähre Gästezahl: '+(guests ? Number(guests) : 'noch offen'),'Ort / genaue Adresse: '+(place || 'noch offen'),'Wunschformat: '+formats[input.format]];
+    if (input.format === 'weihnachtstruck') {
+      for (const [key,label] of [['access','Ebene Fläche mit Zufahrt'],['power','16-A-Strom'],['shelter','Wettergeschützter Essplatz']]) {
+        if (!Object.hasOwn(answers,input[key])) return {field:key,error:'Bitte prüft die Angaben zum Weihnachts-Truck.'};
+        lines.push(label+': '+answers[input[key]]);
+      }
+    }
+    if (notes) lines.push('Ergänzungen: '+notes);
+    lines.push('','Bitte prüft Termin, Anfahrt und die mögliche Umsetzung. Diese Anfrage ist noch keine Buchung.');
+    const message = lines.join('\n');
+    return {message,whatsapp:'https://wa.me/491627500673?text='+encodeURIComponent(message),email:'mailto:info@fryhigh.de?subject=Catering%20anfragen&body='+encodeURIComponent(message),smallGroup:!!guests && Number(guests)<50};
+  }
+  // FH-INQUIRY-MATH:END
+  const byId = suffix => document.getElementById('fh-inquiry-'+suffix);
+  const form = byId('form');
+  const result = byId('result');
+  const fields = ['date','guests','place','format','notes','access','power','shelter'];
+  function todayLocal() {
+    const now = new Date();
+    return now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  }
+  function clearResult() {
+    result.hidden = true;
+    byId('message').value = '';
+    byId('whatsapp').removeAttribute('href');
+    byId('email').removeAttribute('href');
+    byId('error').hidden = true;
+    fields.forEach(key => byId(key).removeAttribute('aria-invalid'));
+    byId('truck').hidden = byId('format').value !== 'weihnachtstruck';
+  }
+  form.addEventListener('input',clearResult);
+  form.addEventListener('change',clearResult);
+  form.addEventListener('submit',event => {
+    event.preventDefault();
+    clearResult();
+    const input = Object.fromEntries(fields.map(key => [key,byId(key).value]));
+    const draft = byId('date').validity.badInput ? {field:'date',error:'Bitte vervollständigt das Datum oder lasst das Feld offen.'} : prepareCatering(input,todayLocal());
+    if (draft.error) {
+      byId('error').textContent = draft.error;
+      byId('error').hidden = false;
+      byId(draft.field).setAttribute('aria-invalid','true');
+      byId(draft.field).focus();
+      return;
+    }
+    byId('message').value = draft.message;
+    byId('whatsapp').href = draft.whatsapp;
+    byId('email').href = draft.email;
+    byId('small').hidden = !draft.smallGroup;
+    result.hidden = false;
+    byId('result-title').focus();
+  });
+  byId('date').min = todayLocal();
+  clearResult();
+  document.getElementById('catering-anfragehilfe').hidden = false;
+})();
+</script>
+<!-- FH-ANFRAGEHILFE:END -->

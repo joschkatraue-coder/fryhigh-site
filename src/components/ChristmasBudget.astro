@@ -1,0 +1,118 @@
+---
+// Weihnachtsrechner „Was kostet eure Runde?“ (SEO-Welle 5), aus dem Live-Stand zurückgeholt.
+// Rechnet Gästezahl mal Paketpreis; ohne JavaScript bleibt das Beispiel im noscript.
+// shortcut: data-astro-cid-dmubfjji bindet die scoped Styles von OfferPage.astro; wenn sich Pfad oder Name von OfferPage ändert, Attribut aus dem Build neu übernehmen.
+---
+<!-- FH-WEIHNACHTSBUDGET:START -->
+<section id="weihnachtsbudget" class="offer-section fh-budget" aria-labelledby="budget-title" data-astro-cid-dmubfjji>
+  <div>
+    <span class="offer-eyebrow" data-astro-cid-dmubfjji>Exklusive Weihnachtsfeier 2026</span>
+    <h2 id="budget-title" data-astro-cid-dmubfjji>Was kostet eure Runde?</h2>
+    <p>Gästezahl rein. Paket wählen. Essensbudget sehen.</p>
+  </div>
+  <div class="fh-budget__body">
+    <p id="budget-scope">Der Rechner gilt für eure <strong>exklusive Feier im Restaurant ab 30 Personen</strong>. Kleinere Runden kommen ins Abendgeschäft; für Catering bei euch erstellen wir ein separates Angebot.</p>
+    <form id="fh-budget-form" aria-describedby="budget-scope budget-conditions" novalidate hidden>
+      <div class="fh-budget__fields">
+        <div>
+          <label for="fh-budget-guests">Wie viele seid ihr?</label>
+          <input id="fh-budget-guests" type="text" inputmode="numeric" pattern="[0-9]+" value="30" autocomplete="off" spellcheck="false" required aria-describedby="budget-guests-help budget-error">
+          <p id="budget-guests-help" class="fh-budget__help">Ganze Gästezahl ab 30.</p>
+        </div>
+        <div>
+          <label for="fh-budget-package">Euer Tischbuffet-Paket</label>
+          <select id="fh-budget-package" aria-describedby="budget-error">
+            <option value="2990">Streetfood-Tischbuffet · 29,90 € p. P.</option>
+            <option value="3490">Weihnachts-BBQ · 34,90 € p. P.</option>
+            <option value="3990">Große Weihnachtsrunde · 39,90 € p. P.</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="fh-btn">Budget berechnen</button>
+      <p id="budget-error" class="fh-budget__error" role="status" hidden></p>
+      <div id="budget-result" class="fh-budget__result" aria-live="polite" aria-atomic="true" hidden>
+        <span>Essensbudget für eure Runde · brutto</span>
+        <output id="budget-total" for="fh-budget-guests fh-budget-package"></output>
+        <span id="budget-calculation"></span>
+      </div>
+    </form>
+    <noscript><p><strong>Beispiel für 30 Personen:</strong> Streetfood-Tischbuffet 897,00 €, Weihnachts-BBQ 1.047,00 €, Große Weihnachtsrunde 1.197,00 € – jeweils brutto. Für eine andere Gästezahl: Preis pro Person × Gästezahl. Der interaktive Rechner benötigt JavaScript.</p></noscript>
+    <p id="budget-conditions" class="fh-budget__conditions">Der Betrag umfasst das gewählte Tischbuffet-Paket für eine gemeinsame Mahlzeit, kein All-you-can-eat. Gedeckte Tische, Geschirr, Betreuung während des Essens und weihnachtliche Dekoration sind dabei. <strong>Getränke sind nicht enthalten.</strong></p>
+    <p class="fh-budget__conditions">Die Rechnung bestätigt weder Platz für die eingegebene Gästezahl noch einen freien Termin. Zugang, Wünsche und Machbarkeit klären wir mit euch. Eine Anfrage ist noch keine Buchung.</p>
+    <a class="fh-link" href="#anfrage">Termin und Gästezahl anfragen</a>
+  </div>
+</section>
+<style is:inline id="fh-budget-style">
+  .fh-budget p { line-height: 1.6; }
+  .fh-budget__body { min-width: 0; }
+  .fh-budget__fields { display: grid; grid-template-columns: minmax(0, .65fr) minmax(0, 1.35fr); gap: 16px; margin: 24px 0 16px; }
+  .fh-budget label { display: block; margin-bottom: 8px; font-weight: 700; }
+  .fh-budget input, .fh-budget select { box-sizing: border-box; width: 100%; min-height: 48px; min-width: 0; padding: 12px; border: 1px solid var(--navy); border-radius: 4px; background: var(--cream); color: var(--navy); font: inherit; font-size: 16px; }
+  .fh-budget :is(input, select, button, a):focus-visible { outline: 3px solid var(--navy); outline-offset: 4px; }
+  .fh-budget .fh-budget__help { margin: 6px 0 0; font-size: .9rem; }
+  .fh-budget .fh-budget__error { padding: 12px 16px; border-left: 4px solid var(--navy); font-weight: 700; }
+  .fh-budget [aria-invalid="true"] { border-width: 2px; }
+  .fh-budget__result { margin-top: 24px; padding: 24px; border-radius: 8px; background: var(--navy); color: var(--cream); }
+  .fh-budget__result span, .fh-budget__result output { display: block; }
+  .fh-budget__result output { margin: 8px 0; font-size: clamp(1.7rem, 4vw, 2.7rem); line-height: 1.2; font-weight: 800; overflow-wrap: anywhere; }
+  .fh-budget .fh-budget__conditions { font-size: 1rem; }
+  .fh-budget [hidden] { display: none !important; }
+  @media (max-width: 600px) {
+    .fh-budget__fields { grid-template-columns: 1fr; }
+    .fh-budget form > button { width: 100%; justify-content: center; }
+    .fh-budget__result { padding: 20px; }
+  }
+</style>
+<script is:inline id="fh-budget-script">
+  (() => {
+    // FH-BUDGET-MATH:START
+    function christmasBudget(rawGuests, rawPrice) {
+      const text = String(rawGuests).trim();
+      if (!/^\d+$/.test(text)) return { ok: false, code: "guests" };
+      const guests = Number(text);
+      if (!Number.isSafeInteger(guests)) return { ok: false, code: "range" };
+      if (guests < 30) return { ok: false, code: "minimum" };
+      const priceCents = Number(rawPrice);
+      if (![2990, 3490, 3990].includes(priceCents)) return { ok: false, code: "package" };
+      const totalCents = guests * priceCents;
+      if (!Number.isSafeInteger(totalCents)) return { ok: false, code: "range" };
+      return { ok: true, guests, priceCents, totalCents };
+    }
+    function formatBudget(cents) {
+      const exact = BigInt(cents);
+      const euros = new Intl.NumberFormat("de-DE").format(exact / 100n);
+      return euros + "," + String(exact % 100n).padStart(2, "0") + "\u00a0€";
+    }
+    // FH-BUDGET-MATH:END
+    const form = document.getElementById("fh-budget-form");
+    if (!form) return;
+    const guests = document.getElementById("fh-budget-guests");
+    const choice = document.getElementById("fh-budget-package");
+    const error = document.getElementById("budget-error");
+    const result = document.getElementById("budget-result");
+    const total = document.getElementById("budget-total");
+    const calculation = document.getElementById("budget-calculation");
+    const messages = {
+      guests: "Bitte gib eine ganze Gästezahl ein, zum Beispiel 30.",
+      minimum: "Exklusiv feiert ihr ab 30 Personen. Kleinere Teams kommen ab 13.11. ins Abendgeschäft, donnerstags bis samstags ab 18 Uhr.",
+      range: "Diese Gästezahl lässt sich hier nicht zuverlässig berechnen. Schreibt uns für eine persönliche Prüfung.",
+      package: "Bitte wähle eines der drei Tischbuffet-Pakete."
+    };
+    function update() {
+      const budget = christmasBudget(guests.value, choice.value);
+      guests.setAttribute("aria-invalid", String(!budget.ok && budget.code !== "package"));
+      choice.setAttribute("aria-invalid", String(!budget.ok && budget.code === "package"));
+      error.hidden = budget.ok;
+      error.textContent = budget.ok ? "" : messages[budget.code];
+      result.hidden = !budget.ok;
+      total.textContent = budget.ok ? formatBudget(budget.totalCents) : "";
+      calculation.textContent = budget.ok ? budget.guests + " Personen × " + formatBudget(budget.priceCents) + " brutto pro Person" : "";
+    }
+    form.addEventListener("submit", event => { event.preventDefault(); update(); });
+    guests.addEventListener("input", update);
+    choice.addEventListener("change", update);
+    update();
+    form.hidden = false;
+  })();
+</script>
+<!-- FH-WEIHNACHTSBUDGET:END -->

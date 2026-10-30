@@ -50,14 +50,14 @@ const TERMS_VERSION = "2026-09-16";
 
 const description = live
   ? `${spiel.name}: Zutaten sammeln, Möwen ausweichen, Wochenwertung. ${prizeSentence}`
-  : `${spiel.name}: Zutaten sammeln, Möwen ausweichen, Bestwert knacken. Mit Wochenbestenliste. Die Gewinnrunde ist noch nicht gestartet.`;
+  : `${spiel.name} von Fry High: als Gast online fliegen, Zutaten sammeln und Hindernissen ausweichen. Dein Bestwert bleibt im Browser. Wochenwertung noch nicht aktiv.`;
 ---
-<MarketingLayout title="Pommespilot · Mini-Spiel · Fry High" description={description}>
+<MarketingLayout title="Pommespilot: Pommes-Spiel online | Fry High" description={description}>
   <section class="spiel-hero">
     <div class="spiel-hero-inner">
       <span class="spiel-eyebrow">{live ? "Gewinnspiel · Wochenwertung" : `${spiel.name} · Mini-Spiel`}</span>
       <h1>Flieg. Sammel.<br />Schmier nicht ab.</h1>
-      <p class="spiel-lead">Klick, Tipp oder Leertaste hebt. Zutaten sammeln, Möwen ausweichen.</p>
+      <p class="spiel-lead">Pommespilot ist das Pommes-Spiel von Fry High. Flieg online als Gast, sammle Zutaten und weiche Möwen aus. Jeder Klick, Tipp oder Druck auf die Leertaste gibt dem Flieger einen Aufwärtsimpuls. Danach sinkt er wieder.</p>
       <a class="fh-link" href="#wochenwertung">Zur Bestenliste ↓</a>
     </div>
   </section>
@@ -66,6 +66,15 @@ const description = live
     <PilotFlightGame contestLive={live} prizeLabel={prizeSentence} minAge={spiel.min_age} termsVersion={TERMS_VERSION} />
     <Leaderboard contestLive={live} prizeLabel={prizeSentence} />
   </div>
+
+  <section class="spiel-flow" aria-labelledby="pommespilot-anleitung">
+    <div class="spiel-flow-inner">
+      <h2 id="pommespilot-anleitung">So fliegst du beim Pommespilot.</h2>
+      <p>Starte das Gastspiel mit „Ballern wir los“. Jeder Klick, Tipp oder Druck auf die Leertaste gibt dem Flieger einen Aufwärtsimpuls. Danach sinkt er wieder. Drücke oder tippe für den nächsten Impuls erneut.</p>
+      <p>Sammle Zutaten für Punkte. Drei Zutaten derselben Kreation geben einen Bonus. Möwen, Ketchup, die Wolkendecke und das Wasser beenden deinen Flug. Mit „Nochmal fliegen“ startest du die nächste Runde.</p>
+      {!live && <p>Dein Bestwert bleibt in diesem Browser. Die Wochenwertung und die Anmeldung sind noch nicht freigeschaltet; die Gewinnrunde ist noch nicht gestartet.</p>}
+    </div>
+  </section>
 
   <section class="spiel-flow">
     <div class="spiel-flow-inner">

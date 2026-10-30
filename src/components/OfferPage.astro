@@ -41,11 +41,13 @@ interface Props {
   call?: boolean;
   extraSchema?: Record<string, unknown>[];
   heroImage?: ImageMetadata;
+  /** Index des Abschnitts, nach dem der Slot „after-section“ erscheint */
+  insertAfterSection?: number;
 }
 
 const { title, description, label, eyebrow, headline, mark, lead, facts, sections, processTitle, steps, faq, faqTitle,
   primaryLabel, heroAlternate, requestTitle, requestSubject, requestIntro, requestText, related, call, extraSchema = [],
-  heroImage = loadedFries } = Astro.props;
+  heroImage = loadedFries, insertAfterSection } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site).toString();
 const whatsapp = `https://wa.me/491627500673?text=${encodeURIComponent(requestText)}`;
 const email = `mailto:info@fryhigh.de?subject=${encodeURIComponent(requestSubject)}&body=${encodeURIComponent(requestText)}`;
@@ -97,7 +99,7 @@ const schema = {
           {heroAlternate && <a class="fh-link hero-alternate" href={heroAlternate.href}>{heroAlternate.label}</a>}
         </div>
         <div class="hero-image" aria-hidden="true">
-          <Picture src={heroImage} alt="" widths={[480, 800, 1200]} sizes="(max-width: 800px) 100vw, 44vw" formats={["avif", "webp"]} quality={82} loading="eager" />
+          <Picture src={heroImage} alt="" widths={[480, 800, 1200]} sizes="(max-width: 800px) 100vw, 44vw" formats={["avif", "webp"]} quality={82} loading="eager" fetchpriority="high" />
         </div>
       </div>
       <ul class="facts" role="list">{facts.map((fact) => <li>{fact}</li>)}</ul>
@@ -106,10 +108,13 @@ const schema = {
 
   <div class="offer-content offer-wrap">
     {sections.map((section, i) => (
+      <>
       <section id={section.id} class="offer-section" aria-labelledby={`section-${i}`}>
         <h2 id={`section-${i}`}>{section.title}</h2>
         <div class="section-text">{section.paragraphs.map((paragraph) => <p>{paragraph}</p>)}{section.link && <a class="fh-link section-link" href={section.link.href}>{section.link.label}</a>}</div>
       </section>
+      {i === insertAfterSection && <slot name="after-section" />}
+      </>
     ))}
   </div>
 
@@ -151,6 +156,7 @@ const schema = {
         <p class="request-contact">WhatsApp: <a href={whatsapp} target="_blank" rel="noopener">0162 7500 673</a><br /><a href={email}>info@fryhigh.de</a></p>
       </div>
     </div>
+    <slot name="request" />
   </section>
 
   <aside class="related offer-wrap" aria-label="Weiteres Angebot">

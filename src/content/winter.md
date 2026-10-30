@@ -6,7 +6,7 @@ intro: "Eure Weihnachtsfeier in Bremerhaven: bei uns im Restaurant im Zoo am Mee
 cards:
   - title: "Weihnachten am Zoo"
     body: "Feiert mit eurem Team oder Freundeskreis drinnen im Restaurant im Zoo am Meer. Fragt euren Wunschtermin und die passende Runde an."
-    cta_label: "Mehr zur Feier am Zoo"
+    cta_label: "Weihnachtsfeier im Restaurant am Zoo"
     cta_anlass: "Weihnachtsfeier am Zoo"
     detail_href: "/weihnachtsfeier-bremerhaven/"
   - title: "Weihnachtscatering"
