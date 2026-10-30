@@ -1,36 +1,27 @@
-// Fry High — Pommespilot Game Worker (Cloudflare Worker + D1)
-//
-// Routes (kompatibel zum deployten Stand vom Mai 2026; nur additive Felder):
-//   POST /session/start                  → { token, expires_at }
-//   POST /score/submit                   → { ok, verify_required, mail_sent, masked_email, rank, total, week_key, display_name_dropped }
-//   GET  /verify?t=<token>               → HTML-Bestätigung, Link zurück auf SITE_BASE/spiel?verified=1
-//   GET  /leaderboard[?period=all]       → { period, week_key, top: [{ rank, name, score }] }
-//   GET  /rank?score=N                   → { rank, total, week_key }   (vorläufiger Platz: bestätigte Scores der Woche > N, plus 1)
-//   GET  /vouchers/check?code=…[&pin=…]  → { ok, valid, reason? }; mit Crew-PIN zusätzlich score, week_key, expires_at, label, redeem_location
-//   POST /vouchers/redeem                → { ok, redeemed_at }         (PIN)
-//   POST /admin/hide-score               → { ok, hidden, changes }     (PIN; { id } oder { name[, week_key] }, optional hidden:false)
-//   POST /admin/retry-winner-mail        → { ok, code, masked_email }  (PIN; { wk })
-//
-// Cron ('0 23 * * SUN' = Montag 01:00 MESZ / 00:00 MEZ):
-//   1. Woche einfrieren, Top-1 ermitteln, Gutschein-Code anlegen, Gewinner- und Crew-Mail.
-//   2. Aufräumen: Sessions älter als 1 Tag, unbestätigte Scores nach Token-Ablauf, E-Mails alter Einträge anonymisieren.
-//
-// Env-Vars: siehe wrangler-game.toml. Secrets: RESEND_API_KEY, CREW_PIN, optional MAILERLITE_API_KEY.
-// Caveman: ein File, keine Routing-Library. if(path) reicht.
+// Fry High Pommespilot — Cloudflare Worker + D1, 2026-09-16.
+// Player API: POST /auth/start, /auth/verify, /auth/logout; GET /auth/me.
+// 20-minute one-use magic links; 30-day bearer sessions. Only token hashes are stored.
+// Runs: POST /session/start -> token/expires_at, then authenticated POST /score/submit.
+// One best score per normalized email/week; exact run retries are idempotent.
+// Public: GET /leaderboard[?week_key=YYYY-Www|period=all], GET /rank?score=N.
+// Crew: GET /admin/scores; POST /admin/hide-score, /admin/retry-winner-mail.
+// Crew credentials use X-Crew-Pin; legacy POST pin remains supported. Never put a PIN in URLs.
+// Vouchers: GET /vouchers/check?code=..., POST /vouchers/redeem. Existing voucher codes remain valid.
+// Legacy GET /verify?t=... only verifies old score links; new logins use SITE_BASE/spiel#login=... .
+// Hourly scheduled(): close only past Berlin weeks, issue the highest eligible score (crypto draw for ties),
+// maintain a twelve-calendar-month winner exclusion, safely retry pending mail, then clean up expired data.
+// CONTEST_LIVE stays false until deployment, mail and crew readiness have been accepted.
+// Secrets: RESEND_API_KEY and CREW_PIN. Optional MAILERLITE_API_KEY is only used by legacy opt-in.
+// Tests and rollout preconditions: 50_threads/2026-09-16_fh-minigame-bestenliste/backend/.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SESSION_MS = 60 * 60 * 1000;               // 60 min: lange, ehrliche Läufe dürfen einreichen
-const VERIFY_TOKEN_MS = 7 * DAY_MS;              // Magic-Link 7 Tage gültig
 const EMAIL_RETENTION_MS = 120 * DAY_MS;         // bestätigte Scores: 30 Tage Gutschein + 90 Tage Rückfragen, dann E-Mail anonymisieren
 const VOUCHER_EMAIL_RETENTION_MS = 90 * DAY_MS;  // Gutschein-E-Mail 90 Tage nach Ablauf anonymisieren
-// Cron läuft Sonntag 23:00 UTC = Montag 01:00 MESZ / 00:00 MEZ. Vier Stunden zurück liegt in beiden Fällen
-// noch am Sonntag (Berlin), auch wenn Cloudflare den Trigger bis zu zwei Stunden verspätet feuert.
-const CRON_WEEK_OFFSET_MS = 4 * 60 * 60 * 1000;
-
 const CORS = (origin) => ({
   'Access-Control-Allow-Origin': origin,
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Crew-Pin, Idempotency-Key',
   'Access-Control-Max-Age': '86400',
   Vary: 'Origin',
 });
@@ -53,7 +44,7 @@ function resolveOrigin(request, env) {
 const json = (body, status, origin) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json', ...CORS(origin) },
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...CORS(origin) },
   });
 
 const html = (body, status = 200) =>
@@ -72,6 +63,151 @@ const escape = (s) =>
 const isEmail = (s) => typeof s === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 const uuid = () => crypto.randomUUID();
 const now = () => Date.now();
+const LOGIN_MS = 30 * DAY_MS;
+const AUTH_LINK_MS = 20 * 60 * 1000;
+const errorJson = (code, status, origin) => json({ ok: false, error: code }, status, origin);
+const normalizeEmail = (email) => String(email ?? '').trim().toLowerCase();
+const opaqueToken = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join('');
+async function digest(value) {
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(bytes), b => b.toString(16).padStart(2, '0')).join('');
+}
+const emailKey = (email) => digest(`pommespilot-email-v1:${normalizeEmail(email)}`);
+
+async function limited(env, scope, identity, limit, interval) {
+  const start = Math.floor(now() / interval) * interval;
+  const key = await digest(`${scope}:${identity}:${start}`);
+  const row = await env.DB.prepare(`INSERT INTO request_limits (bucket_key, hits, expires_at) VALUES (?, 1, ?)
+    ON CONFLICT(bucket_key) DO UPDATE SET hits = hits + 1 RETURNING hits`).bind(key, start + interval).first();
+  return Number(row.hits) > limit;
+}
+function rateError(origin) {
+  const response = errorJson('rate_limited', 429, origin);
+  response.headers.set('Retry-After', '900');
+  return response;
+}
+async function playerAuth(request, env) {
+  const token = (request.headers.get('Authorization') ?? '').match(/^Bearer ([a-f0-9]{64})$/)?.[1];
+  if (!token) return null;
+  const tokenHash = await digest(token);
+  const player = await env.DB.prepare(`SELECT p.*, s.expires_at FROM player_sessions s
+    JOIN players p ON p.email_key = s.email_key WHERE s.token_hash = ? AND s.expires_at > ?`)
+    .bind(tokenHash, now()).first();
+  return player ? { ...player, token_hash: tokenHash } : null;
+}
+async function publicPlayer(player, env) {
+  const history = player.email_key ? await env.DB.prepare('SELECT eligible_after FROM winner_history WHERE email_key = ? AND eligible_after > ?')
+    .bind(player.email_key, now()).first() : null;
+  return { display_name: player.display_name, masked_email: maskEmail(player.email), eligible_to_win: !history, eligible_after: history?.eligible_after ?? null };
+}
+async function authStart(request, env, origin) {
+  const data = await request.json();
+  const email = normalizeEmail(data.email);
+  const name = String(data.display_name ?? '').trim();
+  if (email.length > 254 || !isEmail(email)) return errorJson('invalid_email', 422, origin);
+  if (!/^[\p{L}\p{N} ._'’-]{2,32}$/u.test(name) || !nameAllowed(name)) return errorJson('invalid_name', 422, origin);
+  if (data.consent !== true) return errorJson('consent_required', 422, origin);
+  if (data.age_confirmed !== true) return errorJson('age_required', 422, origin);
+  const cfg = prizeConfig(env);
+  if (String(data.terms_version ?? '') !== cfg.termsVersion) return errorJson('terms_changed', 422, origin);
+  const key = await emailKey(email);
+  const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+  if (await limited(env, 'auth-ip', ip, 30, 60 * 60 * 1000) ||
+      await limited(env, 'auth-email', key, 3, 15 * 60 * 1000)) return rateError(origin);
+  const token = opaqueToken();
+  const tokenHash = await digest(token);
+  await env.DB.prepare(`INSERT INTO auth_links (token_hash, email_key, email, display_name, created_at, expires_at, terms_version)
+    VALUES (?, ?, ?, ?, ?, ?, ?)`).bind(tokenHash, key, email, name, now(), now() + AUTH_LINK_MS, cfg.termsVersion).run();
+  const link = `${cfg.siteBase}/spiel#login=${token}`;
+  let result;
+  try { result = await sendMail(env, { to: email, subject: 'Beim Pommespilot anmelden · E-Mail bestätigen',
+    html: `${MAIL_WRAP_OPEN}<h2 style="${MAIL_H2}">Einmal bestätigen. Dann losfliegen.</h2>
+      <p>Moin ${escape(name)},</p><p>Bestätige deine E-Mail-Adresse. Danach bleibt deine Anmeldung auf diesem Gerät 30 Tage gültig.</p>
+      <p><a href="${link}">Beim Pommespilot anmelden</a></p>
+      <p>Der Link gilt 20 Minuten und nur einmal. Wenn du das nicht angefordert hast, ignoriere diese Mail.</p>${MAIL_FOOT}${MAIL_WRAP_CLOSE}` });
+  } catch { result = { ok: false }; }
+  await env.DB.prepare('UPDATE auth_links SET mail_status = ? WHERE token_hash = ?').bind(result.ok ? 'sent' : 'failed', tokenHash).run();
+  if (!result.ok) return errorJson('mail_unavailable', 503, origin);
+  return json({ ok: true, mail_sent: true, masked_email: maskEmail(email) }, 202, origin);
+}
+async function authVerify(request, env, origin) {
+  const data = await request.json();
+  const tokenHash = await digest(String(data.token ?? ''));
+  const row = await env.DB.prepare('SELECT * FROM auth_links WHERE token_hash = ?').bind(tokenHash).first();
+  if (!row || row.expires_at <= now()) return errorJson('auth_link_expired', 410, origin);
+  if (row.used_at) return errorJson('auth_link_used', 410, origin);
+  if (row.mail_status !== 'sent') return errorJson('auth_link_expired', 410, origin);
+  const loginToken = opaqueToken();
+  const loginHash = await digest(loginToken);
+  const ts = now(); const expires = ts + LOGIN_MS;
+  // D1 batch is transactional. Only the first redemption can create a session.
+  const results = await env.DB.batch([
+    env.DB.prepare(`INSERT INTO players (email_key, email, display_name, verified_at, last_login_at, terms_version, terms_accepted_at, age_confirmed)
+      SELECT email_key, email, display_name, ?, ?, terms_version, created_at, 1 FROM auth_links
+      WHERE token_hash = ? AND used_at IS NULL AND expires_at > ? AND mail_status = 'sent'
+      ON CONFLICT(email_key) DO UPDATE SET email = excluded.email, display_name = excluded.display_name,
+        last_login_at = excluded.last_login_at, terms_version = excluded.terms_version, terms_accepted_at = excluded.terms_accepted_at`)
+      .bind(ts, ts, tokenHash, ts),
+    env.DB.prepare(`INSERT INTO player_sessions (token_hash, email_key, created_at, expires_at)
+      SELECT ?, email_key, ?, ? FROM auth_links WHERE token_hash = ? AND used_at IS NULL AND expires_at > ? AND mail_status = 'sent'`)
+      .bind(loginHash, ts, expires, tokenHash, ts),
+    env.DB.prepare(`UPDATE auth_links SET used_at = ? WHERE token_hash = ? AND used_at IS NULL
+      AND EXISTS (SELECT 1 FROM player_sessions WHERE token_hash = ?)`).bind(ts, tokenHash, loginHash),
+  ]);
+  if (results[1].meta?.changes !== 1) return errorJson('auth_link_used', 410, origin);
+  const player = await env.DB.prepare('SELECT * FROM players WHERE email_key = ?').bind(row.email_key).first();
+  return json({ ok: true, token: loginToken, expires_at: expires, player: await publicPlayer(player, env) }, 200, origin);
+}
+async function authMe(request, env, origin) {
+  const player = await playerAuth(request, env);
+  if (!player) return errorJson('auth_invalid', 401, origin);
+  return json({ ok: true, expires_at: player.expires_at, player: await publicPlayer(player, env) }, 200, origin);
+}
+async function authLogout(request, env, origin) {
+  const player = await playerAuth(request, env);
+  if (player) await env.DB.prepare('DELETE FROM player_sessions WHERE token_hash = ?').bind(player.token_hash).run();
+  return json({ ok: true }, 200, origin);
+}
+
+async function crewCheck(request, env, origin, legacyPin = '') {
+  if (!env.CREW_PIN) return errorJson('crew_unavailable', 503, origin);
+  if (await limited(env, 'crew-attempts', request.headers.get('CF-Connecting-IP') ?? 'unknown', 60, 15 * 60 * 1000)) return rateError(origin);
+  const supplied = request.headers.get('X-Crew-Pin') ?? String(legacyPin);
+  const a = new TextEncoder().encode(supplied); const b = new TextEncoder().encode(String(env.CREW_PIN));
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < Math.max(a.length, b.length); i++) diff |= (a[i] ?? 0) ^ (b[i] ?? 0);
+  if (diff === 0) return null;
+  return errorJson('wrong_pin', 401, origin);
+}
+async function adminScores(request, env, origin) {
+  const denied = await crewCheck(request, env, origin); if (denied) return denied;
+  const url = new URL(request.url);
+  const wk = url.searchParams.get('week_key') || weekKey(new Date(now()));
+  if (!/^\d{4}-W\d{2}$/.test(wk)) return errorJson('invalid_week', 422, origin);
+  const limit = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get('limit') ?? '100') || 100));
+  const offset = Math.max(0, Number.parseInt(url.searchParams.get('offset') ?? '0') || 0);
+  const { results: rows } = await env.DB.prepare(`SELECT id, email, email_key, display_name, score, created_at, hidden, verified
+    FROM scores WHERE week_key = ? ORDER BY score DESC, created_at ASC, id ASC LIMIT ? OFFSET ?`).bind(wk, limit, offset).all();
+  const entries = await Promise.all((rows ?? []).map(async r => {
+    const eligibility = await publicPlayer(r, env);
+    return { id: r.id, email: r.email.startsWith('anon:') ? null : r.email, display_name: r.display_name || pilotName(r.id),
+      score: r.score, created_at: r.created_at, hidden: r.hidden, verified: r.verified,
+      eligible_to_win: eligibility.eligible_to_win && r.verified === 1 && r.hidden === 0, eligible_after: eligibility.eligible_after };
+  }));
+  const total = await env.DB.prepare('SELECT COUNT(*) AS total FROM scores WHERE week_key = ?').bind(wk).first();
+  const { results: weeks } = await env.DB.prepare(`SELECT week_key, status, frozen_at, closed_at FROM weeks
+    UNION SELECT DISTINCT week_key, 'open', NULL, NULL FROM scores WHERE week_key NOT IN (SELECT week_key FROM weeks)
+    ORDER BY week_key DESC LIMIT 26`).all();
+  const { results: vouchers } = await env.DB.prepare(`SELECT code, score, week_key, issued_at, expires_at, redeemed_at,
+    label, value_eur, redeem_location, winner_name, email, winner_mail_status, crew_mail_status,
+    winner_mail_first_at, winner_mail_attempt_at FROM vouchers ORDER BY week_key DESC LIMIT 26`).all();
+  const visibleVouchers = (vouchers ?? []).map(({email, winner_mail_first_at, winner_mail_attempt_at, ...v}) => ({ ...v,
+    winner_email: email.startsWith('anon:') ? null : email,
+    winner_mail_retry_safe: !email.startsWith('anon:') && v.expires_at >= now() &&
+      (['pending', 'failed'].includes(v.winner_mail_status) ||
+       (['uncertain', 'sending'].includes(v.winner_mail_status) && winner_mail_attempt_at <= now() - 60000 && winner_mail_first_at > now() - 23 * 60 * 60 * 1000)) }));
+  return json({ ok: true, week_key: wk, total: total.total, entries, weeks, vouchers: visibleVouchers }, 200, origin);
+}
 // Erst nach vollständiger Mail-/Gutschein-Abnahme aktivieren; der Frontend-Schalter allein schützt die API nicht.
 const contestReady = (env) => env.CONTEST_LIVE === 'true' && Boolean(env.RESEND_API_KEY) && Boolean(env.CREW_PIN);
 
@@ -155,16 +291,18 @@ function prizeConfig(env) {
 
 // ─── Mail-Helpers ─────────────────────────────────────────────────────────
 
-async function sendMail(env, { to, subject, html: body, reply_to }) {
+async function sendMail(env, { to, subject, html: body, reply_to, idempotencyKey }) {
   if (!env.RESEND_API_KEY) {
     console.warn('RESEND_API_KEY missing — mail not sent', { to: maskEmail(to), subject });
     return { ok: false, mode: 'no-key' };
   }
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
+    signal: AbortSignal.timeout(20000),
     headers: {
       Authorization: `Bearer ${env.RESEND_API_KEY}`,
       'Content-Type': 'application/json',
+      ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
     },
     body: JSON.stringify({
       from: env.FROM_EMAIL ?? 'spiel@fryhigh.de',
@@ -175,9 +313,8 @@ async function sendMail(env, { to, subject, html: body, reply_to }) {
     }),
   });
   if (!res.ok) {
-    const detail = await res.text();
-    console.error('resend failed', res.status, detail);
-    return { ok: false, status: res.status, detail };
+    console.error('resend failed', res.status);
+    return { ok: false, status: res.status, uncertain: res.status >= 500 };
   }
   return { ok: true };
 }
@@ -215,36 +352,13 @@ const MAIL_FOOT = `
   <p style="font-size:11px;color:#888;border-top:1px solid #eee;padding-top:12px;margin-top:24px">
     Fry High GbR · H.-H.-Meier-Straße 7 · 27568 Bremerhaven · <a href="mailto:info@fryhigh.de" style="color:#888">info@fryhigh.de</a></p>`;
 
-function confirmMailHtml({ name, score, verifyUrl, newsletterOptIn, cfg }) {
-  const termsUrl = `${cfg.siteBase}/spiel/teilnahmebedingungen`;
-  return `${MAIL_WRAP_OPEN}
-    <h2 style="${MAIL_H2}">Score bestätigen</h2>
-    <p>Moin${name ? ' ' + escape(name) : ''},</p>
-    <p>${score} Punkt${score === 1 ? '' : 'e'}. Nicht schlecht. Damit der Score in die Wochenwertung kommt, klick einmal hier:</p>
-    <p style="margin:28px 0">
-      <a href="${verifyUrl}"
-         style="background:#E94F0E;color:#F5F0E1;text-decoration:none;padding:14px 26px;display:inline-block;
-                font-family:Impact,Arial,sans-serif;letter-spacing:1.5px;text-transform:uppercase">
-        Score bestätigen →
-      </a>
-    </p>
-    <p>Sonntag 23:59 Uhr ist Schluss. Wer dann oben steht, bekommt ${escape(cfg.label)}, einlösbar ${escape(cfg.redeemLocation)}.
-       Die Teilnahmebedingungen stehen hier: <a href="${termsUrl}" style="color:#E94F0E">${termsUrl}</a></p>
-    ${newsletterOptIn ? `<p>Du hast den Newsletter angehakt. Mit dem Klick bestätigst du auch den: Karte, Specials, Abende.
-       Kann sein, dass unser Newsletter-Tool dich danach noch einmal um ein Ja bittet. Austragen jederzeit per Link.</p>` : ''}
-    <p style="font-size:13px;color:#666">Nicht du gewesen? Dann Mail ignorieren, ohne Klick passiert nichts.</p>
-    <p style="font-size:11px;color:#888">Falls der Button nicht klickbar ist:<br/><span style="word-break:break-all">${verifyUrl}</span></p>
-    ${MAIL_FOOT}
-  ${MAIL_WRAP_CLOSE}`;
-}
-
 // Gewinner-Mail, genutzt von runWeeklyVoucher und retryWinnerMail.
 function winnerMailHtml({ name, score, code, expiresAt, label, valueEur, redeemLocation, opsEmail, siteBase }) {
   const termsUrl = `${siteBase}/spiel/teilnahmebedingungen`;
   return `${MAIL_WRAP_OPEN}
     <h2 style="${MAIL_H2}">Du hast die Woche gewonnen.</h2>
     <p>Moin ${escape(name)},</p>
-    <p>${score} Punkte. Diese Woche fliegt keiner höher. Glückwunsch.</p>
+    <p>${score} Punkte. Dein Score hat die berechtigte Wochenwertung gewonnen. Bei Punktgleichheit entscheidet das Los. Glückwunsch.</p>
     <p>Dein Gewinn: ${escape(label)}.</p>
     <div style="background:#1A2A4E;color:#F5F0E1;padding:24px;text-align:center;margin:24px 0">
       <div style="font-family:Arial,sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;opacity:0.75">Gutschein-Code</div>
@@ -255,152 +369,116 @@ function winnerMailHtml({ name, score, code, expiresAt, label, valueEur, redeemL
        Gilt einmal, nicht in bar, nicht kombinierbar. Zoo-Eintritt ist nicht dabei.
        Gutscheinwert ${valueEur} €. Alles darüber zahlst du normal, Restbeträge zahlen wir nicht aus.
        Details in den <a href="${termsUrl}" style="color:#E94F0E">Teilnahmebedingungen</a>.</p>
-    <p>Nächste Woche zählt der Zähler wieder von null. Also: weiterfliegen.</p>
+    <p>Du kannst weiterfliegen und in der Bestenliste stehen. Ein weiterer Gewinn mit dieser E-Mail-Adresse ist erst nach zwölf Kalendermonaten möglich.</p>
     <p>Fragen an <a href="mailto:${escape(opsEmail)}" style="color:#E94F0E">${escape(opsEmail)}</a>.</p>
     ${MAIL_FOOT}
   ${MAIL_WRAP_CLOSE}`;
 }
 
-function crewMailHtml({ wk, name, email, score, code, expiresAt, label, valueEur, redeemLocation, winnerMailOk }) {
+function crewMailHtml({ wk, name, email, score, code, expiresAt, label, valueEur, redeemLocation, siteBase }) {
   return `
     <p>Wochensieger <strong>${escape(wk)}</strong>: ${escape(name)}, ${escape(email)}, ${score} Punkte.</p>
     <p>Code <strong>${code}</strong>, gültig bis ${berlinDate(expiresAt)}.<br/>
        Gewinn: ${escape(label)} (Warenwert bis ${valueEur} €), Einlösung: ${escape(redeemLocation)}.</p>
-    <p>Gewinner-Mail: <strong>${winnerMailOk ? 'gesendet' : 'FEHLGESCHLAGEN, bitte manuell anschreiben'}</strong>.</p>
-    <p style="font-size:12px;color:#888">Prüfen und einlösen im Crew-Tool unter /crew/vouchers. Retry der Gewinner-Mail: POST /admin/retry-winner-mail mit PIN und wk.</p>
+    <p>Den aktuellen Versandstatus der Gewinner-Mail findest du im Crew-Tool.</p>
+    <p><a href="${escape(siteBase)}/crew/leaderboard">Bestenliste und Versandstatus prüfen</a> ·
+       <a href="${escape(siteBase)}/crew/vouchers">Gutschein prüfen und einlösen</a></p>
   `;
 }
 
 // ─── Route-Handlers ───────────────────────────────────────────────────────
 
 async function sessionStart(request, env, origin) {
-  const token = uuid();
-  const created = now();
-  const expires = created + SESSION_MS;
-
-  await env.DB.prepare(
-    'INSERT INTO sessions (token, created_at, expires_at, used) VALUES (?, ?, ?, 0)'
-  ).bind(token, created, expires).run();
-
+  const player = await playerAuth(request, env);
+  if (request.headers.has('Authorization') && !player) return errorJson('auth_invalid', 401, origin);
+  if (await limited(env, 'run-ip', request.headers.get('CF-Connecting-IP') ?? 'unknown', 240, 60 * 60 * 1000)) return rateError(origin);
+  const token = opaqueToken(); const created = now(); const expires = created + SESSION_MS;
+  await env.DB.prepare(`INSERT INTO sessions (token, created_at, expires_at, used, email_key, week_key)
+    VALUES (?, ?, ?, 0, ?, ?)`).bind(await digest(token), created, expires, player?.email_key ?? null, weekKey(new Date(created))).run();
   return json({ token, expires_at: expires }, 200, origin);
 }
 
+// Rank deterministically for display. Winner ties are resolved independently by a cryptographic draw.
+function rankedScores(weekly = true) {
+  return `WITH per_player AS (
+    SELECT *, ROW_NUMBER() OVER (PARTITION BY COALESCE(email_key, lower(trim(email)))
+      ORDER BY score DESC, created_at ASC, id ASC) AS personal_rank
+    FROM scores WHERE verified = 1 AND hidden = 0 ${weekly ? 'AND week_key = ?' : ''}
+  ), ranked AS (
+    SELECT *, ROW_NUMBER() OVER (ORDER BY score DESC, created_at ASC, id ASC) AS rank
+    FROM per_player WHERE personal_rank = 1
+  )`;
+}
 async function rankFor(env, wk, score) {
-  const row = await env.DB.prepare(
-    // P2-12: Bei Gleichstand gewinnt der frueher eingereichte Score, die Rangliste sortiert
-    // entsprechend. Mit '>' bekaeme ein neuer Gleichstand Platz N, stuende aber auf N+1.
-    `SELECT SUM(CASE WHEN score >= ? THEN 1 ELSE 0 END) AS above, COUNT(*) AS total
-     FROM scores WHERE week_key = ? AND verified = 1 AND hidden = 0`
-  ).bind(score, wk).first();
+  const row = await env.DB.prepare(`${rankedScores()} SELECT COUNT(*) AS total,
+    SUM(CASE WHEN score >= ? THEN 1 ELSE 0 END) AS above FROM ranked`).bind(wk, score).first();
   return { rank: Number(row?.above ?? 0) + 1, total: Number(row?.total ?? 0) };
 }
-
 async function rank(request, env, origin) {
-  const url = new URL(request.url);
-  const score = Math.floor(Number(url.searchParams.get('score')));
-  if (!Number.isFinite(score) || score < 0) return json({ error: 'invalid score' }, 422, origin);
-  const wk = weekKey();
-  const r = await rankFor(env, wk, score);
-  return json({ ...r, week_key: wk }, 200, origin);
+  const score = Number(new URL(request.url).searchParams.get('score'));
+  if (!Number.isInteger(score) || score < 0) return errorJson('invalid_score', 422, origin);
+  const wk = weekKey(new Date(now()));
+  return json({ ...await rankFor(env, wk, score), week_key: wk }, 200, origin);
 }
-
+async function scoreReceipt(env, player, wk, improved, origin) {
+  const row = await env.DB.prepare(`${rankedScores()} SELECT rank, score,
+    (SELECT COUNT(*) FROM ranked) AS total FROM ranked WHERE email_key = ?`).bind(wk, player.email_key).first();
+  const eligibility = await publicPlayer(player, env);
+  return json({ ok: true, rank: row?.rank ?? null, total: row?.total ?? 0, week_key: wk,
+    best_score: row?.score ?? null, improved, eligible_to_win: eligibility.eligible_to_win,
+    eligible_after: eligibility.eligible_after }, 200, origin);
+}
 async function scoreSubmit(request, env, origin) {
-  let data;
-  try { data = await request.json(); } catch {
-    return json({ error: 'invalid json' }, 400, origin);
+  const player = await playerAuth(request, env);
+  if (!player) return errorJson('auth_required', 401, origin);
+  const data = await request.json();
+  const score = data.score; const duration = data.duration_ms;
+  if (!Number.isInteger(score) || score < 0 || score > Number(env.SCORE_HARD_CAP ?? 20000)) return errorJson('invalid_score', 422, origin);
+  if (!Number.isInteger(duration) || duration < 0 || duration > SESSION_MS) return errorJson('invalid_duration', 422, origin);
+  const tokenHash = await digest(String(data.token ?? ''));
+  const session = await env.DB.prepare('SELECT * FROM sessions WHERE token = ?').bind(tokenHash).first();
+  if (!session) return errorJson('session_expired', 410, origin);
+  if (session.email_key && session.email_key !== player.email_key) return errorJson('run_conflict', 409, origin);
+  if (session.used) {
+    if (session.email_key === player.email_key && session.submitted_score === score && session.submitted_duration === duration)
+      return scoreReceipt(env, player, session.week_key, false, origin);
+    return errorJson('run_conflict', 409, origin);
   }
-  const cfg = prizeConfig(env);
-
-  const token = String(data.token ?? '').trim();
-  const email = String(data.email ?? '').trim().toLowerCase().slice(0, 120);
-  let displayName = String(data.display_name ?? '').trim().slice(0, 32);
-  const score = Math.floor(Number(data.score));
-  const durationMs = Math.floor(Number(data.duration_ms));
-  const consent = data.consent === true;
-  const newsletterOptIn = data.newsletter_opt_in === true;
-  // Teilnahme ab 18: Die Bestätigung muss auch bei direkten API-Aufrufen vorliegen.
-  const ageConfirmed = data.age_confirmed === true;
-  const termsVersion = String(data.terms_version ?? '').trim().slice(0, 32) || cfg.termsVersion;
-
-  if (!token) return json({ error: 'missing session token' }, 422, origin);
-  if (!isEmail(email)) return json({ error: 'invalid email' }, 422, origin);
-  if (!consent) return json({ error: 'consent required (score-storage)' }, 422, origin);
-  if (!ageConfirmed) return json({ error: 'age confirmation required (18+)' }, 422, origin);
-  if (!Number.isFinite(score) || score < 0) return json({ error: 'invalid score' }, 422, origin);
-  if (!Number.isFinite(durationMs) || durationMs < 0) return json({ error: 'invalid duration' }, 422, origin);
-
-  const hardCap = Number(env.SCORE_HARD_CAP ?? 20000);
-  const minDuration = Number(env.MIN_DURATION_MS ?? 5000);
-  const maxRate = Number(env.SCORE_PER_SECOND_MAX ?? 40);
-
-  if (score > hardCap) return json({ error: 'score impossible' }, 422, origin);
-  if (durationMs < minDuration) return json({ error: 'session too short' }, 422, origin);
-  if (score / (durationMs / 1000) > maxRate) {
-    return json({ error: 'score/duration implausible' }, 422, origin);
+  const ts = now();
+  if (session.expires_at <= ts) return errorJson('session_expired', 410, origin);
+  if (session.week_key !== weekKey(new Date(ts))) return errorJson('week_closed', 409, origin);
+  // 1 second clock/render tolerance; elapsed time is measured from the server-issued run.
+  if (duration > ts - session.created_at + 1000 ||
+      duration < Number(env.MIN_DURATION_MS ?? 5000) || score / (duration / 1000) > Number(env.SCORE_PER_SECOND_MAX ?? 40))
+    return errorJson('score_implausible', 422, origin);
+  if (await limited(env, 'score-player', player.email_key, 240, 60 * 60 * 1000)) return rateError(origin);
+  const entryKey = `${player.email_key}:${session.week_key}`;
+  const entryId = await digest(entryKey);
+  const receiptId = uuid();
+  // One atomic transaction claims the run, updates the best score and records the receipt.
+  // The unique receipt guards the second statement against concurrent submitters.
+  const results = await env.DB.batch([
+    env.DB.prepare(`UPDATE sessions SET used = 1, email_key = ?, receipt_id = ?, submitted_score = ?, submitted_duration = ?
+      WHERE token = ? AND used = 0 AND expires_at > ? AND (email_key IS NULL OR email_key = ?)
+      AND NOT EXISTS (SELECT 1 FROM weeks WHERE week_key = sessions.week_key AND status != 'open')`)
+      .bind(player.email_key, receiptId, score, duration, tokenHash, ts, player.email_key),
+    env.DB.prepare(`INSERT INTO scores (id, email, display_name, score, duration_ms, verified, verified_at, created_at,
+      week_key, terms_version, terms_accepted_at, age_confirmed, hidden, email_key, entry_key, mail_status)
+      SELECT ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, 1, 0, ?, ?, 'not-required' FROM sessions WHERE token = ? AND receipt_id = ?
+      ON CONFLICT(entry_key) DO UPDATE SET score = excluded.score, duration_ms = excluded.duration_ms,
+        display_name = excluded.display_name, email = excluded.email, created_at = excluded.created_at
+      WHERE excluded.score > scores.score`)
+      .bind(entryId, player.email, player.display_name, score, duration, ts, ts, session.week_key,
+        player.terms_version, player.terms_accepted_at, player.email_key, entryKey, tokenHash, receiptId),
+  ]);
+  if (results[0].meta?.changes !== 1) {
+    const latest = await env.DB.prepare('SELECT * FROM sessions WHERE token = ?').bind(tokenHash).first();
+    if (latest?.used && latest.email_key === player.email_key && latest.submitted_score === score && latest.submitted_duration === duration)
+      return scoreReceipt(env, player, session.week_key, false, origin);
+    if (!latest?.used) return errorJson('week_closed', 409, origin);
+    return errorJson('run_conflict', 409, origin);
   }
-
-  let displayNameDropped = false;
-  if (displayName && !nameAllowed(displayName)) {
-    displayName = '';
-    displayNameDropped = true;
-  }
-
-  const session = await env.DB.prepare(
-    'SELECT token, expires_at, used FROM sessions WHERE token = ?'
-  ).bind(token).first();
-  if (!session) return json({ error: 'invalid session' }, 410, origin);
-  if (session.used) return json({ error: 'session already used' }, 410, origin);
-  if (session.expires_at < now()) return json({ error: 'session expired' }, 410, origin);
-
-  // P0 fix: atomic conditional UPDATE (was: read-then-update race-window allowing duplicate scores)
-  const updateResult = await env.DB.prepare(
-    'UPDATE sessions SET used = 1 WHERE token = ? AND used = 0 AND expires_at >= ?'
-  ).bind(token, now()).run();
-
-  if (!updateResult.meta || updateResult.meta.changes !== 1) {
-    return json({ error: 'session already used or expired' }, 410, origin);
-  }
-
-  const id = uuid();
-  const verifyToken = uuid();
-  const wk = weekKey();
-  const created = now();
-  const verifyExpiresAt = created + VERIFY_TOKEN_MS;
-
-  await env.DB.prepare(
-    `INSERT INTO scores (id, email, display_name, score, duration_ms, verified, verify_token, verify_expires_at,
-                         newsletter_opt_in, created_at, week_key, terms_version, terms_accepted_at, age_confirmed, hidden)
-     VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, 0)`
-  ).bind(id, email, displayName || null, score, durationMs, verifyToken, verifyExpiresAt,
-         newsletterOptIn ? 1 : 0, created, wk, termsVersion, created, ageConfirmed ? 1 : 0).run();
-
-  // Magic-Link zeigt auf den Worker selbst (VERIFY_BASE), nicht auf die Site: dort gibt es keine /verify-Route.
-  const verifyUrl = `${cfg.verifyBase}/verify?t=${verifyToken}`;
-  const mailResult = await sendMail(env, {
-    to: email,
-    subject: `Dein Score beim Pommespilot · ${score} Punkte · bestätigen`,
-    html: confirmMailHtml({ name: displayName, score, verifyUrl, newsletterOptIn, cfg }),
-  });
-  // P1 fix Run-12: persist mail-status; failure visible for crew + retry-eligibility
-  await env.DB.prepare('UPDATE scores SET mail_status = ? WHERE id = ?')
-    .bind(mailResult.ok ? 'sent' : 'failed', id)
-    .run();
-  if (!mailResult.ok) {
-    console.error('scoreSubmit: verify-mail failed for', maskEmail(email), 'score-id', id, mailResult);
-  }
-
-  const provisional = await rankFor(env, wk, score);
-
-  return json({
-    ok: true,
-    verify_required: true,
-    mail_sent: mailResult.ok,
-    masked_email: maskEmail(email),
-    rank: provisional.rank,
-    total: provisional.total,
-    week_key: wk,
-    display_name_dropped: displayNameDropped,
-  }, 200, origin);
+  return scoreReceipt(env, player, session.week_key, results[1].meta?.changes === 1, origin);
 }
 
 async function verify(request, env) {
@@ -484,38 +562,23 @@ function verifyPage(message, success, siteBase, score) {
 async function leaderboard(request, env, origin) {
   const url = new URL(request.url);
   const period = url.searchParams.get('period') === 'all' ? 'all' : 'week';
-  const wk = weekKey();
-
-  // period=all: SQLite liefert bei MAX() die übrigen Spalten aus der Zeile mit dem Maximum.
-  const query = period === 'all'
-    ? `SELECT id, display_name, MAX(score) AS score FROM scores
-       WHERE verified = 1 AND hidden = 0
-       GROUP BY email
-       ORDER BY score DESC
-       LIMIT 10`
-    : `SELECT id, display_name, score FROM scores
-       WHERE week_key = ? AND verified = 1 AND hidden = 0
-       ORDER BY score DESC, created_at ASC, id ASC
-       LIMIT 10`;
-
-  const stmt = env.DB.prepare(query);
-  const { results } = period === 'all' ? await stmt.all() : await stmt.bind(wk).all();
-
-  const top = (results ?? []).map((r, i) => ({
-    rank: i + 1,
-    name: r.display_name || pilotName(r.id),
-    score: r.score,
-  }));
-
-  return json({ period, week_key: period === 'week' ? wk : null, top }, 200, origin);
+  const wk = url.searchParams.get('week_key') || weekKey(new Date(now()));
+  if (!/^\d{4}-W\d{2}$/.test(wk)) return errorJson('invalid_week', 422, origin);
+  const query = env.DB.prepare(`${rankedScores(period !== 'all')} SELECT rank, id, display_name, score,
+    (SELECT COUNT(*) FROM ranked) AS total FROM ranked ORDER BY rank LIMIT 10`);
+  const { results } = period === 'all' ? await query.all() : await query.bind(wk).all();
+  return json({ period, week_key: period === 'week' ? wk : null, contest_live: contestReady(env),
+    total: results?.[0]?.total ?? 0,
+    top: (results ?? []).map(r => ({ rank: r.rank, name: r.display_name || pilotName(r.id), score: r.score })) }, 200, origin);
 }
 
 async function voucherCheck(request, env, origin) {
   const url = new URL(request.url);
   const code = String(url.searchParams.get('code') ?? '').trim().toUpperCase();
   // P0 fix: crew-PIN required for detailed reasons; unauthenticated gets generic invalid (prevents enumeration-oracle)
-  const crewPin = String(url.searchParams.get('pin') ?? '').trim();
-  const isCrew = Boolean(crewPin && env.CREW_PIN && crewPin === env.CREW_PIN);
+  const crewPin = request.headers.get('X-Crew-Pin') ?? '';
+  const isCrew = Boolean(crewPin);
+  if (isCrew) { const denied = await crewCheck(request, env, origin, crewPin); if (denied) return denied; }
   const cfg = prizeConfig(env);
 
   if (!code) return json({ ok: false, error: 'no code' }, 400, origin);
@@ -564,7 +627,7 @@ async function voucherRedeem(request, env, origin) {
   const code = String(data.code ?? '').trim().toUpperCase();
   const note = String(data.note ?? '').trim().slice(0, 120);
 
-  if (pin !== env.CREW_PIN) return json({ ok: false, error: 'wrong pin' }, 401, origin);
+  const denied = await crewCheck(request, env, origin, pin); if (denied) return denied;
   if (!code) return json({ ok: false, error: 'no code' }, 400, origin);
 
   // P0 fix: atomic conditional UPDATE (was: read-then-update double-spend race)
@@ -593,8 +656,7 @@ async function hideScore(request, env, origin) {
   try { data = await request.json(); } catch {
     return json({ ok: false, error: 'invalid json' }, 400, origin);
   }
-  const pin = String(data.pin ?? '').trim();
-  if (pin !== env.CREW_PIN) return json({ ok: false, error: 'wrong pin' }, 401, origin);
+  const denied = await crewCheck(request, env, origin, data.pin ?? ''); if (denied) return denied;
 
   const hidden = data.hidden === false ? 0 : 1;
   const id = String(data.id ?? '').trim();
@@ -615,157 +677,158 @@ async function hideScore(request, env, origin) {
 }
 
 async function retryWinnerMail(request, env, origin) {
-  if (!env.CREW_PIN) {
-    return json({ ok: false, error: 'crew pin not configured' }, 503, origin);
-  }
-  let data;
-  try { data = await request.json(); } catch {
-    return json({ ok: false, error: 'invalid json' }, 400, origin);
-  }
-  const pin = String(data.pin ?? '').trim();
-  const wk = String(data.wk ?? '').trim();
-
-  if (pin !== env.CREW_PIN) return json({ ok: false, error: 'wrong pin' }, 401, origin);
-  if (!wk) return json({ ok: false, error: 'no wk' }, 400, origin);
-
-  const voucher = await env.DB.prepare(
-    'SELECT code, email, score_id, score, expires_at, label, value_eur, redeem_location FROM vouchers WHERE week_key = ?'
-  ).bind(wk).first();
-  if (!voucher) return json({ ok: false, error: 'no voucher for week' }, 404, origin);
-  if (String(voucher.email).startsWith('anon:')) return json({ ok: false, error: 'email already anonymised' }, 410, origin);
-
-  const scoreRow = await env.DB.prepare(
-    'SELECT display_name FROM scores WHERE id = ?'
-  ).bind(voucher.score_id).first();
-
-  const cfg = prizeConfig(env);
-  const winnerName = (scoreRow && scoreRow.display_name) || pilotName(voucher.score_id);
-  const label = voucher.label ?? cfg.label;
-  const valueEur = voucher.value_eur ?? cfg.valueEur;
-  const redeemLocation = voucher.redeem_location ?? cfg.redeemLocation;
-
-  const mailResult = await sendMail(env, {
-    to: voucher.email,
-    subject: 'Du hast die Woche gewonnen · Pommespilot',
-    html: winnerMailHtml({
-      name: winnerName, score: voucher.score, code: voucher.code, expiresAt: voucher.expires_at,
-      label, valueEur, redeemLocation, opsEmail: cfg.opsEmail, siteBase: cfg.siteBase,
-    }),
-  });
-
-  return json({
-    ok: mailResult.ok,
-    code: voucher.code,
-    masked_email: maskEmail(voucher.email),
-    mail_result: mailResult,
-  }, mailResult.ok ? 200 : 502, origin);
+  const data = await request.json();
+  const denied = await crewCheck(request, env, origin, data.pin ?? ''); if (denied) return denied;
+  if (!contestReady(env)) return errorJson('contest_unavailable', 503, origin);
+  const wk = String(data.wk ?? '');
+  if (!/^\d{4}-W\d{2}$/.test(wk)) return errorJson('invalid_week', 422, origin);
+  const voucher = await env.DB.prepare('SELECT * FROM vouchers WHERE week_key = ?').bind(wk).first();
+  if (!voucher) return errorJson('voucher_not_found', 404, origin);
+  if (voucher.email.startsWith('anon:')) return errorJson('email_anonymised', 410, origin);
+  if (voucher.winner_mail_status !== 'sent') await deliverVoucher(env, voucher, 'winner');
+  const row = await env.DB.prepare('SELECT winner_mail_status FROM vouchers WHERE code = ?').bind(voucher.code).first();
+  const sent = row.winner_mail_status === 'sent';
+  return json({ ok: sent, code: voucher.code, masked_email: maskEmail(voucher.email), mail_status: row.winner_mail_status,
+    ...(sent ? {} : { error: row.winner_mail_status === 'failed' ? 'mail_unavailable' : 'delivery_uncertain' }) },
+    sent ? 200 : row.winner_mail_status === 'failed' ? 503 : 409, origin);
 }
 
 // ─── Scheduled (Cron) ─────────────────────────────────────────────────────
 
+const BERLIN_CLOCK = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit',
+  day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+function berlinParts(ms) {
+  return Object.fromEntries(BERLIN_CLOCK.formatToParts(new Date(ms)).filter(p => p.type !== 'literal').map(p => [p.type, Number(p.value)]));
+}
+function wallTime(p, millis = 0) { return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second, millis); }
+function twelveCalendarMonths(ms) {
+  const p = berlinParts(ms); p.year += 1;
+  p.day = Math.min(p.day, new Date(Date.UTC(p.year, p.month, 0)).getUTCDate());
+  const desired = wallTime(p, ms % 1000);
+  const offsets = [...new Set([-2 * DAY_MS, 0, 2 * DAY_MS].map(delta => {
+    const sample = desired + delta;
+    return wallTime(berlinParts(sample), sample % 1000) - sample;
+  }))];
+  const candidates = offsets.map(offset => desired - offset);
+  const exact = candidates.filter(t => wallTime(berlinParts(t), t % 1000) === desired);
+  // Calendar arithmetic: Feb 29 clamps to Feb 28; a DST gap moves forward, a fold uses the earlier instant.
+  return exact.length ? Math.min(...exact) : Math.max(...candidates);
+}
+function randomIndex(length) {
+  const ceiling = 0x100000000 - (0x100000000 % length);
+  const values = new Uint32Array(1);
+  do { crypto.getRandomValues(values); } while (values[0] >= ceiling);
+  return values[0] % length;
+}
+async function issueWeek(env, wk) {
+  if (wk >= weekKey(new Date(now()))) return;
+  await env.DB.prepare("INSERT INTO weeks (week_key, status) VALUES (?, 'open') ON CONFLICT DO NOTHING").bind(wk).run();
+  await env.DB.prepare("UPDATE weeks SET status = 'frozen', frozen_at = ? WHERE week_key = ? AND status = 'open'").bind(now(), wk).run();
+  // A frozen week is recoverable after a crash. The voucher and history are committed together.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const existing = await env.DB.prepare('SELECT code FROM vouchers WHERE week_key = ?').bind(wk).first();
+    if (existing) return;
+    const ts = now();
+    const { results } = await env.DB.prepare(`${rankedScores()} SELECT * FROM ranked
+      WHERE email_key IS NOT NULL AND email NOT LIKE 'anon:%'
+      AND NOT EXISTS (SELECT 1 FROM winner_history h WHERE h.email_key = ranked.email_key AND h.eligible_after > ?)
+      ORDER BY score DESC`).bind(wk, ts).all();
+    if (!results?.length) {
+      await env.DB.prepare("UPDATE weeks SET status = 'closed', closed_at = ? WHERE week_key = ? AND status = 'frozen'").bind(ts, wk).run();
+      return;
+    }
+    const ties = results.filter(r => r.score === results[0].score);
+    const winner = ties[ties.length === 1 ? 0 : randomIndex(ties.length)];
+    const code = voucherCode(); const cfg = prizeConfig(env);
+    const eligibleAfter = twelveCalendarMonths(ts);
+    const batch = await env.DB.batch([
+      env.DB.prepare(`INSERT INTO vouchers (code, email, email_key, winner_name, score_id, score, week_key, issued_at,
+        expires_at, kind, label, value_eur, redeem_location)
+        SELECT ?, s.email, s.email_key, COALESCE(s.display_name, ?), s.id, s.score, ?, ?, ?, ?, ?, ?, ? FROM scores s
+        WHERE s.id = ? AND s.hidden = 0 AND s.verified = 1
+        AND EXISTS (SELECT 1 FROM weeks WHERE week_key = ? AND status = 'frozen')
+        AND NOT EXISTS (SELECT 1 FROM winner_history WHERE email_key = s.email_key AND eligible_after > ?)
+        AND NOT EXISTS (SELECT 1 FROM scores higher WHERE higher.week_key = s.week_key AND higher.verified = 1 AND higher.hidden = 0
+          AND higher.email_key IS NOT NULL AND higher.email NOT LIKE 'anon:%' AND higher.score > s.score
+          AND NOT EXISTS (SELECT 1 FROM winner_history h WHERE h.email_key = higher.email_key AND h.eligible_after > ?))
+        ON CONFLICT(week_key) DO NOTHING`)
+        .bind(code, pilotName(winner.id), wk, ts, ts + cfg.validDays * DAY_MS, cfg.kind, cfg.label, cfg.valueEur, cfg.redeemLocation,
+          winner.id, wk, ts, ts),
+      env.DB.prepare(`INSERT INTO winner_history (email_key, week_key, won_at, eligible_after)
+        SELECT email_key, week_key, issued_at, ? FROM vouchers WHERE code = ?
+        ON CONFLICT(email_key) DO UPDATE SET week_key = excluded.week_key, won_at = excluded.won_at, eligible_after = excluded.eligible_after`)
+        .bind(eligibleAfter, code),
+      env.DB.prepare(`UPDATE weeks SET status = 'closed', closed_at = ? WHERE week_key = ?
+        AND EXISTS (SELECT 1 FROM vouchers WHERE week_key = ?)`)
+        .bind(ts, wk, wk),
+    ]);
+    if (batch[0].meta?.changes === 1) return;
+    // Another week may just have won with this email, or moderation changed eligibility. Re-evaluate.
+  }
+  throw new Error('weekly winner changed repeatedly; frozen week retained for retry');
+}
+async function deliverVoucher(env, voucher, kind) {
+  const prefix = kind === 'winner' ? 'winner_mail' : 'crew_mail';
+  const ts = now();
+  if (voucher.email.startsWith('anon:') || voucher.expires_at < ts) return;
+  const claim = await env.DB.prepare(`UPDATE vouchers SET ${prefix}_status = 'sending',
+    ${prefix}_first_at = COALESCE(${prefix}_first_at, ?), ${prefix}_attempt_at = ? WHERE code = ? AND (
+      ${prefix}_status IN ('pending', 'failed') OR
+      (${prefix}_status IN ('sending', 'uncertain') AND ${prefix}_attempt_at <= ? AND ${prefix}_first_at > ?)
+    )`).bind(ts, ts, voucher.code, ts - 60000, ts - 23 * 60 * 60 * 1000).run();
+  if (claim.meta?.changes !== 1) return;
+  const cfg = prizeConfig(env);
+  const common = { name: voucher.winner_name || pilotName(voucher.score_id), score: voucher.score, code: voucher.code,
+    expiresAt: voucher.expires_at, label: voucher.label ?? cfg.label, valueEur: voucher.value_eur ?? cfg.valueEur,
+    redeemLocation: voucher.redeem_location ?? cfg.redeemLocation, opsEmail: cfg.opsEmail, siteBase: cfg.siteBase };
+  let result;
+  try {
+    result = await sendMail(env, {
+      to: kind === 'winner' ? voucher.email : cfg.opsEmail,
+      subject: kind === 'winner' ? 'Du hast die Woche gewonnen · Pommespilot' : `[Pommespilot] Gewinner ${voucher.week_key} · ${voucher.score} Punkte · ${voucher.code}`,
+      html: kind === 'winner' ? winnerMailHtml(common) : crewMailHtml({ ...common, wk: voucher.week_key, email: voucher.email }),
+      idempotencyKey: `pommespilot-${kind}-${voucher.code}`,
+    });
+  } catch { result = { ok: false, uncertain: true }; }
+  await env.DB.prepare(`UPDATE vouchers SET ${prefix}_status = ?, ${prefix}_sent_at = ? WHERE code = ? AND ${prefix}_attempt_at = ?`)
+    .bind(result.ok ? 'sent' : result.uncertain ? 'uncertain' : 'failed', result.ok ? ts : null, voucher.code, ts).run();
+}
 async function runWeeklyVoucher(env) {
   if (!contestReady(env)) return;
-  // Zielwoche = die Berliner Woche, die gerade zu Ende ging (Offset siehe CRON_WEEK_OFFSET_MS).
-  // Achtung bei manuellem Trigger unter der Woche: friert die laufende Woche ein.
-  const wk = weekKey(new Date(Date.now() - CRON_WEEK_OFFSET_MS));
-  const cfg = prizeConfig(env);
-
-  // P0 fix Run-13: atomic week-freeze BEFORE selecting winner — eliminates cron-vs-verify TOCTOU
-  await env.DB.prepare(
-    "INSERT INTO weeks (week_key, status) VALUES (?, 'open') ON CONFLICT(week_key) DO NOTHING"
-  ).bind(wk).run();
-  const freezeResult = await env.DB.prepare(
-    "UPDATE weeks SET status = 'frozen', frozen_at = ? WHERE week_key = ? AND status = 'open'"
-  ).bind(now(), wk).run();
-  if (!freezeResult.meta || freezeResult.meta.changes !== 1) {
-    console.log('weekly-voucher: week already frozen/closed, skip', wk);
-    return;
+  // A crashed attempt beyond the safe provider retry window needs operator review.
+  await env.DB.batch(['winner_mail', 'crew_mail'].map(prefix => env.DB.prepare(`UPDATE vouchers SET ${prefix}_status = 'uncertain'
+    WHERE ${prefix}_status = 'sending' AND ${prefix}_first_at <= ? AND ${prefix}_attempt_at <= ?`)
+    .bind(now() - 23 * 60 * 60 * 1000, now() - 60000)));
+  const current = weekKey(new Date(now()));
+  const p = berlinYMD(new Date(now()));
+  const previous = weekKey(new Date(Date.UTC(p.year, p.month - 1, p.day - 7, 12)));
+  await env.DB.prepare("INSERT INTO weeks (week_key, status) VALUES (?, 'open') ON CONFLICT DO NOTHING").bind(previous).run();
+  const { results: weeks } = await env.DB.prepare(`SELECT week_key FROM weeks WHERE week_key < ? AND status != 'closed'
+    UNION SELECT DISTINCT week_key FROM scores WHERE week_key < ? AND week_key NOT IN (SELECT week_key FROM weeks WHERE status = 'closed')
+    ORDER BY week_key ASC`).bind(current, current).all();
+  for (const row of weeks ?? []) await issueWeek(env, row.week_key);
+  const { results: pending } = await env.DB.prepare(`SELECT * FROM vouchers WHERE expires_at >= ?
+    AND (winner_mail_status != 'sent' OR crew_mail_status != 'sent')`).bind(now()).all();
+  for (const voucher of pending ?? []) {
+    await deliverVoucher(env, voucher, 'winner');
+    await deliverVoucher(env, voucher, 'crew');
   }
-  // Ab hier ist die Woche 'frozen'. 'closed' erst nach erfolgreicher Gutschein-Ausgabe; Wochen ohne Gewinner
-  // bleiben 'frozen' (für /verify gleichbedeutend mit geschlossen).
-  const winner = await env.DB.prepare(
-    `SELECT id, email, display_name, score FROM scores
-     WHERE week_key = ? AND verified = 1 AND hidden = 0
-     ORDER BY score DESC, created_at ASC, id ASC
-     LIMIT 1`
-  ).bind(wk).first();
-
-  if (!winner) {
-    console.log('weekly-voucher: no winner this week', wk);
-    return;
-  }
-
-  const code = voucherCode();
-  const issuedAt = now();
-  const expiresAt = issuedAt + cfg.validDays * DAY_MS;
-
-  // P1 fix: idempotent INSERT via UNIQUE(week_key) + ON CONFLICT (was: read-then-insert race)
-  const insertResult = await env.DB.prepare(
-    `INSERT INTO vouchers (code, email, score_id, score, week_key, issued_at, expires_at, kind, label, value_eur, redeem_location)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(week_key) DO NOTHING`
-  ).bind(code, winner.email, winner.id, winner.score, wk, issuedAt, expiresAt,
-         cfg.kind, cfg.label, cfg.valueEur, cfg.redeemLocation).run();
-
-  if (!insertResult.meta || insertResult.meta.changes !== 1) {
-    console.log('weekly-voucher: already issued for', wk, '(conflict on week_key)');
-    return;
-  }
-
-  const winnerName = winner.display_name || pilotName(winner.id);
-
-  const winnerMailResult = await sendMail(env, {
-    to: winner.email,
-    subject: 'Du hast die Woche gewonnen · Pommespilot',
-    html: winnerMailHtml({
-      name: winnerName, score: winner.score, code, expiresAt,
-      label: cfg.label, valueEur: cfg.valueEur, redeemLocation: cfg.redeemLocation,
-      opsEmail: cfg.opsEmail, siteBase: cfg.siteBase,
-    }),
-  });
-  if (!winnerMailResult.ok) {
-    console.error('weekly-voucher: WINNER MAIL FAILED', { wk, code, email: maskEmail(winner.email), result: winnerMailResult });
-  }
-
-  const crewMailResult = await sendMail(env, {
-    to: cfg.opsEmail,
-    subject: `[Pommespilot] Gewinner ${wk} · ${winner.score} Punkte · ${code}${winnerMailResult.ok ? '' : ' · GEWINNER-MAIL FEHLGESCHLAGEN'}`,
-    html: crewMailHtml({
-      wk, name: winnerName, email: winner.email, score: winner.score, code, expiresAt,
-      label: cfg.label, valueEur: cfg.valueEur, redeemLocation: cfg.redeemLocation, winnerMailOk: winnerMailResult.ok,
-    }),
-  });
-  if (!crewMailResult.ok) {
-    console.error('weekly-voucher: CREW MAIL FAILED', { wk, code, result: crewMailResult });
-  }
-
-  // P0 fix Run-13: mark week as closed after voucher issuance + mails sent
-  await env.DB.prepare(
-    "UPDATE weeks SET status = 'closed', closed_at = ? WHERE week_key = ?"
-  ).bind(now(), wk).run();
-
-  console.log('weekly-voucher issued', { wk, code, score: winner.score });
 }
 
-// Aufräum-Job (Datensparsamkeit). Fristen stehen in der Datenschutzerklärung, Abschnitt Mini-Spiel.
+// Cleanup remains active while prize issuance is disabled. No raw IP is stored.
 async function runCleanup(env) {
-  const t = now();
-  const sessions = await env.DB.prepare('DELETE FROM sessions WHERE created_at < ?').bind(t - DAY_MS).run();
-  const unverified = await env.DB.prepare(
-    'DELETE FROM scores WHERE verified = 0 AND verify_expires_at IS NOT NULL AND verify_expires_at < ?'
-  ).bind(t).run();
-  const scoresAnon = await env.DB.prepare(
-    "UPDATE scores SET email = 'anon:' || id WHERE verified = 1 AND created_at < ? AND email NOT LIKE 'anon:%'"
-  ).bind(t - EMAIL_RETENTION_MS).run();
-  const vouchersAnon = await env.DB.prepare(
-    "UPDATE vouchers SET email = 'anon:' || score_id WHERE expires_at < ? AND email NOT LIKE 'anon:%'"
-  ).bind(t - VOUCHER_EMAIL_RETENTION_MS).run();
-  console.log('cleanup', {
-    sessions: sessions.meta?.changes ?? 0,
-    unverified: unverified.meta?.changes ?? 0,
-    scores_anonymised: scoresAnon.meta?.changes ?? 0,
-    vouchers_anonymised: vouchersAnon.meta?.changes ?? 0,
-  });
+  const ts = now();
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM sessions WHERE created_at < ?').bind(ts - DAY_MS),
+    env.DB.prepare('DELETE FROM auth_links WHERE expires_at <= ? OR used_at IS NOT NULL').bind(ts),
+    env.DB.prepare('DELETE FROM player_sessions WHERE expires_at <= ?').bind(ts),
+    env.DB.prepare('DELETE FROM players WHERE last_login_at <= ?').bind(ts - EMAIL_RETENTION_MS),
+    env.DB.prepare('DELETE FROM request_limits WHERE expires_at <= ?').bind(ts),
+    env.DB.prepare('DELETE FROM winner_history WHERE eligible_after <= ?').bind(ts),
+    env.DB.prepare('DELETE FROM scores WHERE verified = 0 AND verify_expires_at IS NOT NULL AND verify_expires_at < ?').bind(ts),
+    env.DB.prepare("UPDATE scores SET email = 'anon:' || id WHERE verified = 1 AND created_at < ? AND email NOT LIKE 'anon:%'").bind(ts - EMAIL_RETENTION_MS),
+    env.DB.prepare("UPDATE vouchers SET email = 'anon:' || score_id, email_key = NULL WHERE expires_at < ? AND email NOT LIKE 'anon:%'").bind(ts - VOUCHER_EMAIL_RETENTION_MS),
+  ]);
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────
@@ -781,13 +844,39 @@ export default {
     }
 
     try {
+      if (request.method === 'POST') {
+        const requestOrigin = request.headers.get('Origin');
+        if (requestOrigin && !allowedOrigins(env).includes(requestOrigin)) return errorJson('origin_not_allowed', 403, origin);
+        if (!request.headers.get('Content-Type')?.toLowerCase().startsWith('application/json')) return errorJson('invalid_json', 400, origin);
+        if (Number(request.headers.get('Content-Length') ?? '0') > 8192) return errorJson('request_too_large', 413, origin);
+        const bytes = new Uint8Array(8192); let length = 0;
+        const reader = request.body?.getReader();
+        if (reader) while (true) {
+          const { done, value } = await reader.read(); if (done) break;
+          if (length + value.length > bytes.length) { await reader.cancel(); return errorJson('request_too_large', 413, origin); }
+          bytes.set(value, length); length += value.length;
+        }
+        const raw = new TextDecoder().decode(bytes.subarray(0, length));
+        const data = JSON.parse(raw);
+        if (!data || typeof data !== 'object' || Array.isArray(data)) return errorJson('invalid_json', 400, origin);
+        request = new Request(request.url, { method: request.method, headers: request.headers, body: raw });
+      }
+      if (['/auth/start', '/auth/verify'].includes(path) && request.method === 'POST') {
+        if (env.CONTEST_LIVE !== 'true' || !env.CREW_PIN) return errorJson('contest_unavailable', 503, origin);
+        if (!env.RESEND_API_KEY) return errorJson('mail_unavailable', 503, origin);
+      }
+      if (path === '/auth/start' && request.method === 'POST') return await authStart(request, env, origin);
+      if (path === '/auth/verify' && request.method === 'POST') return await authVerify(request, env, origin);
+      if (path === '/auth/me' && request.method === 'GET') return await authMe(request, env, origin);
+      if (path === '/auth/logout' && request.method === 'POST') return await authLogout(request, env, origin);
+      if (path === '/admin/scores' && request.method === 'GET') return await adminScores(request, env, origin);
       if (!contestReady(env) && (
         (path === '/session/start' && request.method === 'POST') ||
         (path === '/score/submit' && request.method === 'POST') ||
         (path === '/verify' && request.method === 'GET')
       )) {
         if (path === '/verify') return html(verifyPage('Die Wochenwertung ist noch nicht gestartet. Du kannst schon ohne Gewinnwertung spielen.', false, prizeConfig(env).siteBase), 503);
-        return json({ ok: false, error: 'contest unavailable' }, 503, origin);
+        return errorJson('contest_unavailable', 503, origin);
       }
       if (path === '/session/start' && request.method === 'POST') return await sessionStart(request, env, origin);
       if (path === '/score/submit' && request.method === 'POST')  return await scoreSubmit(request, env, origin);
@@ -799,11 +888,12 @@ export default {
       if (path === '/admin/hide-score' && request.method === 'POST') return await hideScore(request, env, origin);
       if (path === '/admin/retry-winner-mail' && request.method === 'POST') return await retryWinnerMail(request, env, origin);
     } catch (err) {
+      if (err instanceof SyntaxError) return errorJson('invalid_json', 400, origin);
       console.error('handler error', path, err);
-      return json({ error: 'internal' }, 500, origin);
+      return errorJson('internal', 500, origin);
     }
 
-    return json({ error: 'not found' }, 404, origin);
+    return errorJson('not_found', 404, origin);
   },
 
   async scheduled(event, env, ctx) {

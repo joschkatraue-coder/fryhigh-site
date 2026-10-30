@@ -7,6 +7,7 @@ interface Card {
   tags: string[];
   cta_label: string;
   cta_anlass: string;
+  detail_href?: string;
 }
 interface Props {
   eyebrow: string;
@@ -15,11 +16,9 @@ interface Props {
   intro: string;
   cards: Card[];
   note: string;
-  cta_label: string;
-  cta_href: string;
 }
 
-const { eyebrow, headline, headline_accent, intro, cards, note, cta_label, cta_href } = Astro.props;
+const { eyebrow, headline, headline_accent, intro, cards, note } = Astro.props;
 ---
 <section id="winter" class="winter has-mascot" aria-label="Winter: Weihnachtsfeiern und Grünkohl">
   <FloatingMascot
@@ -40,8 +39,6 @@ const { eyebrow, headline, headline_accent, intro, cards, note, cta_label, cta_h
       <p class="intro">{intro}</p>
     </header>
 
-    <span class="badge">Anfragen ab sofort</span>
-
     <ul class="cards" role="list">
       {cards.map((card) => (
         <li class="card">
@@ -53,10 +50,8 @@ const { eyebrow, headline, headline_accent, intro, cards, note, cta_label, cta_h
             </ul>
           )}
           <a
-            href="#catering"
+            href={card.detail_href ?? `mailto:info@fryhigh.de?subject=${encodeURIComponent(card.cta_anlass + " anfragen")}&body=${encodeURIComponent("Moin Fry High,\n\nwir möchten eine Winterfeier anfragen:\nWunschtermin: \nOrt: \nGästezahl: \nWünsche: \n\nViele Grüße")}`}
             class="fh-btn"
-            data-winter-cta
-            data-anlass={card.cta_anlass}
           >
             <span>{card.cta_label}</span>
             <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
@@ -67,25 +62,10 @@ const { eyebrow, headline, headline_accent, intro, cards, note, cta_label, cta_h
 
     <div class="note">
       <p>{note}</p>
-      <a href={cta_href} class="fh-btn fh-btn--ghost">{cta_label}</a>
     </div>
   </div>
 </section>
 
-<script>
-  // Karten-CTA: Anlass im Catering-Formular vorwählen, dann zu #catering scrollen.
-  document.querySelectorAll<HTMLAnchorElement>("[data-winter-cta]").forEach((cta) => {
-    cta.addEventListener("click", (e) => {
-      const target = document.getElementById("catering");
-      if (!target) return; // ohne Ziel greift der normale Anker
-      e.preventDefault();
-      const anlass = cta.dataset.anlass ?? "";
-      if (anlass) document.dispatchEvent(new CustomEvent("catering:preset", { detail: { anlass } }));
-      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      target.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
-    });
-  });
-</script>
 
 <style>
   /* Dusk-Modus (CI §3.5): Navy-Deep → Orange → Gelb, Cream-Type.
@@ -96,7 +76,7 @@ const { eyebrow, headline, headline_accent, intro, cards, note, cta_label, cta_h
     --panel: color-mix(in oklab, var(--navy-deep) 82%, transparent);
     --panel-line: color-mix(in oklab, var(--cream) 18%, transparent);
     position: relative;
-    padding: clamp(64px, 9vw, 110px) clamp(20px, 6vw, 80px);
+    padding: clamp(56px, 7vw, 88px) clamp(20px, 6vw, 80px);
     background: linear-gradient(
       180deg,
       var(--navy-deep) 0%,

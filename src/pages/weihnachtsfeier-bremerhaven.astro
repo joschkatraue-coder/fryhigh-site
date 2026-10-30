@@ -1,0 +1,84 @@
+---
+import OfferPage from "../components/OfferPage.astro";
+
+const requestText = "Moin Fry High,\n\nwir möchten eine Weihnachtsfeier 2026 am Zoo anfragen.\nDatum / Ausweichdatum:\nOrt: Restaurant im Zoo am Meer\nGästezahl:\nPaketwunsch:\nWünsche zu Getränken und Ablauf:\nBesondere Anforderungen:\n";
+const cateringLink = { href: "/catering-bremerhaven/#weihnachtscatering", label: "Weihnachts-Catering bei euch" };
+const sections = [
+  {
+    title: "Tischbuffet im Restaurant am Zoo",
+    paragraphs: [
+      "In der Weihnachtssaison 2026 feiert ihr drinnen im Restaurant an gedeckten Tischen. Das Essen steht nicht an einer entfernten Buffetstation: Wir stellen Platten und Schüsseln direkt auf eure Tische. Ihr greift zu, reicht weiter und probiert euch durch.",
+      "Ihr wählt ein Paket für die ganze Runde. Zugang, Veranstaltungszeiten und eure Wünsche zu Getränken und Raumnutzung klären wir vor dem Angebot.",
+    ],
+  },
+  {
+    title: "Drei Tischbuffet-Pakete für 2026",
+    paragraphs: [
+      "Streetfood-Tischbuffet · 29,90 € brutto pro Person: Buffalo & Teriyaki Wings, Korean Cheese Corndogs, frittierte Mac ’n’ Cheese, Onion Rings, Mango-Coleslaw und drei Dips.",
+      "Weihnachts-BBQ · 34,90 € brutto pro Person: Honey-BBQ-Rippchen, Buffalo & Teriyaki Wings, Mais mit Trüffelcreme und Parmesan, Onion Rings, Mango-Coleslaw und drei Dips.",
+      "Große Weihnachtsrunde · 39,90 € brutto pro Person: Pulled-Duck-Burger, Honey-BBQ-Rippchen, Buffalo & Teriyaki Wings, frittierte Mac ’n’ Cheese, Trüffel-Parmesan-Mais, Mango-Coleslaw und drei Dips.",
+    ],
+  },
+  {
+    title: "Was bei eurem Paket dabei ist",
+    paragraphs: [
+      "Dabei sind gedeckte Tische, Geschirr, Betreuung während des Essens und ein weihnachtlich geschmückter Laden. Vegetarisch geht mit Blumenkohl-Wings und Pilz-Rippchen statt Fleisch; sagt uns vorher, für wie viele Gäste.",
+      "Die Mengen sind für eine gemeinsame Mahlzeit geplant, nicht als All-you-can-eat. Getränke sind nicht enthalten und werden auf Wunsch mit euch zusammengestellt.",
+    ],
+  },
+  {
+    title: "Eigener Abend oder Abendgeschäft?",
+    paragraphs: [
+      "Ab 30 Personen gehört euch der ganze Laden. Ihr feiert als eigene Gruppe im Restaurant im Zoo am Meer.",
+      "Kleinere Teams kommen ab Freitag, 13.11., ins Abendgeschäft: donnerstags bis samstags ab 18 Uhr, freitags mit Chicken Wings All You Can Eat. Euren Tisch reserviert ihr per WhatsApp unter 0162 7500 673. Die drei Paketpreise oben gelten für eure exklusive Feier ab 30 Personen.",
+    ],
+  },
+  {
+    title: "Restaurant am Zoo oder Weihnachts-Catering bei euch?",
+    paragraphs: ["Für den Abend im Restaurant nutzt ihr die Anfrage auf dieser Seite. Feiert ihr in eurer Firma oder einer eigenen Location, führt euch der separate Cateringweg zu Foodtruck, Crew oder Tischbuffet. Welche Variante dort möglich ist, klären wir mit der genauen Adresse."],
+    link: cateringLink,
+  },
+  {
+    title: "Nach Weihnachten kommt der Kohl",
+    paragraphs: ["Im Januar geht es bei uns mit der Grünkohlparty weiter: 59 € pro Person, Getränke von 18 bis 24 Uhr im Preis drin. Erster Termin ist Samstag, 16.01.2027. Plant ihr mit Team oder Verein eine Kohlfahrt? Dann macht uns zum Ziel."],
+    link: { href: "/kohlfahrt-bremerhaven/", label: "Grünkohlparty und Kohlfahrt ansehen" },
+  },
+];
+const steps = [
+  { title: "Wunschdatum und Gruppe", text: "Nennt uns für eure Feier im Restaurant das Wunschdatum und die ungefähre Gästezahl." },
+  { title: "Möglichkeiten klären", text: "Mit euren Angaben klären wir die Möglichkeiten und machen euch ein Angebot." },
+  { title: "Angebot abstimmen", text: "Eine Anfrage reserviert noch keinen Termin." },
+];
+const faq = [
+  { question: "Was ist euer Tischbuffet?", answer: "Platten und Schüsseln stehen direkt auf euren Tischen. Ihr nehmt euch, reicht weiter und probiert gemeinsam. Welche Zusammenstellung für eure Runde möglich ist, steht anschließend im Angebot." },
+  { question: "Findet die Weihnachtsfeier im Restaurant oder bei uns statt?", answer: "Beides könnt ihr anfragen. Die Feier am Zoo findet drinnen im Restaurant statt. Für eure Firma oder eine eigene Location nutzt ihr den separaten Weihnachts-Catering-Weg; dort prüfen wir Foodtruck, Crew oder Tischbuffet für die genaue Adresse." },
+  { question: "Gelten die drei Paketpreise auch für kleine Runden?", answer: "Nein. Die Paketpreise von 29,90 €, 34,90 € und 39,90 € pro Person gelten für eure exklusive Feier im Restaurant ab 30 Personen. Kleinere Runden kommen ins Abendgeschäft." },
+  { question: "Können wir als kleines Team im Restaurant feiern?", answer: "Ja, im Abendgeschäft. Ab Freitag, 13.11., haben wir donnerstags bis samstags ab 18 Uhr geöffnet, freitags mit Chicken Wings All You Can Eat. Euren Tisch reserviert ihr per WhatsApp unter 0162 7500 673." },
+  { question: "Welche Termine sind noch frei?", answer: "Nennt uns euer Wunschdatum und möglichst eine Alternative. Wir prüfen die Verfügbarkeit für euren Abend und bestätigen den Termin im Angebot." },
+  { question: "Wie kommen wir zum Restaurant, und brauchen wir Zooeintritt?", answer: "Den Zugang zum Restaurant und die geltende Eintrittsregel bestätigen wir mit eurem Angebot. Nennt besondere Anforderungen, etwa zur Erreichbarkeit für Gäste mit eingeschränkter Mobilität, bei der Anfrage." },
+  { question: "Gibt es vegetarische Alternativen?", answer: "Ja. Blumenkohl-Wings und Pilz-Rippchen ersetzen die Fleischkomponenten. Nennt die ungefähre Anzahl sowie Allergien oder Unverträglichkeiten frühzeitig, damit wir die Umsetzung prüfen können." },
+  { question: "Was ist im Paket enthalten?", answer: "Gedeckte Tische, Geschirr, Betreuung während des Essens und ein weihnachtlich geschmückter Laden sind dabei. Getränke sind nicht enthalten. Die Mengen sind für eine gemeinsame Mahlzeit geplant, nicht als All-you-can-eat." },
+];
+---
+<OfferPage
+  title="Weihnachtsfeier Bremerhaven 2026: Pakete ab 29,90 € | Fry High"
+  description="Weihnachtsfeier 2026 am Zoo: drei Tischbuffet-Pakete ab 29,90 € p. P. Ganzer Laden ab 30 Personen; kleine Runden ab 13.11. Do–Sa ab 18 Uhr."
+  label="Weihnachtsfeier am Zoo"
+  eyebrow="Weihnachten 2026 im Restaurant im Zoo am Meer"
+  headline={["Weihnachtsfeier", "in Bremerhaven", "am Zoo."]}
+  mark="Ein Tisch. Alle greifen zu."
+  lead="Drei Tischbuffet-Pakete für eure Weihnachtsfeier 2026 im Restaurant im Zoo am Meer. Ab 30 Personen gehört euch der ganze Laden; kleinere Teams kommen ab 13.11. ins Abendgeschäft, donnerstags bis samstags ab 18 Uhr."
+  facts={["29,90 € · 34,90 € · 39,90 € brutto p. P.", "Ganzer Laden ab 30 Personen", "Ab 13.11. abends · Do–Sa ab 18 Uhr"]}
+  {sections}
+  processTitle="So fragt ihr eure Weihnachtsfeier an"
+  {steps}
+  {faq}
+  faqTitle="Eure Fragen zum Weihnachtsabend"
+  primaryLabel="Feier am Zoo anfragen"
+  heroAlternate={cateringLink}
+  requestTitle="Welcher Abend passt zu euch?"
+  requestSubject="Weihnachtsfeier 2026 am Zoo anfragen"
+  requestIntro="Schickt uns für eure exklusive Feier ab 30 Personen Datum und möglichst ein Ausweichdatum, Gästezahl und Paketwunsch. Ergänzt Wünsche zu Getränken und Ablauf. Kleinere Runden kommen ab 13.11. donnerstags bis samstags ab 18 Uhr ins Abendgeschäft. Für eine Feier an eurem Ort nutzt ihr den separaten Weihnachts-Catering-Weg."
+  {requestText}
+  related={{ href: "/catering-bremerhaven/#weihnachtscatering", label: "Zum Weihnachts-Catering bei euch", title: "Eure Weihnachtsfeier findet bei euch statt?", text: "Hier erfahrt ihr mehr über Speisen, Foodtruck oder Crew und Catering am Kundenstandort." }}
+/>

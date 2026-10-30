@@ -86,7 +86,7 @@ const normalizedLines = headline_lines.map((line) =>
 <style>
   .hero {
     position: relative;
-    min-height: 88vh;
+    min-height: min(640px, 78svh);
     display: flex;
     align-items: flex-end;
     color: var(--cream);
@@ -123,7 +123,7 @@ const normalizedLines = headline_lines.map((line) =>
     position: relative;
     z-index: 1;
     max-width: 880px;
-    padding-bottom: 60px;
+    padding-bottom: 12px;
     display: grid;
     gap: var(--space-4);
   }

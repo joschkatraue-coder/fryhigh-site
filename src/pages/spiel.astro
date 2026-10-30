@@ -45,95 +45,47 @@ try {
 const live = spiel.contest_live === true;
 const lcFirst = (s: string) => (s ? s.charAt(0).toLowerCase() + s.slice(1) : s);
 // Gewinn-Satz an genau einer Stelle gebaut; prize_cap_eur ist intern und bleibt unsichtbar.
-const prizeSentence = `Wer am Sonntag oben steht: ${lcFirst(spiel.prize_label)}, ${spiel.redeem_location}.`;
-const TERMS_VERSION = "2026-09-11";
+const prizeSentence = `Jede Woche gewinnt der höchste berechtigte Score ${lcFirst(spiel.prize_label)}. Bei Gleichstand entscheidet das Los.`;
+const TERMS_VERSION = "2026-09-16";
 
 const description = live
   ? `${spiel.name}: Zutaten sammeln, Möwen ausweichen, Wochenwertung. ${prizeSentence}`
-  : `${spiel.name}: Zutaten sammeln, Möwen ausweichen, Bestwert knacken. Die Wochenwertung mit Gewinn startet in Kürze.`;
+  : `${spiel.name}: Zutaten sammeln, Möwen ausweichen, Bestwert knacken. Mit Wochenbestenliste. Die Gewinnrunde ist noch nicht gestartet.`;
 ---
 <MarketingLayout title="Pommespilot · Mini-Spiel · Fry High" description={description}>
   <section class="spiel-hero">
     <div class="spiel-hero-inner">
       <span class="spiel-eyebrow">{live ? "Gewinnspiel · Wochenwertung" : `${spiel.name} · Mini-Spiel`}</span>
       <h1>Flieg. Sammel.<br />Schmier nicht ab.</h1>
-      <p class="spiel-lead">
-        Der Pilot reist, sammelt, kommt zurück und kocht. Hier fliegst du ihn über die Wesermündung:
-        Zutaten einsammeln, Möwen und Ketchup ausweichen, Wolkendecke und Wasser meiden.
-        Drei Zutaten einer Kreation geben Bonus. Die Kreationen im Spiel sind aus dem Archiv, die
-        Karte im Laden wechselt.
-        {live && <> {prizeSentence}</>}
-      </p>
-      <ul class="spiel-rules-short" aria-label="Kurzregeln">
-        <li><strong>Steuern.</strong> Klick, Tipp oder Leertaste hebt, Loslassen sinkt.</li>
-        <li><strong>Punkte.</strong> Zutat 10, überflogene Möwe 1, drei Zutaten einer Kreation 50 extra.</li>
-        <li><strong>Schluss.</strong> Möwe, Ketchup, Wolkendecke oder Wasser.</li>
-      </ul>
+      <p class="spiel-lead">Klick, Tipp oder Leertaste hebt. Zutaten sammeln, Möwen ausweichen.</p>
+      <a class="fh-link" href="#wochenwertung">Zur Bestenliste ↓</a>
     </div>
   </section>
 
-  <PilotFlightGame contestLive={live} prizeLabel={prizeSentence} minAge={spiel.min_age} termsVersion={TERMS_VERSION} />
-
-  <Leaderboard contestLive={live} prizeLabel={prizeSentence} />
+  <div class="spiel-layout">
+    <PilotFlightGame contestLive={live} prizeLabel={prizeSentence} minAge={spiel.min_age} termsVersion={TERMS_VERSION} />
+    <Leaderboard contestLive={live} prizeLabel={prizeSentence} />
+  </div>
 
   <section class="spiel-flow">
     <div class="spiel-flow-inner">
-      <span class="spiel-eyebrow">Wie es läuft</span>
-      <h2>Vier Schritte.</h2>
-      {live ? (
-        <ol>
-          <li>
-            <strong>Fliegen.</strong> Klick auf „Ballern wir los“, dann tippen, sammeln, ausweichen. Der Score steht
-            oben links, dein Bestwert daneben.
-          </li>
-          <li>
-            <strong>Eintragen.</strong> Nach dem Crash trägst du unter dem Spiel deine E-Mail ein. Spitzname ist
-            freiwillig und steht öffentlich in der Wertung. Zwei Haken sind Pflicht: Bedingungen und Alter ab {spiel.min_age}.
-          </li>
-          <li>
-            <strong>Mail bestätigen.</strong> Wir schicken dir einen Link. Klick rein, dann zählt der Score. Den
-            Newsletter gibt es nur mit dem extra Haken.
-          </li>
-          <li>
-            <strong>Sonntag.</strong> Wer Sonntag 23:59 Uhr den höchsten bestätigten Score hat, bekommt den Code per
-            Mail. {spiel.prize_label}, einlösbar {spiel.redeem_location}, {spiel.valid_days} Tage gültig.
-          </li>
-        </ol>
-      ) : (
-        <ol>
-          <li>
-            <strong>Fliegen.</strong> Klick auf den Startknopf, dann tippen. Loslassen sinkt, Möwen und Ketchup
-            sind Schluss.
-          </li>
-          <li>
-            <strong>Sammeln.</strong> Jede Zutat gibt 10 Punkte. Drei Zutaten einer Kreation ergeben das Set,
-            das gibt 50 extra und den Namen der Kreation obendrauf.
-          </li>
-          <li>
-            <strong>Bestwert.</strong> Dein Bestwert bleibt in deinem Browser gespeichert. Nochmal fliegen geht
-            sofort.
-          </li>
-          <li>
-            <strong>Wochenwertung.</strong> Die Wertung mit Gewinn startet in Kürze. Trag dich in den
-            <a class="fh-link" href="/#newsletter">Newsletter</a> ein, dann sagen wir Bescheid.
-          </li>
-        </ol>
-      )}
-      <p class="spiel-fineprint">
-        {live
-          ? `Mehrere Versuche sind erwünscht, es zählt der höchste bestätigte Score. Bots kicken wir raus. Mindestalter ${spiel.min_age}. Kein Bargeld, nicht kombinierbar. Alles Weitere steht in den `
-          : "Die Regeln für die Wochenwertung stehen schon fest: "}
-        <a class="fh-link" href="/spiel/teilnahmebedingungen">Teilnahmebedingungen</a>.
-      </p>
+      <h2>{live ? "Einmal anmelden. Immer weiterfliegen." : "So läuft die kommende Wochenwertung."}</h2>
+      <p>{!live && "Sobald die Wochenwertung startet: "}Name wählen, E-Mail einmal bestätigen. Danach landet dein Score nach jedem Flug automatisch in der Bestenliste. Als Gast kannst du direkt loslegen.</p>
+      <p>{live ? prizeSentence + " Nach einem Gewinn kannst du zwölf Monate weiter mitspielen, aber nicht erneut gewinnen." : "Die Gewinnrunde ist noch nicht gestartet. Sobald es losgeht, sagen wir hier Bescheid."}</p>
+      <p class="spiel-fineprint">Für die Bestenliste ab {spiel.min_age} Jahren. Öffentlicher Name, private E-Mail. <a class="fh-link" href="/spiel/teilnahmebedingungen">Spielregeln</a> · <a class="fh-link" href="/datenschutz">Datenschutz</a></p>
     </div>
   </section>
 </MarketingLayout>
 
 <style>
+  .spiel-layout { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr); max-width: 1440px; margin: 0 auto; background: var(--navy-deep); align-items: start; }
+  .spiel-layout > :global(*) { min-width: 0; }
+  @media (max-width: 1000px) { .spiel-layout { grid-template-columns: 1fr; } }
+
   .spiel-hero {
     background: linear-gradient(180deg, var(--cream) 0%, var(--cream-warm) 100%);
     color: var(--ink);
-    padding: clamp(48px, 7vw, 96px) clamp(20px, 6vw, 56px) clamp(32px, 5vw, 64px);
+    padding: 28px 20px 24px;
   }
 
   .spiel-hero-inner {
@@ -154,7 +106,7 @@ const description = live
 
   .spiel-hero h1 {
     font-family: var(--font-display);
-    font-size: clamp(2.5rem, 7vw, 5rem);
+    font-size: clamp(2rem, 5vw, 3.25rem);
     line-height: 0.95;
     margin: 12px 0 18px;
     color: var(--navy);

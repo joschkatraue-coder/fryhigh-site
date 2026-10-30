@@ -30,50 +30,6 @@ const home = defineCollection({
       ctas: z.array(ctaSchema),
       image: z.string().optional(),
     }),
-    stats: z.array(z.object({
-      value: z.string(),
-      label: z.string(),
-    })),
-    newsletter: z.object({
-      headline: z.string(),
-      lead: z.string(),
-    }),
-  }),
-});
-
-// Karte: Default-Modus "anker" zeigt drei datierte Preisanker; "kompakt" zeigt
-// die fünf stabilen Gerichte mit Preis (F12). Kids ohne Preise bis F14.
-const karte = defineCollection({
-  loader: glob({ pattern: 'karte.md', base: './src/content' }),
-  schema: z.object({
-    eyebrow: z.string(),
-    headline: z.string(),
-    headline_accent: z.string().optional(),
-    stand: z.string(),
-    mode: z.enum(['anker', 'kompakt']).default('anker'),
-    anker: z.array(z.object({
-      label: z.string(),
-      price_from: z.string(),
-    })),
-    items: z.array(z.object({
-      name: z.string(),
-      desc: z.string(),
-      price: z.string(),
-      tags: z.array(z.string()).default([]),
-    })),
-    kids: z.object({
-      intro: z.string(),
-      items: z.array(z.object({
-        name: z.string(),
-        desc: z.string(),
-        price: z.string().optional(),
-      })),
-    }),
-    drinks: z.string(),
-    vegan_note: z.string(),
-    allergen_note: z.string(),
-    instagram_note: z.string(),
-    instagram_url: z.string(),
   }),
 });
 
@@ -85,32 +41,7 @@ const catering = defineCollection({
     intro: z.string(),
     threshold_text: z.string(),
     features: z.array(z.string()),
-    packages: z.array(z.object({
-      name: z.string(),
-      body: z.string(),
-      recommended: z.boolean().default(false),
-    })),
-    references: z.array(z.object({
-      text: z.string(),
-    })),
     response_promise: z.string(),
-    form: z.object({
-      submit_endpoint: z.string(),
-      pax_min: z.number().default(50),
-      pax_max: z.number().default(500),
-      gates: z.array(z.object({
-        value: z.enum([
-          'Hochzeit',
-          'Firmenfeier',
-          'Privat',
-          'Festival',
-          'Weihnachtsfeier',
-          'Grünkohl',
-          'Sonstiges',
-        ]),
-        label: z.string(),
-      })),
-    }),
   }),
 });
 
@@ -136,8 +67,8 @@ const tisch = defineCollection({
   }),
 });
 
-// Winter: Weihnachtsfeiern und Grünkohl als Teaser mit Anfrage über das
-// Catering-Formular (cta_anlass = vorgewählter Anlass). Keine Preise, keine Termine (F26–F28).
+// Winter: Weihnachtsfeiern und Grünkohl mit direkten E-Mail-Anfragen.
+// Preise, Zugang und Termine werden im individuellen Angebot bestätigt.
 const winter = defineCollection({
   loader: glob({ pattern: 'winter.md', base: './src/content' }),
   schema: z.object({
@@ -151,10 +82,9 @@ const winter = defineCollection({
       tags: z.array(z.string()).default([]),
       cta_label: z.string(),
       cta_anlass: z.string(),
+      detail_href: z.string().optional(),
     })),
     note: z.string(),
-    cta_label: z.string(),
-    cta_href: z.string(),
   }),
 });
 
@@ -281,7 +211,6 @@ const pantrySkus = defineCollection({
 
 export const collections = {
   home,
-  karte,
   catering,
   tisch,
   winter,

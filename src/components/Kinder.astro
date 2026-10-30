@@ -1,5 +1,4 @@
 ---
-import { getEntry } from "astro:content";
 import FloatingMascot from "./FloatingMascot.astro";
 
 interface KidsItem { name: string; desc: string; price?: string; }
@@ -22,9 +21,8 @@ const {
   group_note = "Ab 20 Personen gibt es 10 % auf alles. Mitgebrachter Kuchen: 15 € Servicepauschale.",
 } = Astro.props;
 
-// Kids-Karte aus karte.md (Namen, Beschreibung, Preis sobald eingetragen). Prop übersteuert.
-const karte = kidsProp ? undefined : await getEntry("karte", "karte");
-const kids: KidsItem[] = kidsProp ?? karte?.data.kids.items ?? [];
+// Nur ausdrücklich übergebene Kinderangebote; keine feste Speisekarte laden.
+const kids: KidsItem[] = kidsProp ?? [];
 ---
 <section id="kinder" class="kinder has-mascot">
   <FloatingMascot

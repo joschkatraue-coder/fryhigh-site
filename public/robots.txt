@@ -1,7 +1,5 @@
 User-agent: *
 Allow: /
-Disallow: /impressum
-Disallow: /datenschutz
 Disallow: /crew/
 
 Sitemap: https://fryhigh.de/sitemap-index.xml

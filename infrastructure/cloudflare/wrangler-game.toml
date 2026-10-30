@@ -2,8 +2,8 @@
 # Deploy: cd infrastructure/cloudflare && npx wrangler deploy --config wrangler-game.toml
 #
 # Erst-Setup (leere DB): siehe Kopf von game-schema.sql.
-# Bestehende DB (Mai-Stand): VOR dem Deploy den Block "Migration 2026-09-11" aus game-schema.sql
-#   per `wrangler d1 execute fryhigh-game --remote --command "…"` ausführen (Worker liest neue Spalten).
+# Bestehende vollständige DB vom 2026-09-11: game-migration-2026-09-16.sql genau einmal anwenden.
+# Rollout-Voraussetzung: scores=0 und vouchers=0; bei historischen Teilnehmern zuerst Backfill planen.
 # Secrets (je: npx wrangler secret put NAME --config wrangler-game.toml):
 #   RESEND_API_KEY      — Pflicht für Bestätigungs-, Gewinner- und Crew-Mail (Resend-Domain fryhigh.de muss verifiziert sein)
 #   CREW_PIN            — Pflicht für /vouchers/check-Details, /vouchers/redeem, /admin/*
@@ -13,10 +13,10 @@ name = "fryhigh-game"
 main = "game-worker.js"
 compatibility_date = "2026-05-17"
 
-# Cron Sonntag 23:00 UTC = Montag 01:00 MESZ / 00:00 MEZ.
-# Wochenschlüssel (Mo 00:00 – So 23:59) rechnet der Worker über Europe/Berlin, in submit und cron identisch.
+# Stündlich: ausschließlich abgeschlossene Berliner Wochen auswerten, Mailzustellung sicher wiederholen, aufräumen.
+# Laufende Wochen werden auch bei manueller Ausführung nie eingefroren.
 [triggers]
-crons = ["0 23 * * SUN"]
+crons = ["15 * * * *"]
 
 [vars]
 CONTEST_LIVE         = "false"                 # Erst nach Mail-/Gutschein-Abnahme zusammen mit src/content/spiel.md aktivieren.
@@ -29,11 +29,11 @@ VOUCHER_KIND         = "eur"                   # F29 Joschka 11.09.: Gutschein �
 VOUCHER_LABEL        = "15-€-Gutschein für Fry High"
 VOUCHER_VALUE_EUR    = "15"                    # Gutscheinwert (F29)
 VOUCHER_VALID_DAYS   = "30"
-REDEEM_LOCATION      = "Fry High im Zoo am Meer oder am Foodtruck"   # F31 Joschka 11.09.
+REDEEM_LOCATION      = "bei einem tatsächlichen Verkaufstermin von Fry High im Zoo am Meer oder am Foodtruck"
 SCORE_HARD_CAP       = "20000"
 MIN_DURATION_MS      = "5000"
 SCORE_PER_SECOND_MAX = "40"                    # Sammelflug: 10 Punkte je Zutat + 50 Bonus; Plausibilitätsgrenze
-TERMS_VERSION        = "2026-09-11"            # Fallback, falls der Client keine terms_version schickt
+TERMS_VERSION        = "2026-09-16"            # Anmeldung muss diese Version ausdrücklich bestätigen.
 MAILERLITE_GROUP_ID  = ""                      # leer = Newsletter-Opt-in wird nur in D1 vermerkt (Crew trägt von Hand ein)
 
 # D1-Database — fryhigh-game

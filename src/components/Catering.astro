@@ -1,950 +1,106 @@
 ---
 import FloatingMascot from "./FloatingMascot.astro";
 
-interface Gate { value: string; label: string; }
-interface Package { name: string; body: string; recommended: boolean; }
-interface Reference { text: string; }
-interface FormCfg {
-  submit_endpoint: string;
-  pax_min: number;
-  pax_max: number;
-  gates: Gate[];
-}
 interface Props {
   eyebrow: string;
   headline: string;
   intro: string;
   threshold_text: string;
   features: string[];
-  packages: Package[];
-  references: Reference[];
   response_promise: string;
-  form: FormCfg;
 }
 
-const {
-  eyebrow,
-  headline,
-  intro,
-  threshold_text,
-  features,
-  packages,
-  references,
-  response_promise,
-  form,
-} = Astro.props;
-
+const { eyebrow, headline, intro, threshold_text, features, response_promise } = Astro.props;
 const headlineLines = headline.split("\n");
-// Slider-Default 80 ist Designentscheidung (copy-master §6), begrenzt auf die Content-Grenzen.
-const paxDefault = Math.min(form.pax_max, Math.max(form.pax_min, 80));
-const firstGate = form.gates[0]?.value ?? "";
+const mailto = `mailto:info@fryhigh.de?subject=${encodeURIComponent("Anfrage für unsere Feier")}&body=${encodeURIComponent("Moin Fry High,\n\nwir planen eine Feier:\nDatum: \nOrt: \nGästezahl: \nAnlass und Wünsche: \n\nViele Grüße")}`;
 ---
-<section id="catering" class="catering has-mascot">
-  <FloatingMascot
-    image="10_Koefte_Feta.png"
-    size={130}
-    rotate={9}
-    top="28px"
-    right="2%"
-  />
+<section id="catering" class="catering has-mascot" aria-labelledby="catering-title">
+  <FloatingMascot image="10_Koefte_Feta.png" size={130} rotate={9} top="28px" right="2%" />
 
   <div class="wrap">
     <div class="copy">
-      <!-- Captain's-Catering-Lockup (code/identity/logos/08-catering-lockup.svg), inline damit die Webfonts greifen.
-           Tagline gegenüber dem Scaffold von "AB 50 PAX" auf "AB 50 PERSONEN" gesetzt (kein Airline-Jargon). -->
-      <svg class="sub-lockup" viewBox="0 0 800 240" role="img" aria-label="Captain's Catering · Fry High">
-        <g transform="translate(400,42)">
-          <rect x="-90" y="-16" width="180" height="32" class="lk-tag-bg" />
-          <text x="0" y="6" class="lk-mono lk-tag-text" font-size="13" text-anchor="middle" letter-spacing="6">FRY HIGH ·</text>
-        </g>
-        <text x="400" y="138" class="lk-display" font-size="82" text-anchor="middle" letter-spacing="2">CAPTAIN'S CATERING</text>
-        <g class="lk-rule" stroke-width="2">
-          <line x1="180" y1="170" x2="385" y2="170" />
-          <line x1="415" y1="170" x2="620" y2="170" />
-        </g>
-        <circle cx="400" cy="170" r="5" class="lk-dot" />
-        <text x="400" y="204" class="lk-mono" font-size="15" text-anchor="middle" letter-spacing="8">FOODTRUCK · CREW · AB 50 PERSONEN</text>
-      </svg>
-
       <span class="eyebrow">{eyebrow}</span>
-      <h2>{headlineLines.map((line, i) => (
+      <h2 id="catering-title">{headlineLines.map((line, i) => (
         <>
-          <span class:list={{ acc: i === headlineLines.length - 1 && headlineLines.length > 1 }}>{line}</span>
+          <span class:list={{ acc: i === headlineLines.length - 1 }}>{line}</span>
           {i < headlineLines.length - 1 && <br />}
         </>
       ))}</h2>
       <p class="intro">{intro}</p>
       <p class="threshold">{threshold_text}</p>
-
-      <ul class="feat" role="list">
-        {features.map((f) => (
-          <li>
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-            <span>{f}</span>
-          </li>
-        ))}
+      <ul class="features" role="list">
+        {features.map((feature) => <li>{feature}</li>)}
       </ul>
-
-      <div class="packages">
-        <h3 class="sub-title">Drei Pakete</h3>
-        <ul class="pkg-list" role="list">
-          {packages.map((p) => (
-            <li class:list={["pkg", { recommended: p.recommended }]}>
-              <div class="pkg-head">
-                <span class="pkg-name">{p.name}</span>
-                {p.recommended && <span class="pkg-badge">Empfohlen</span>}
-              </div>
-              <p class="pkg-body">{p.body}</p>
-            </li>
-          ))}
-        </ul>
-        <p class="mono-note">Preise nennen wir im Angebot.</p>
-        <p class="mono-note">So läuft es: Anfrage, Angebot, Anzahlung, Termin fix.</p>
-      </div>
-
-      {references.length > 0 && (
-        <div class="refs">
-          <h3 class="sub-title">Haben wir gemacht</h3>
-          <ul class="ref-list" role="list">
-            {references.map((r) => <li class="ref-stamp">{r.text}</li>)}
-          </ul>
-        </div>
-      )}
-
-      <p class="promise">{response_promise}</p>
+      <a class="fh-link detail-link" href="/catering-bremerhaven/">Mehr über unser Catering</a>
     </div>
 
-    <div class="form-col">
-      <form
-        class="fp"
-        action={form.submit_endpoint}
-        method="post"
-        data-catering-form
-      >
-        <div class="fp-header">
-          <div class="fp-stamp" aria-hidden="true">FH</div>
-          <div>
-            <div class="fp-title">Catering-Anfrage</div>
-            <div class="fp-sub">Wir melden uns mit einem Angebot.</div>
-          </div>
-        </div>
-
-        <input type="text" name="_honey" tabindex="-1" autocomplete="off" class="fp-honey" aria-hidden="true" />
-
-        <div class="fp-section">
-          <div class="fp-section-title">
-            <span>Kontakt</span>
-            <span class="hint">Wer schreibt uns?</span>
-          </div>
-          <div class="fp-row">
-            <label class="fp-field">
-              <span class="fp-field-label">Name</span>
-              <input type="text" name="name" placeholder="Euer Name" required autocomplete="name" />
-            </label>
-            <label class="fp-field">
-              <span class="fp-field-label">E-Mail</span>
-              <input type="email" name="email" placeholder="name@firma.de" required autocomplete="email" />
-            </label>
-          </div>
-          <div class="fp-row fp-row--single">
-            <label class="fp-field">
-              <span class="fp-field-label">Telefon (optional)</span>
-              <input type="tel" name="phone" placeholder="Für Rückfragen" autocomplete="tel" />
-            </label>
-          </div>
-        </div>
-
-        <div class="fp-section">
-          <div class="fp-section-title">
-            <span>Wann und wie viele</span>
-            <span class="hint">Datum und Gästezahl</span>
-          </div>
-          <div class="fp-row">
-            <label class="fp-field">
-              <span class="fp-field-label">Datum</span>
-              <input type="date" name="event_date" required data-date-min-today />
-            </label>
-            <div class="fp-field fp-range-wrap">
-              <span class="fp-field-label" id="catering-pax-label">Gästezahl</span>
-              <div class="fp-range-row">
-                <div class="n"><output data-pax-out>{paxDefault}</output><small>Personen</small></div>
-              </div>
-              <input
-                type="range"
-                name="pax"
-                aria-label="Gästezahl"
-                min={form.pax_min}
-                max={form.pax_max}
-                step="10"
-                value={paxDefault}
-                class="fp-range"
-                data-pax-range
-              />
-              <div class="fp-range-readout" data-pax-readout>Feier</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="fp-section">
-          <div class="fp-section-title">
-            <span>Anlass</span>
-            <span class="hint">Was feiert ihr?</span>
-          </div>
-          <div class="fp-gates" role="radiogroup" aria-label="Anlass">
-            {form.gates.map((gate, i) => (
-              <button
-                type="button"
-                class:list={["fp-gate", { active: i === 0 }]}
-                data-gate-value={gate.value}
-                role="radio"
-                aria-checked={i === 0 ? "true" : "false"}
-              >
-                <span class="fp-gate-name">{gate.label}</span>
-              </button>
-            ))}
-          </div>
-          <input type="hidden" name="gate" value={firstGate} data-gate-input />
-        </div>
-
-        <div class="fp-section">
-          <div class="fp-section-title">
-            <span>Was wir wissen sollten</span>
-            <span class="hint">Ort, Wünsche, Besonderheiten</span>
-          </div>
-          <textarea
-            class="fp-text"
-            name="nachricht"
-            placeholder="Wo findet es statt? Was wünscht ihr euch? Gibt es Starkstrom?"
-          ></textarea>
-        </div>
-
-        <div class="fp-section fp-section--submit">
-          <button type="submit" class="fh-btn fp-submit" data-submit>
-            <span>Anfrage schicken</span>
-            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-          </button>
-          <p class="fp-meta">Wir melden uns per Mail.</p>
-          <p class="fp-status" role="status" aria-live="polite" data-status></p>
-
-          <div class="fp-fallback" data-fallback hidden>
-            <p>Hm, das hat nicht geklappt. Schickt uns die Infos kurz an <a class="fh-link" href="mailto:info@fryhigh.de?subject=Catering-Anfrage">info@fryhigh.de</a></p>
-            <a class="fh-btn" href="mailto:info@fryhigh.de?subject=Catering-Anfrage" data-mailto>Als Mail senden</a>
-          </div>
-        </div>
-      </form>
-
-      <p class="direct">Lieber direkt? <a class="fh-link" href="mailto:info@fryhigh.de?subject=Catering-Anfrage">Mail an info@fryhigh.de</a> mit Datum, Personenzahl und Anlass.</p>
+    <div id="anfrage" class="contact">
+      <span class="eyebrow">Eure Anfrage</span>
+      <h3>Erzählt uns von eurer Feier.</h3>
+      <p>{response_promise}</p>
+      <div class="actions">
+        <a class="fh-btn" href="https://wa.me/491627500673" target="_blank" rel="noopener">WhatsApp schreiben</a>
+        <a class="fh-btn fh-btn--outline" href={mailto}>Per E-Mail anfragen</a>
+      </div>
+      <a class="email" href={mailto}>info@fryhigh.de</a>
     </div>
   </div>
 </section>
 
-<script>
-  // Catering-Formular: Slider-Readout, Anlass-Auswahl, Vorbelegung, Submit mit Mail-Fallback.
-  // Läuft auch mit mehreren Instanzen pro Seite.
-  const tierFor = (pax: number): string => {
-    if (pax < 50)  return "Kleine Runde, fragt trotzdem";
-    if (pax < 100) return "Feier";
-    if (pax < 200) return "Große Feier";
-    if (pax < 350) return "Firmenfest";
-    return "Festival-Größe";
-  };
-
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const localIso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
-  const forms = Array.from(document.querySelectorAll<HTMLFormElement>("[data-catering-form]"));
-
-  const selectGate = (form: HTMLFormElement, value: string): boolean => {
-    const target = Array.from(form.querySelectorAll<HTMLButtonElement>(".fp-gate"))
-      .find((g) => g.dataset.gateValue === value);
-    if (!target) return false;
-    if (!target.classList.contains("active")) target.click();
-    return true;
-  };
-
-  // mailto mit allen Feldern, für den Fall dass der Worker nicht liefern kann.
-  const mailtoHref = (form: HTMLFormElement): string => {
-    const fd = new FormData(form);
-    const v = (k: string) => String(fd.get(k) ?? "").trim();
-    const gateLabel = form.querySelector<HTMLElement>(".fp-gate.active .fp-gate-name")?.textContent?.trim() ?? v("gate");
-    const lines = [
-      `Name: ${v("name")}`,
-      `E-Mail: ${v("email")}`,
-      `Telefon: ${v("phone")}`,
-      `Datum: ${v("event_date")}`,
-      `Gästezahl: ${v("pax")}`,
-      `Anlass: ${gateLabel}`,
-      "",
-      "Nachricht:",
-      v("nachricht"),
-    ];
-    return `mailto:info@fryhigh.de?subject=${encodeURIComponent("Catering-Anfrage")}&body=${encodeURIComponent(lines.join("\n"))}`;
-  };
-
-  forms.forEach((form) => {
-    // Datum: nicht in der Vergangenheit, im Browser berechnet.
-    form.querySelectorAll<HTMLInputElement>("[data-date-min-today]").forEach((d) => {
-      d.min = localIso(new Date());
-    });
-
-    const range = form.querySelector<HTMLInputElement>("[data-pax-range]");
-    const out = form.querySelector<HTMLOutputElement>("[data-pax-out]");
-    const readout = form.querySelector<HTMLElement>("[data-pax-readout]");
-    const updatePax = () => {
-      if (!range || !out || !readout) return;
-      const v = Number(range.value);
-      out.textContent = String(v);
-      readout.textContent = tierFor(v);
-      const min = Number(range.min);
-      const max = Number(range.max);
-      const pct = max > min ? ((v - min) / (max - min)) * 100 : 0;
-      range.style.setProperty("--pax-pct", `${pct}%`);
-    };
-    range?.addEventListener("input", updatePax);
-    updatePax();
-
-    const gates = form.querySelectorAll<HTMLButtonElement>(".fp-gate");
-    const gateInput = form.querySelector<HTMLInputElement>("[data-gate-input]");
-    gates.forEach((g) => g.addEventListener("click", () => {
-      gates.forEach((x) => {
-        x.classList.remove("active");
-        x.setAttribute("aria-checked", "false");
-      });
-      g.classList.add("active");
-      g.setAttribute("aria-checked", "true");
-      if (gateInput) gateInput.value = g.dataset.gateValue ?? "";
-    }));
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const submit = form.querySelector<HTMLButtonElement>("[data-submit]");
-      const status = form.querySelector<HTMLElement>("[data-status]");
-      const fallback = form.querySelector<HTMLElement>("[data-fallback]");
-      const endpoint = form.getAttribute("action") ?? "";
-      if (!submit || !status) return;
-
-      fallback?.setAttribute("hidden", "");
-      submit.disabled = true;
-      status.textContent = "Wird gesendet …";
-
-      const showFallback = () => {
-        const mail = form.querySelector<HTMLAnchorElement>("[data-mailto]");
-        if (mail) mail.href = mailtoHref(form);
-        fallback?.removeAttribute("hidden");
-        status.textContent = "";
-        submit.disabled = false;
-      };
-
-      const payload = Object.fromEntries(new FormData(form).entries());
-
-      try {
-        const res = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ ...payload, source: "fryhigh.de/catering", ts: new Date().toISOString() }),
-        });
-        // 503 "mail not configured" und 502 "mail send failed": Worker kann nicht liefern, Mail-Fallback zeigen.
-        if (res.status >= 500) { showFallback(); return; }
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        status.textContent = "Anfrage ist raus. Wir melden uns per Mail.";
-        submit.classList.add("is-done");
-      } catch (err) {
-        console.error("catering submit failed", err);
-        // fetch wirft TypeError bei Netzfehler oder CORS-Block.
-        if (err instanceof TypeError) { showFallback(); return; }
-        status.textContent = "Hm, das hat nicht geklappt. Schickt uns die Infos kurz an info@fryhigh.de";
-        submit.disabled = false;
-      }
-    });
-  });
-
-  // Vorbelegung des Anlasses: CustomEvent "catering:preset" {anlass} (Winter-Karten)
-  // oder URL: ?anlass=Grünkohl, #catering?anlass=Grünkohl, #catering:Grünkohl.
-  const presetAll = (anlass: string) => forms.forEach((f) => selectGate(f, anlass));
-
-  document.addEventListener("catering:preset", (e) => {
-    const anlass = (e as CustomEvent<{ anlass?: string }>).detail?.anlass;
-    if (anlass) presetAll(anlass);
-  });
-
-  const presetFromUrl = () => {
-    const fromQuery = new URLSearchParams(location.search).get("anlass");
-    const m = location.hash.match(/^#catering(?:\?anlass=|:)(.+)$/);
-    let anlass: string | null = fromQuery;
-    if (!anlass && m) {
-      try { anlass = decodeURIComponent(m[1]); } catch { anlass = m[1]; }
-    }
-    if (!anlass) return;
-    presetAll(anlass);
-    if (m) document.getElementById("catering")?.scrollIntoView({ block: "start" });
-  };
-  presetFromUrl();
-  window.addEventListener("hashchange", presetFromUrl);
-</script>
-
 <style>
   .catering {
-    --mono-min: 0.72rem; /* 11,5 px, CI-Untergrenze */
-    --muted: color-mix(in oklab, var(--ink) 75%, transparent); /* ≥ 4,5:1 auf Cream */
-    --cream-soft: color-mix(in oklab, var(--cream) 82%, transparent);
-    padding: clamp(64px, 9vw, 110px) clamp(20px, 6vw, 80px);
+    padding: clamp(56px, 7vw, 88px) clamp(20px, 6vw, 80px);
     background: var(--navy);
     color: var(--cream);
   }
-
   .wrap {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: clamp(32px, 5vw, 64px);
-    align-items: start;
+    align-items: center;
     max-width: var(--container-wide);
     margin: 0 auto;
   }
-
-  /* ── Lockup ── */
-  .sub-lockup {
-    width: min(280px, 100%);
-    height: auto;
-    margin-bottom: 18px;
-  }
-  .lk-display { font-family: var(--font-display); fill: var(--cream); }
-  .lk-mono { font-family: var(--font-mono); font-weight: 700; fill: var(--cream); }
-  .lk-tag-bg { fill: var(--cream); }
-  .lk-tag-text { fill: var(--navy); }
-  .lk-rule { stroke: var(--cream); }
-  .lk-dot { fill: var(--orange); }
-
-  /* ── Copy ── */
-  .copy .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--cream);
-    opacity: 0.85;
-    margin-bottom: 12px;
+  .eyebrow {
     display: inline-block;
-  }
-
-  .copy h2 {
-    font-family: var(--font-display);
-    font-size: clamp(2.125rem, 5vw, 3.75rem);
-    text-transform: uppercase;
-    line-height: 1;
-    margin: 0 0 18px;
-    color: var(--cream);
-    letter-spacing: -0.5px;
-  }
-  .copy h2 .acc { color: var(--orange); }
-
-  .intro,
-  .threshold {
-    font-family: var(--font-body);
-    font-size: 1.0625rem;
-    line-height: 1.6;
-    margin: 0 0 12px;
-    color: var(--cream);
-    max-width: 56ch;
-  }
-  .threshold {
-    font-style: italic;
-    font-weight: 600;
-  }
-
-  .feat {
-    list-style: none;
-    margin: 18px 0 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 18px;
-    font-family: var(--font-body);
-    font-size: 0.94rem;
-  }
-  .feat li {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-    color: var(--cream);
-  }
-  .feat .ico {
-    flex: 0 0 auto;
-    width: 16px;
-    height: 16px;
-    margin-top: 4px;
-    color: var(--orange);
-  }
-
-  .sub-title {
-    font-family: var(--font-display);
-    font-size: 1.25rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--cream);
-    margin: 0 0 12px;
-    line-height: 1;
-  }
-
-  /* ── Pakete ── */
-  .packages { margin-top: 36px; }
-
-  .pkg-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 10px;
-  }
-  .pkg {
-    border: 1px solid color-mix(in oklab, var(--cream) 28%, transparent);
-    background: color-mix(in oklab, var(--cream) 6%, transparent);
-    padding: 14px 16px;
-    display: grid;
-    gap: 6px;
-  }
-  .pkg.recommended {
-    border: 1.5px solid var(--orange);
-    background: color-mix(in oklab, var(--cream) 10%, transparent);
-  }
-  .pkg-head {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  .pkg-name {
-    font-family: var(--font-display);
-    font-size: 1.25rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--cream);
-    line-height: 1;
-  }
-  .pkg-badge {
-    font-family: var(--font-mono);
-    font-size: var(--mono-min);
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--navy);
-    background: var(--cream);
-    border: 1.5px solid var(--orange);
-    padding: 3px 8px;
-    line-height: 1.2;
-  }
-  .pkg-body {
-    font-family: var(--font-body);
-    font-size: 0.95rem;
-    line-height: 1.5;
-    color: var(--cream);
-    margin: 0;
-  }
-
-  .mono-note {
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    letter-spacing: 0.04em;
-    color: var(--cream-soft);
-    margin: 10px 0 0;
-    line-height: 1.5;
-  }
-  .mono-note + .mono-note { margin-top: 4px; }
-
-  /* ── Referenzen als Mono-Stempel ── */
-  .refs { margin-top: 32px; }
-  .ref-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .ref-stamp {
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    letter-spacing: 0.04em;
-    line-height: 1.4;
-    color: var(--cream);
-    border: 1.5px dashed color-mix(in oklab, var(--cream) 55%, transparent);
-    padding: 8px 12px;
-  }
-
-  .promise {
-    font-family: var(--font-body);
-    font-style: italic;
-    font-size: 1rem;
-    line-height: 1.5;
-    color: var(--cream);
-    margin: 28px 0 0;
-    max-width: 52ch;
-  }
-
-  /* ── Formular (Cream auf Navy, Perforationskanten) ── */
-  .form-col {
-    position: sticky;
-    top: 88px;
-  }
-
-  .fp {
-    background: var(--cream);
-    color: var(--ink);
-    position: relative;
-    box-shadow:
-      0 24px 60px rgba(0, 0, 0, 0.5),
-      0 6px 14px rgba(0, 0, 0, 0.3);
-  }
-  .fp::before,
-  .fp::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 10px;
-    background-image: radial-gradient(circle at center, var(--navy) 4px, transparent 4.5px);
-    background-size: 16px 10px;
-    background-repeat: repeat-x;
-    pointer-events: none;
-  }
-  .fp::before { top: -5px; }
-  .fp::after { bottom: -5px; }
-
-  .fp-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 18px 22px;
-    border-bottom: 1px dashed color-mix(in oklab, var(--ink) 35%, transparent);
-    background: linear-gradient(180deg, var(--cream-warm) 0%, var(--cream) 100%);
-  }
-  .fp-stamp {
-    width: 44px;
-    height: 44px;
-    background: var(--orange);
-    color: var(--cream);
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    font-family: var(--font-display);
-    font-size: 17px;
-    letter-spacing: 1px;
-    border: 2px dashed var(--cream);
-    box-shadow: 0 0 0 2px var(--orange);
-    transform: rotate(-8deg);
-    flex-shrink: 0;
-  }
-  .fp-title {
-    font-family: var(--font-display);
-    font-size: 1.25rem;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    color: var(--ink);
-    line-height: 1.05;
-  }
-  .fp-sub {
-    font-family: var(--font-body);
-    font-style: italic;
-    font-size: 0.95rem;
-    color: var(--muted);
-    margin-top: 2px;
-  }
-
-  .fp-honey {
-    position: absolute;
-    left: -9999px;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .fp-section {
-    padding: 18px 22px;
-    border-bottom: 1px dashed color-mix(in oklab, var(--ink) 18%, transparent);
-  }
-  .fp-section--submit { border-bottom: 0; }
-
-  .fp-section-title {
-    font-family: var(--font-mono);
-    font-size: var(--mono-min);
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--navy);
-    margin-bottom: 14px;
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-3);
-    flex-wrap: wrap;
-  }
-  .fp-section-title .hint {
-    font-weight: 400;
-    color: var(--muted);
-    text-transform: none;
-    letter-spacing: 0.04em;
-  }
-
-  .fp-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
-  }
-  .fp-row + .fp-row { margin-top: 14px; }
-  .fp-row--single { grid-template-columns: 1fr; }
-
-  .fp-field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-  }
-  .fp-field-label {
-    font-family: var(--font-mono);
-    font-size: var(--mono-min);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-
-  .fp-field input[type="text"],
-  .fp-field input[type="email"],
-  .fp-field input[type="tel"],
-  .fp-field input[type="date"] {
-    background: transparent;
-    border: none;
-    border-bottom: 1.5px solid var(--ink);
-    padding: 8px 0;
-    font-family: var(--font-body);
-    font-size: 1rem;
-    color: var(--ink);
-    width: 100%;
-    min-height: 40px;
-    border-radius: 0;
-    outline: none;
-    transition: border-color var(--duration-fast) var(--ease-out);
-  }
-  .fp-field input::placeholder {
-    color: color-mix(in oklab, var(--ink) 45%, transparent);
-    font-style: italic;
-  }
-  .fp-field input:focus-visible,
-  .fp-text:focus-visible,
-  .fp-range:focus-visible,
-  .fp-gate:focus-visible {
-    outline: 2px solid var(--orange);
-    outline-offset: 3px;
-  }
-  .fp-field input:focus { border-bottom-color: var(--orange); }
-
-  .fp-range-wrap { padding-top: 6px; }
-  .fp-range-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 4px;
-  }
-  .fp-range-row .n {
-    font-family: var(--font-display);
-    font-size: 1.75rem;
-    color: var(--ink);
-    line-height: 1;
-  }
-  .fp-range-row .n small {
-    font-family: var(--font-mono);
-    font-size: var(--mono-min);
-    letter-spacing: 0.12em;
-    color: var(--muted);
-    margin-left: 6px;
-  }
-
-  .fp-range {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: 6px;
-    background: linear-gradient(
-      to right,
-      var(--orange) 0%,
-      var(--orange) var(--pax-pct, 16%),
-      color-mix(in oklab, var(--ink) 18%, transparent) var(--pax-pct, 16%),
-      color-mix(in oklab, var(--ink) 18%, transparent) 100%
-    );
-    cursor: pointer;
-    border-radius: 0;
-    margin-top: 6px;
-  }
-  .fp-range::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: var(--orange);
-    border: 3px solid var(--cream);
-    box-shadow: 0 0 0 1.5px var(--orange), 0 4px 10px rgba(0, 0, 0, 0.25);
-    cursor: pointer;
-  }
-  .fp-range::-moz-range-thumb {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: var(--orange);
-    border: 3px solid var(--cream);
-    box-shadow: 0 0 0 1.5px var(--orange), 0 4px 10px rgba(0, 0, 0, 0.25);
-    cursor: pointer;
-  }
-  .fp-range-readout {
-    font-family: var(--font-body);
-    font-style: italic;
-    font-size: 0.9rem;
-    color: var(--navy);
-    margin-top: 8px;
-  }
-
-  /* Anlass-Buttons */
-  .fp-gates {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
-    gap: 8px;
-  }
-  .fp-gate {
-    background: transparent;
-    border: 1.5px solid color-mix(in oklab, var(--ink) 40%, transparent);
-    padding: 10px 8px;
-    min-height: 44px;
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    color: var(--ink);
-    border-radius: 0;
-    font-family: inherit;
-    transition: background var(--duration-fast) var(--ease-out),
-                border-color var(--duration-fast) var(--ease-out),
-                color var(--duration-fast) var(--ease-out);
-  }
-  .fp-gate:hover {
-    border-color: var(--ink);
-    background: color-mix(in oklab, var(--ink) 6%, transparent);
-  }
-  .fp-gate.active {
-    background: var(--navy);
-    color: var(--cream);
-    border-color: var(--navy);
-  }
-  .fp-gate-name {
-    font-family: var(--font-display);
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    line-height: 1;
-    text-align: center;
-  }
-
-  /* Freitext */
-  .fp-text {
-    width: 100%;
-    background: transparent;
-    border: 1.5px dashed color-mix(in oklab, var(--ink) 40%, transparent);
-    padding: 14px;
-    font-family: var(--font-body);
-    font-size: 0.95rem;
-    line-height: 1.5;
-    color: var(--ink);
-    min-height: 96px;
-    resize: vertical;
-    border-radius: 0;
-    transition: border-color var(--duration-fast) var(--ease-out);
-  }
-  .fp-text::placeholder {
-    color: color-mix(in oklab, var(--ink) 45%, transparent);
-    font-style: italic;
-  }
-  .fp-text:focus { border-color: var(--orange); }
-
-  /* Submit: globale .fh-btn, hier nur Breite und Icon-Abstand */
-  .fp-submit {
-    width: 100%;
-    justify-content: center;
-    gap: 10px;
-  }
-  .fp-submit .ico {
-    width: 18px;
-    height: 18px;
-    flex: 0 0 auto;
-    transition: transform var(--duration-fast) var(--ease-out);
-  }
-  .fp-submit:hover:not(:disabled) .ico { transform: translateX(4px); }
-  .fp-submit:disabled { cursor: default; opacity: 0.85; }
-  .fp-submit.is-done { background: var(--green); opacity: 1; }
-
-  .fp-meta {
-    font-family: var(--font-mono);
-    font-size: var(--mono-min);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
-    text-align: center;
-    margin: 10px 0 0;
-  }
-  .fp-status {
-    font-family: var(--font-body);
-    font-size: 0.95rem;
-    line-height: 1.45;
-    color: var(--navy);
-    text-align: center;
-    margin: 8px 0 0;
-    min-height: 1.4em;
-  }
-  .fp-status:empty { margin: 0; min-height: 0; }
-
-  .fp-fallback {
-    display: grid;
-    gap: 12px;
-    justify-items: start;
-    margin-top: 14px;
-    padding: 14px 16px;
-    border: 1.5px dashed var(--navy);
-  }
-  .fp-fallback[hidden] { display: none; }
-  .fp-fallback p {
-    font-family: var(--font-body);
-    font-size: 0.95rem;
-    line-height: 1.5;
-    color: var(--ink);
-    margin: 0;
-  }
-
-  .direct {
     font-family: var(--font-mono);
     font-size: 0.75rem;
-    letter-spacing: 0.02em;
-    line-height: 1.6;
-    color: var(--cream-soft);
-    margin: 18px 0 0;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: inherit;
+    margin-bottom: 12px;
   }
-
-  @media (max-width: 980px) {
+  h2, h3 {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    line-height: 1.05;
+    margin: 0 0 18px;
+    color: inherit;
+  }
+  h2 { font-size: clamp(2.125rem, 5vw, 3.75rem); }
+  h2 .acc { color: var(--orange); }
+  h3 { font-size: clamp(1.75rem, 3vw, 2.4rem); }
+  p { font-size: 1.1rem; line-height: 1.55; }
+  .intro { max-width: 48ch; margin-bottom: 16px; }
+  .threshold { font-style: italic; }
+  .features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    margin-top: 20px;
+    font-size: 1rem;
+  }
+  .features li { border-bottom: 1px solid color-mix(in oklab, var(--cream) 35%, transparent); padding-bottom: 4px; }
+  .detail-link { margin-top: 24px; line-height: 1.7; }
+  .contact { background: var(--cream); color: var(--navy); padding: clamp(24px, 3vw, 36px); }
+  .actions { display: grid; gap: 12px; margin: 24px 0 18px; }
+  .actions a { text-align: center; justify-content: center; }
+  .fh-btn--outline { color: var(--navy); border: 2px solid var(--navy); background: transparent; }
+  .fh-btn--outline:hover { color: var(--cream); background: var(--navy); }
+  .email { display: inline-block; font-size: 1.05rem; border-bottom: 1px solid currentColor; }
+  .email:focus-visible { outline: 3px solid var(--orange); outline-offset: 4px; }
+  @media (max-width: 800px) {
     .wrap { grid-template-columns: 1fr; }
-    .form-col { position: static; }
-  }
-
-  @media (max-width: 720px) {
     .catering :global([data-mascot]) { display: none; }
-    .feat { grid-template-columns: 1fr; }
-    .fp-header,
-    .fp-section { padding-left: 18px; padding-right: 18px; }
-  }
-
-  @media (max-width: 560px) {
-    .fp-row { grid-template-columns: 1fr; }
-    .fp-gates { grid-template-columns: 1fr 1fr; }
-    /* Ungerade Anzahl: der letzte Anlass ("Anders") geht über die volle Breite */
-    .fp-gate:last-child:nth-child(odd) { grid-column: 1 / -1; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .fp-submit .ico,
-    .fp-gate { transition: none; }
-    .fp-submit:hover:not(:disabled) .ico { transform: none; }
   }
 </style>

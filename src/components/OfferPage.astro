@@ -1,0 +1,232 @@
+---
+import { Picture } from "astro:assets";
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+import loadedFries from "../assets/hero/loaded-fries-hero.jpg";
+
+interface Section {
+  id?: string;
+  title: string;
+  paragraphs: string[];
+  link?: { href: string; label: string };
+}
+interface Step {
+  title: string;
+  text: string;
+}
+interface FAQ {
+  question: string;
+  answer: string;
+}
+interface Props {
+  title: string;
+  description: string;
+  label: string;
+  eyebrow: string;
+  headline: string[];
+  mark?: string;
+  lead: string;
+  facts: string[];
+  sections: Section[];
+  processTitle: string;
+  steps: Step[];
+  faq: FAQ[];
+  faqTitle: string;
+  primaryLabel: string;
+  heroAlternate?: { href: string; label: string };
+  requestTitle: string;
+  requestSubject: string;
+  requestIntro: string;
+  requestText: string;
+  related: { href: string; label: string; title: string; text: string };
+  call?: boolean;
+  extraSchema?: Record<string, unknown>[];
+  heroImage?: ImageMetadata;
+}
+
+const { title, description, label, eyebrow, headline, mark, lead, facts, sections, processTitle, steps, faq, faqTitle,
+  primaryLabel, heroAlternate, requestTitle, requestSubject, requestIntro, requestText, related, call, extraSchema = [],
+  heroImage = loadedFries } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site).toString();
+const whatsapp = `https://wa.me/491627500673?text=${encodeURIComponent(requestText)}`;
+const email = `mailto:info@fryhigh.de?subject=${encodeURIComponent(requestSubject)}&body=${encodeURIComponent(requestText)}`;
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": `${canonical}#webpage`,
+      url: canonical,
+      name: title,
+      description,
+      inLanguage: "de-DE",
+      about: { "@id": "https://fryhigh.de/#fry-high" },
+      breadcrumb: { "@id": `${canonical}#breadcrumb` },
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": `${canonical}#breadcrumb`,
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Startseite", item: "https://fryhigh.de/" },
+        { "@type": "ListItem", position: 2, name: label, item: canonical },
+      ],
+    },
+    ...extraSchema,
+  ],
+};
+---
+<MarketingLayout title={title} description={description}>
+  <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+
+  <section class="offer-hero" aria-labelledby="offer-title">
+    <div class="offer-wrap">
+      <nav class="breadcrumbs" aria-label="Brotkrumen">
+        <ol>
+          <li><a href="/">Startseite</a></li>
+          <li><span aria-hidden="true">/</span><span aria-current="page">{label}</span></li>
+        </ol>
+      </nav>
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <span class="offer-eyebrow">{eyebrow}</span>
+          <h1 id="offer-title">{headline.map((line, i) => (
+            <><span class:list={{ accent: i === headline.length - 1 }}>{line}</span>{i < headline.length - 1 && <br />}</>
+          ))}</h1>
+          {mark && <p class="mark">{mark}</p>}
+          <p class="offer-lead">{lead}</p>
+          <a class="fh-btn" href="#anfrage">{primaryLabel}</a>
+          {heroAlternate && <a class="fh-link hero-alternate" href={heroAlternate.href}>{heroAlternate.label}</a>}
+        </div>
+        <div class="hero-image" aria-hidden="true">
+          <Picture src={heroImage} alt="" widths={[480, 800, 1200]} sizes="(max-width: 800px) 100vw, 44vw" formats={["avif", "webp"]} quality={82} loading="eager" />
+        </div>
+      </div>
+      <ul class="facts" role="list">{facts.map((fact) => <li>{fact}</li>)}</ul>
+    </div>
+  </section>
+
+  <div class="offer-content offer-wrap">
+    {sections.map((section, i) => (
+      <section id={section.id} class="offer-section" aria-labelledby={`section-${i}`}>
+        <h2 id={`section-${i}`}>{section.title}</h2>
+        <div class="section-text">{section.paragraphs.map((paragraph) => <p>{paragraph}</p>)}{section.link && <a class="fh-link section-link" href={section.link.href}>{section.link.label}</a>}</div>
+      </section>
+    ))}
+  </div>
+
+  <section class="process" aria-labelledby="process-title">
+    <div class="offer-wrap">
+      <span class="offer-eyebrow">Von der Idee zum Angebot</span>
+      <h2 id="process-title">{processTitle}</h2>
+      <ol class="steps">
+        {steps.map((step, i) => <li><span class="step-number" aria-hidden="true">0{i + 1}</span><h3>{step.title}</h3><p>{step.text}</p></li>)}
+      </ol>
+    </div>
+  </section>
+
+  <section class="faq offer-wrap" aria-labelledby="faq-title">
+    <div class="faq-heading">
+      <span class="offer-eyebrow">Gut zu wissen</span>
+      <h2 id="faq-title">{faqTitle}</h2>
+    </div>
+    <div class="faq-list">
+      {faq.map((item) => (
+        <details>
+          <summary>{item.question}<span class="faq-icon" aria-hidden="true"></span></summary>
+          <p>{item.answer}</p>
+        </details>
+      ))}
+    </div>
+  </section>
+
+  <section id="anfrage" class="request" aria-labelledby="request-title">
+    <div class="offer-wrap request-grid">
+      <div>
+        <span class="offer-eyebrow">Fry High · Bremerhaven</span>
+        <h2 id="request-title">{requestTitle}</h2>
+        <p>{requestIntro}</p>
+      </div>
+      <div class="request-actions">
+        <a class="fh-btn" href={whatsapp} target="_blank" rel="noopener">Per WhatsApp anfragen</a>
+        <a class="fh-btn fh-btn--ghost" href={email}>Per E-Mail anfragen</a>{call && <a class="fh-btn fh-btn--ghost" href="tel:+491627500673">Anrufen: 0162 7500 673</a>}
+        <p class="request-contact">WhatsApp: <a href={whatsapp} target="_blank" rel="noopener">0162 7500 673</a><br /><a href={email}>info@fryhigh.de</a></p>
+      </div>
+    </div>
+  </section>
+
+  <aside class="related offer-wrap" aria-label="Weiteres Angebot">
+    <div><h2>{related.title}</h2><p>{related.text}</p></div>
+    <a class="fh-link" href={related.href}>{related.label}</a>
+  </aside>
+</MarketingLayout>
+
+<style>
+  .offer-wrap { width: min(100% - 2 * clamp(20px, 5vw, 72px), 1200px); margin-inline: auto; }
+  .offer-hero { background: var(--cream); color: var(--navy); padding: 28px 0 0; }
+  .breadcrumbs { font-family: var(--font-mono); font-size: 0.72rem; line-height: 1.6; margin-bottom: 36px; }
+  .breadcrumbs ol { display: flex; gap: 12px; flex-wrap: wrap; }
+  .breadcrumbs li { display: flex; gap: 12px; }
+  .breadcrumbs a { text-decoration: underline; text-underline-offset: 3px; }
+  .hero-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: center; gap: clamp(28px, 5vw, 64px); }
+  .hero-copy { padding: 12px 0 28px; min-width: 0; }
+  .offer-eyebrow { display: block; font-family: var(--font-mono); font-size: 0.72rem; line-height: 1.6; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 16px; }
+  h1 { font-size: clamp(2rem, 4.6vw, 4.5rem); line-height: 1.05; margin: 0 0 24px; letter-spacing: -0.02em; overflow-wrap: break-word; hyphens: auto; }
+  h1 .accent { color: var(--orange); }
+  .offer-lead { font-size: clamp(1.125rem, 1.65vw, 1.35rem); line-height: 1.5; max-width: 46ch; margin: 0 0 28px; }
+  .mark { font-size: 1.35rem; font-style: italic; margin: 0 0 14px; }
+  .hero-alternate { display: block; width: fit-content; max-width: 100%; margin-top: 22px; line-height: 1.7; }
+  .hero-image { min-width: 0; border-bottom: 8px solid var(--orange); }
+  .hero-image :global(picture) { display: block; }
+  .hero-image :global(img) { display: block; width: 100%; height: clamp(260px, 31vw, 420px); object-fit: cover; object-position: center; }
+  .facts { display: flex; flex-wrap: wrap; gap: 12px 30px; padding: 26px 0; margin-top: 28px; border-top: 1px solid var(--cream-hairline); font-family: var(--font-mono); font-size: 0.75rem; line-height: 1.65; }
+  .facts li { padding-left: 15px; position: relative; }
+  .facts li::before { content: ""; width: 5px; height: 5px; background: var(--orange); position: absolute; top: 0.6em; left: 0; }
+  .offer-content { padding-block: 24px 64px; }
+  .offer-section { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.4fr); gap: 32px 70px; padding: 38px 0; border-bottom: 1px solid var(--cream-hairline); scroll-margin-top: 96px; }
+  h2 { font-size: clamp(1.8rem, 3vw, 2.65rem); line-height: 1.08; margin: 0; color: var(--navy); }
+  .section-text p, .steps p, .faq p, .request p, .related p { font-size: 1.125rem; line-height: 1.6; }
+  .section-text p + p { margin-top: 16px; }
+  .section-link { margin-top: 20px; line-height: 1.7; }
+  .process { background: var(--navy); color: var(--cream); padding-block: 56px; }
+  .process h2, .process h3 { color: var(--cream); }
+  .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; margin-top: 34px; }
+  .steps li { min-width: 0; border-top: 1px solid color-mix(in oklab, var(--cream) 30%, transparent); padding-top: 18px; }
+  .step-number { display: block; font-family: var(--font-mono); font-size: 0.8rem; color: var(--yellow); margin-bottom: 18px; }
+  h3 { font-size: 1.4rem; line-height: 1.15; margin: 0 0 12px; }
+  .faq { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.4fr); gap: 32px 70px; padding-block: 64px; }
+  .faq-list { border-top: 1px solid var(--cream-hairline); }
+  details { border-bottom: 1px solid var(--cream-hairline); }
+  summary { display: flex; justify-content: space-between; align-items: start; gap: 18px; cursor: pointer; list-style: none; font-size: 1.2rem; font-weight: 600; line-height: 1.4; padding: 20px 0; color: var(--navy); }
+  summary::-webkit-details-marker { display: none; }
+  .faq-icon { position: relative; flex: 0 0 16px; height: 16px; margin-top: 5px; color: var(--orange); }
+  .faq-icon::before, .faq-icon::after { content: ""; position: absolute; background: currentColor; }
+  .faq-icon::before { width: 16px; height: 2px; top: 7px; }
+  .faq-icon::after { height: 16px; width: 2px; left: 7px; }
+  details[open] .faq-icon::after { display: none; }
+  details p { padding: 0 30px 22px 0; }
+  .request { background: var(--navy-deep); color: var(--cream); padding-block: 56px; scroll-margin-top: 96px; }
+  .request-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 32px 64px; align-items: center; }
+  .request h2 { color: var(--cream); margin-bottom: 22px; }
+  .request p { max-width: 48ch; }
+  .request-actions { display: grid; gap: 12px; min-width: 0; }
+  .request-actions .fh-btn { width: 100%; }
+  .request .request-contact { font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.9; margin-top: 8px; }
+  .request-contact a { text-decoration: underline; text-underline-offset: 4px; }
+  .related { padding-block: 40px; display: flex; justify-content: space-between; align-items: center; gap: 24px 48px; }
+  .related h2 { font-size: 1.6rem; margin-bottom: 10px; }
+  .related p { max-width: 58ch; }
+  .related .fh-link { flex-shrink: 0; line-height: 1.7; }
+  a:focus-visible, summary:focus-visible { outline: 3px solid var(--orange); outline-offset: 4px; }
+  @media (max-width: 800px) {
+    .hero-grid, .offer-section, .faq, .request-grid { grid-template-columns: 1fr; gap: 24px; }
+    .hero-image :global(img) { height: clamp(210px, 45vw, 320px); }
+    .hero-copy { padding-bottom: 0; }
+    h1 { font-size: clamp(2rem, 7.5vw, 3.4rem); }
+    .breadcrumbs { margin-bottom: 24px; }
+    .facts { margin-top: 28px; }
+    .offer-content { padding-bottom: 40px; }
+    .steps { grid-template-columns: 1fr; gap: 26px; }
+    .step-number { margin-bottom: 10px; }
+    .faq { padding-block: 44px; }
+    .related { flex-direction: column; align-items: flex-start; }
+  }
+</style>

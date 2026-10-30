@@ -18,7 +18,7 @@ const {
   contestLive = false,
   prizeLabel = "Wer am Sonntag oben steht, bekommt einen 15-€-Gutschein für Fry High.",
   minAge = 18,
-  termsVersion = "2026-09-11",
+  termsVersion = "2026-09-16",
 } = Astro.props;
 ---
 <div
@@ -28,9 +28,13 @@ const {
   data-contest-live={contestLive ? "1" : "0"}
   data-terms-version={termsVersion}
 >
-  <p class="pp-banner" data-verified-banner role="status" hidden>
-    Score bestätigt. Du stehst in der Wochenwertung.
-  </p>
+  <div class="pp-account">
+    <p data-player-state>{contestLive ? "Als Gast fliegen oder mit eigenem Namen in die Bestenliste." : "Gastspiel ist offen. Die Anmeldung zur Wochenwertung folgt."}</p>
+    <button type="button" class="pp-account-button" data-login-toggle disabled={!contestLive}>{contestLive ? "Anmelden" : "Anmeldung folgt"}</button>
+    <button type="button" class="pp-account-button" data-logout hidden>Abmelden</button>
+  </div>
+  <p class="pp-account-status" data-run-status role="status" aria-live="polite"></p>
+  <button type="button" class="pp-account-button pp-retry" data-retry-score hidden>Nochmal versuchen</button>
 
   <div class="pp-stage" data-stage>
     <canvas
@@ -97,9 +101,8 @@ const {
         <p class="pp-rank" data-rank hidden></p>
         <div class="pp-actions">
           <button type="button" class="fh-btn" data-restart>Nochmal fliegen</button>
-          {contestLive && (
-            <button type="button" class="fh-btn fh-btn--ghost" data-to-form>Score eintragen</button>
-          )}
+          <button type="button" class="fh-btn fh-btn--ghost" data-to-form hidden={!contestLive}>Anmelden &amp; Score sichern</button>
+          <a class="fh-link" href="#wochenwertung">Bestenliste ansehen</a>
         </div>
         {!contestLive && (
           <p class="pp-mini">Bestwert hier im Browser: <span data-over-best>0</span>.</p>
@@ -108,62 +111,33 @@ const {
     </div>
   </div>
 
-  {contestLive ? (
-    <form class="pp-form" data-score-form hidden novalidate>
-      <div class="pp-form-head">
-        <span class="pp-eyebrow">Wochenwertung</span>
-        <h3>Score in die Wertung? Wir schicken dir einen Link.</h3>
-        <p class="pp-form-lead">
-          Dein Score: <strong data-form-score>0</strong>. {prizeLabel}
-        </p>
-      </div>
-
-      <label class="pp-field">
-        <span class="pp-label">Spitzname · öffentlich, freiwillig</span>
-        <input type="text" name="display_name" maxlength="32" autocomplete="nickname" placeholder="z. B. Möwenschreck" />
-      </label>
-
-      <label class="pp-field">
-        <span class="pp-label">E-Mail · für den Bestätigungs-Link</span>
-        <input type="email" name="email" required autocomplete="email" placeholder="du@beispiel.de" />
-      </label>
-
-      <input class="pp-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
-
-      <label class="pp-check">
-        <input type="checkbox" name="terms" required />
-        <span>
-          Ich akzeptiere die
-          <a href="/spiel/teilnahmebedingungen" target="_blank" rel="noopener">Teilnahmebedingungen</a>
-          und die
-          <a href="/datenschutz" target="_blank" rel="noopener">Datenschutzhinweise</a>.
-        </span>
-      </label>
-
-      <label class="pp-check">
-        <input type="checkbox" name="age" required />
-        <span>Ich bin mindestens {minAge} Jahre alt.</span>
-      </label>
-
-      <label class="pp-check">
-        <input type="checkbox" name="newsletter_opt_in" />
-        <span>Newsletter dazu. Karte, Specials, Catering-Slots. Kein Spam.</span>
-      </label>
-
-      <button type="submit" class="fh-btn" data-submit>Score eintragen</button>
-      <p class="pp-meta" data-form-meta role="status" aria-live="polite"></p>
-    </form>
-  ) : (
-    <div class="pp-soon">
-      <span class="pp-eyebrow">Wochenwertung</span>
-      <h3>Wochenwertung mit Gewinn startet in Kürze.</h3>
-      <p>
-        Trag dich in den Newsletter ein, dann sagen wir Bescheid. Dein Bestwert bleibt hier im Browser gespeichert:
-        <strong data-soon-best>0</strong>.
-      </p>
-      <a class="fh-link" href="/#newsletter">Zum Newsletter</a>
+  <form class="pp-form" id="spieler-anmeldung" data-score-form hidden>
+    <div class="pp-form-head">
+      <span class="pp-eyebrow">Dein Platz in der Bestenliste</span>
+      <h3>Unter welchem Namen fliegst du?</h3>
+      <p class="pp-form-lead">{contestLive ? "E-Mail einmal bestätigen. Danach zählen deine Flüge automatisch." : "Die Anmeldung ist noch nicht freigeschaltet. Sobald es losgeht, bestätigst du hier einmal deine E-Mail."}</p>
     </div>
-  )}
+    <label class="pp-field">
+      <span class="pp-label">Dein Name in der Bestenliste · gern ein Pseudonym</span>
+      <input type="text" name="display_name" required maxlength="32" autocomplete="nickname" placeholder="z. B. Möwenschreck" />
+    </label>
+    <label class="pp-field">
+      <span class="pp-label">E-Mail · bleibt privat</span>
+      <input type="email" name="email" required autocomplete="email" placeholder="du@beispiel.de" />
+    </label>
+    <input class="pp-hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+    <label class="pp-check">
+      <input type="checkbox" name="terms" required />
+      <span>Ich akzeptiere die <a href="/spiel/teilnahmebedingungen" target="_blank" rel="noopener">Spielregeln</a> und habe die <a href="/datenschutz" target="_blank" rel="noopener">Datenschutzhinweise</a> gelesen.</span>
+    </label>
+    <label class="pp-check">
+      <input type="checkbox" name="age" required />
+      <span>Ich bin mindestens {minAge} Jahre alt.</span>
+    </label>
+    <button type="submit" class="fh-btn" data-submit>Anmeldelink schicken</button>
+    <button type="button" class="pp-account-button" data-login-cancel>Als Gast weiterspielen</button>
+    <p class="pp-meta" data-form-meta role="status" aria-live="polite"></p>
+  </form>
 </div>
 
 <script>
@@ -173,7 +147,6 @@ const {
     startRun,
     drainEvents,
     activeProgress,
-    provisionalRank,
     INGREDIENTS,
     CREATIONS,
     COLORS,
@@ -214,7 +187,7 @@ const {
   if (!ROOT) throw new Error('Pommespilot: Wurzel fehlt');
   const apiBase = ROOT.dataset.apiBase ?? '';
   const contestLive = ROOT.dataset.contestLive === '1';
-  const termsVersion = ROOT.dataset.termsVersion ?? '2026-09-11';
+  const termsVersion = ROOT.dataset.termsVersion ?? '2026-09-16';
 
   function q<T extends HTMLElement>(sel: string): T | null {
     return ROOT!.querySelector<T>(sel);
@@ -242,10 +215,13 @@ const {
   const restartBtn = q<HTMLButtonElement>('[data-restart]')!;
   const toFormBtn = q<HTMLButtonElement>('[data-to-form]');
   const form = q<HTMLFormElement>('[data-score-form]');
-  const formScore = q<HTMLElement>('[data-form-score]');
   const submitBtn = q<HTMLButtonElement>('[data-submit]');
   const formMeta = q<HTMLElement>('[data-form-meta]');
-  const verifiedBanner = q<HTMLElement>('[data-verified-banner]')!;
+  const playerState = q<HTMLElement>('[data-player-state]')!;
+  const runStatus = q<HTMLElement>('[data-run-status]')!;
+  const loginToggle = q<HTMLButtonElement>('[data-login-toggle]')!;
+  const logoutBtn = q<HTMLButtonElement>('[data-logout]')!;
+  const retryScore = q<HTMLButtonElement>('[data-retry-score]')!;
 
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const FONT_MONO = "'JetBrains Mono', 'SFMono-Regular', Consolas, monospace";
@@ -334,12 +310,11 @@ const {
   let bg = 0;             // Parallax-Strecke
   let propAngle = 0;
   let shake = 0;          // Restzeit Screen-Shake in Frames
-  let sessionToken: string | null = null;
-  let sessionFailed = false;
+  let runSession: Promise<RunSession | { error: unknown } | null> = Promise.resolve(null);
   let runId = 0;
   let durationMs = 0;
-  let finalScore = 0;
   let hasResult = false;
+  let starting = false;
   let lastAnnounced = 0;
   const particles: Particle[] = [];
   const popups: Popup[] = [];
@@ -353,23 +328,23 @@ const {
     ROOT!.dataset.playing = which === null ? "1" : "0";
   }
 
-  async function requestSession() {
-    sessionToken = null;
-    sessionFailed = false;
-    if (!apiBase || !contestLive) return;
-    const id = runId;
-    try {
-      const res = await fetch(`${apiBase}/session/start`, { method: 'POST' });
-      if (!res.ok) throw new Error(`session ${res.status}`);
-      const data = (await res.json()) as { token?: string };
-      if (id === runId) sessionToken = data.token ?? null;
-    } catch {
-      if (id === runId) sessionFailed = true;
-    }
+  interface RunSession { token: string; expires_at: number }
+  async function requestSession(): Promise<RunSession | { error: unknown }> {
+    try { return await api<RunSession>('/session/start', {}, true); }
+    catch (error) { return { error }; }
   }
 
-  function begin() {
+  async function begin() {
+    if (starting) return;
+    starting = true;
+    startBtn.disabled = true;
+    restartBtn.disabled = true;
     runId += 1;
+    // Der Server setzt den Beginn der wertbaren Laufzeit. Erst danach startet die Physik.
+    if (contestLive) setRunMessage('Flug wird vorbereitet …');
+    const session = contestLive ? await requestSession() : null;
+    runSession = Promise.resolve(session);
+    if (contestLive) setRunMessage(session && !('error' in session) ? '' : 'Du fliegst gerade nur lokal. Die Verbindung zur Bestenliste fehlt.');
     fitCanvas();
     startRun(state);
     paused = false;
@@ -385,7 +360,9 @@ const {
       form.hidden = true;
       if (formMeta) formMeta.textContent = '';
     }
-    void requestSession();
+    starting = false;
+    startBtn.disabled = false;
+    restartBtn.disabled = false;
     canvas.focus({ preventScroll: true });
   }
 
@@ -403,7 +380,6 @@ const {
   function onGameOver() {
     durationMs = Math.round((state.frames * 1000) / 60);
     const score = state.score;
-    finalScore = score;
     hasResult = true;
     finalEl.textContent = String(score);
     bestNote.hidden = !(score > best && score > 0);
@@ -418,29 +394,22 @@ const {
     rankEl.textContent = '';
     show('over');
     announce.textContent = `Abgeschmiert bei ${score} Punkten.`;
-    if (form) {
-      form.hidden = false;
-      if (formScore) formScore.textContent = String(score);
-      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Score eintragen'; }
-      if (formMeta) formMeta.textContent = '';
-    }
-    if (contestLive) void loadRank(score);
-  }
-
-  async function loadRank(score: number) {
-    if (!apiBase) return;
-    const id = runId;
-    try {
-      const res = await fetch(`${apiBase}/leaderboard`, { cache: 'no-store' });
-      if (!res.ok) return;
-      const data = (await res.json()) as { top?: { score: number }[] };
-      if (id !== runId || !hasResult) return;
-      const rank = provisionalRank(data.top ?? [], score);
-      rankEl.textContent = rank
-        ? `Vorläufig Platz ${rank} diese Woche. Zählt, sobald du den Mail-Link geklickt hast.`
-        : 'Vorläufig außerhalb der Top 10 diese Woche. Trotzdem eintragen, der Sonntag entscheidet.';
-      rankEl.hidden = false;
-    } catch { /* Wertung nicht erreichbar: still */ }
+    if (contestLive && !player && form) form.hidden = false;
+    if (toFormBtn) toFormBtn.hidden = !contestLive || Boolean(player);
+    if (!contestLive) { setRunMessage('Die Wochenwertung ist noch nicht gestartet. Dein Bestwert bleibt in diesem Browser.'); return; }
+    const finishedRun = runSession;
+    const finishedDuration = durationMs;
+    void finishedRun.then((session) => {
+      if (!session || 'error' in session) {
+        setRunMessage(session ? errorMessage(session.error) : 'Dieser Flug bleibt nur hier gespeichert. Die Bestenliste ist gerade nicht erreichbar.');
+        return;
+      }
+      const pending = readPending();
+      pending.push({ token: session.token, score, duration_ms: finishedDuration, expires_at: session.expires_at });
+      savePending(pending);
+      if (player) void submitPending();
+      else setRunMessage(`${score} Punkte warten auf deine Anmeldung. Bestätige die E-Mail in diesem Browser innerhalb einer Stunde.`);
+    });
   }
 
   // ── Events aus der Engine → Effekte ───────────────────────────────────────
@@ -1217,114 +1186,227 @@ const {
       show('pause');
     }
   });
-  if (toFormBtn && form) {
-    toFormBtn.addEventListener('click', () => {
-      form.hidden = false;
-      form.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
-      const email = form.querySelector<HTMLInputElement>('input[name="email"]');
-      window.setTimeout(() => email?.focus({ preventScroll: true }), reduceMotion ? 0 : 450);
-    });
-  }
+  // Einmalige E-Mail-Anmeldung. Auth-Token bleibt 30 Tage lokal; Runs maximal eine Stunde.
+  interface Player { display_name: string; masked_email: string; eligible_to_win: boolean; eligible_after: number | null }
+  interface AuthResult { ok: boolean; token?: string; expires_at: number; player: Player }
+  interface PendingRun { token: string; score: number; duration_ms: number; expires_at: number }
+  interface ScoreResult { ok: boolean; rank: number; total: number; best_score: number; improved: boolean; eligible_to_win: boolean; eligible_after: number | null }
+  const AUTH_KEY = 'pp_player_token';
+  const PENDING_KEY = 'pp_pending_runs';
+  let authToken = readStore(AUTH_KEY) ?? '';
+  let player: Player | null = null;
+  let authRevision = 0;
+  let submitting = false;
+  let pendingMemory: PendingRun[] = [];
+  let authReady = false;
 
-  // ── Submit an den Worker ───────────────────────────────────────────────────
-  const UNREACHABLE = 'Die Wochenwertung ist gerade nicht erreichbar. Dein Bestwert bleibt hier gespeichert.';
-  if (form && submitBtn && formMeta) {
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!hasResult) {
-        formMeta.textContent = 'Erst fliegen, dann eintragen.';
-        return;
-      }
-      const fd = new FormData(form);
-      if (String(fd.get('website') ?? '').trim()) return; // Honeypot
-      const email = String(fd.get('email') ?? '').trim();
-      const displayName = String(fd.get('display_name') ?? '').trim();
-      const terms = fd.get('terms') === 'on';
-      const age = fd.get('age') === 'on';
-      const newsletterOptIn = fd.get('newsletter_opt_in') === 'on';
-      if (!email || !terms || !age) {
-        formMeta.textContent = 'E-Mail, Bedingungen und Alter sind Pflicht.';
-        return;
-      }
-      if (!sessionToken) {
-        formMeta.textContent = sessionFailed || !apiBase
-          ? UNREACHABLE
-          : 'Spiel-Sitzung fehlt. Spiel nochmal, dann klappt das Eintragen.';
-        return;
-      }
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Wird gesendet';
-      formMeta.textContent = '';
-      const score = finalScore;
-      try {
-        const res = await fetch(`${apiBase}/score/submit`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            token: sessionToken,
-            email,
-            display_name: displayName,
-            score,
-            duration_ms: durationMs,
-            consent: true,
-            age_confirmed: true,
-            terms_version: termsVersion,
-            newsletter_opt_in: newsletterOptIn,
-          }),
-        });
-        const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; masked_email?: string; mail_sent?: boolean };
-        if (!res.ok || !data.ok) throw new Error(data.error || `submit ${res.status}`);
-        sessionToken = null; // Token ist verbraucht
-        submitBtn.textContent = 'Eingetragen';
-        try {
-          sessionStorage.setItem('pp_last_entry', JSON.stringify({ name: displayName, score }));
-        } catch { /* egal */ }
-        if (data.mail_sent === false) {
-          formMeta.textContent = 'Die Bestätigungs-Mail konnte gerade nicht raus. Wir kümmern uns.';
-        } else {
-          formMeta.replaceChildren(
-            document.createTextNode('Bestätigungs-Mail unterwegs an '),
-            Object.assign(document.createElement('strong'), { textContent: String(data.masked_email ?? email) }),
-            document.createTextNode('. Klick rein, dann zählt der Score.'),
-          );
-        }
-        window.dispatchEvent(new CustomEvent('leaderboard:refresh'));
-      } catch (err) {
-        console.error('score submit failed', err);
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Score eintragen';
-        const msg = (err instanceof Error ? err.message : String(err ?? '')).toLowerCase();
-        if (err instanceof TypeError || msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('load failed')) {
-          formMeta.textContent = UNREACHABLE;
-        } else if (msg.includes('session expired') || msg.includes('invalid session') || msg.includes('session already used')) {
-          formMeta.textContent = 'Spiel-Sitzung abgelaufen oder ungültig. Spiel nochmal.';
-        } else if (msg.includes('consent') || msg.includes('age')) {
-          formMeta.textContent = 'Einverständnis fehlt. Haken setzen und nochmal senden.';
-        } else if (msg.includes('too short')) {
-          formMeta.textContent = 'Zu kurz geflogen. Ab 5 Sekunden zählt der Score.';
-        } else if (msg.includes('implausible') || msg.includes('impossible')) {
-          formMeta.textContent = 'Score sieht unplausibel aus. Spiel ehrlich nochmal, wir kicken Bots raus.';
-        } else if (msg.includes('invalid email')) {
-          formMeta.textContent = 'E-Mail-Adresse prüfen.';
-        } else {
-          formMeta.textContent = 'Senden fehlgeschlagen. Versuchs gleich nochmal.';
-        }
-      }
-    });
+  class ApiError extends Error {
+    constructor(public code: string, public status: number) { super(code); }
   }
+  async function api<T>(path: string, body?: unknown, authenticated = false): Promise<T> {
+    const headers: Record<string, string> = {};
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (authenticated && authToken) headers.Authorization = `Bearer ${authToken}`;
+    const res = await fetch(`${apiBase}${path}`, {
+      method: body === undefined ? 'GET' : 'POST', headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      cache: 'no-store', signal: AbortSignal.timeout(12000),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) throw new ApiError(String(data.error ?? 'unavailable'), res.status);
+    return data as T;
+  }
+  function errorMessage(error: unknown): string {
+    if (!(error instanceof ApiError)) return 'Verbindung fehlgeschlagen. Bitte versuch es gleich noch einmal.';
+    const messages: Record<string, string> = {
+      invalid_email: 'Bitte prüfe deine E-Mail-Adresse.',
+      invalid_name: 'Bitte wähle einen öffentlichen Namen mit höchstens 32 Zeichen.',
+      consent_required: 'Bitte bestätige die Spielregeln und Datenschutzhinweise.',
+      age_required: 'Die Bestenliste ist ab 18 Jahren. Bitte bestätige dein Alter.',
+      terms_changed: 'Die Spielregeln wurden aktualisiert. Lade die Seite neu und bestätige sie erneut.',
+      auth_required: 'Bitte melde dich an, damit dein Score zählt.',
+      auth_invalid: 'Deine Anmeldung ist abgelaufen. Bitte bestätige einen neuen E-Mail-Link.',
+      auth_link_expired: 'Dieser Link ist abgelaufen. Fordere einen neuen Anmeldelink an.',
+      auth_link_used: 'Dieser Link wurde schon verwendet. Melde dich bei Bedarf mit einem neuen Link an.',
+      session_expired: 'Dieser Flug ist abgelaufen. Flieg eine neue Runde.',
+      run_conflict: 'Dieser Flug wurde bereits anders eingereicht. Flieg eine neue Runde.',
+      week_closed: 'Die Woche dieses Flugs ist abgeschlossen. Deine nächste Runde zählt für diese Woche.',
+      invalid_duration: 'Dieser Flug war zu kurz oder konnte nicht gewertet werden. Versuch es noch einmal.',
+      invalid_score: 'Dieser Score konnte nicht gewertet werden. Flieg eine neue Runde.',
+      score_implausible: 'Dieser Flug konnte nicht gewertet werden. Flieg eine neue Runde.',
+      rate_limited: 'Gerade zu viele Versuche. Warte kurz, bevor du es noch einmal probierst.',
+      mail_unavailable: 'Der Anmeldelink kann gerade nicht verschickt werden. Du kannst als Gast weiterspielen.',
+      contest_unavailable: 'Anmeldung und Scoreabgabe sind noch nicht verfügbar. Du kannst als Gast weiterspielen.',
+    };
+    return messages[error.code] ?? 'Das hat gerade nicht geklappt. Bitte versuch es noch einmal.';
+  }
+  function readPending(): PendingRun[] {
+    const raw = readStore(PENDING_KEY);
+    try {
+      if (raw) pendingMemory = JSON.parse(raw);
+    } catch { pendingMemory = []; }
+    if (!Array.isArray(pendingMemory)) pendingMemory = [];
+    pendingMemory = pendingMemory.filter(run => run && typeof run.token === 'string' && Number.isFinite(run.score) && Number.isFinite(run.duration_ms) && Number(run.expires_at) > Date.now());
+    const clean = JSON.stringify(pendingMemory);
+    if (raw && raw !== clean) writeStore(PENDING_KEY, clean);
+    return pendingMemory;
+  }
+  function savePending(runs: PendingRun[]) {
+    pendingMemory = runs;
+    writeStore(PENDING_KEY, JSON.stringify(runs));
+  }
+  function setRunMessage(message: string) {
+    runStatus.textContent = message;
+    if (hasResult) { rankEl.textContent = message; rankEl.hidden = false; }
+  }
+  function applyPlayer() {
+    loginToggle.disabled = !contestLive;
+    loginToggle.textContent = contestLive ? 'Anmelden' : 'Anmeldung folgt';
+    loginToggle.hidden = Boolean(player);
+    logoutBtn.hidden = !authToken;
+    if (toFormBtn) toFormBtn.hidden = !contestLive || Boolean(player);
+    if (player) {
+      const eligible = player.eligible_to_win || !player.eligible_after ? '' : ` Wieder gewinnen kannst du ab ${new Date(player.eligible_after).toLocaleDateString('de-DE')}.`;
+      playerState.textContent = `Du fliegst als ${player.display_name}. ${contestLive ? 'Deine Scores zählen automatisch.' : 'Die Wochenwertung ist noch nicht gestartet.'}${eligible}`;
+      if (form) form.hidden = true;
+    } else playerState.textContent = contestLive ? 'Als Gast fliegen oder mit eigenem Namen in die Bestenliste.' : 'Gastspiel ist offen. Die Anmeldung zur Wochenwertung folgt.';
+  }
+  function openLogin() {
+    if (!form || !contestLive) return;
+    form.hidden = false;
+    form.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    form.querySelector<HTMLInputElement>('[name="display_name"]')?.focus({ preventScroll: true });
+  }
+  loginToggle.addEventListener('click', openLogin);
+  toFormBtn?.addEventListener('click', openLogin);
+  q<HTMLButtonElement>('[data-login-cancel]')?.addEventListener('click', () => {
+    if (form) form.hidden = true;
+    canvas.focus({ preventScroll: true });
+  });
 
-  // ── Rücksprung aus der Bestätigungs-Mail (?verified=1) ─────────────────────
-  try {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('verified') === '1') {
-      // P2-06: Ohne laufende Wochenwertung gibt es nichts zu bestätigen, das Banner bleibt weg.
-      verifiedBanner.hidden = !contestLive;
-      params.delete('verified');
-      const rest = params.toString();
-      window.history.replaceState(null, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`);
-      window.dispatchEvent(new CustomEvent('leaderboard:refresh'));
+  async function refreshAuth() {
+    const revision = ++authRevision;
+    authReady = false;
+    if (!authToken) { player = null; applyPlayer(); authReady = true; return; }
+    playerState.textContent = 'Anmeldung wird geprüft …';
+    try {
+      const data = await api<AuthResult>('/auth/me', undefined, true);
+      if (revision !== authRevision) return;
+      player = data.player;
+      applyPlayer();
+    } catch (error) {
+      if (revision !== authRevision) return;
+      player = null;
+      if (error instanceof ApiError && error.status === 401) {
+        authToken = ''; writeStore(AUTH_KEY, '');
+      }
+      applyPlayer();
+      setRunMessage(errorMessage(error));
+    } finally {
+      if (revision === authRevision) { authReady = true; if (player) void submitPending(); }
     }
-  } catch { /* URL nicht lesbar: kein Banner */ }
+  }
+  async function submitPending() {
+    if (submitting || !player || !authReady) return;
+    submitting = true;
+    const activeToken = authToken;
+    try {
+      retryScore.hidden = true;
+      while (readPending().length) {
+        const run = readPending()[0];
+        if (!player || authToken !== activeToken) break;
+        setRunMessage(`${run.score} Punkte werden eingetragen …`);
+        try {
+          const data = await api<ScoreResult>('/score/submit', { token: run.token, score: run.score, duration_ms: run.duration_ms }, true);
+          savePending(readPending().filter(item => item.token !== run.token));
+          if (authToken !== activeToken || !player) break;
+          player.eligible_to_win = data.eligible_to_win;
+          player.eligible_after = data.eligible_after;
+          applyPlayer();
+          const rank = data.rank ? ` Platz ${data.rank} diese Woche.` : '';
+          setRunMessage(data.improved ? `${data.best_score} Punkte stehen in der Bestenliste.${rank}` : `Flug gespeichert. Dein Bestwert bleibt ${data.best_score}.${rank}`);
+          window.dispatchEvent(new CustomEvent('leaderboard:refresh'));
+        } catch (error) {
+          if (authToken !== activeToken) break;
+          setRunMessage(errorMessage(error));
+          if (error instanceof ApiError && error.status === 401) {
+            player = null; authToken = ''; writeStore(AUTH_KEY, ''); applyPlayer();
+            if (form && contestLive) form.hidden = false;
+            break;
+          }
+          if (error instanceof ApiError && [409, 410, 422].includes(error.status)) {
+            savePending(readPending().filter(item => item.token !== run.token));
+            continue;
+          }
+          setRunMessage(errorMessage(error) + ' Dein Flug wartet hier. Sobald die Verbindung wieder da ist, versuchen wir es erneut.');
+          retryScore.hidden = false;
+          break;
+        }
+      }
+    } finally { submitting = false; }
+  }
+  retryScore.addEventListener('click', () => { if (player) void submitPending(); else if (authToken) void refreshAuth(); else openLogin(); });
+  logoutBtn.addEventListener('click', async () => {
+    const token = authToken;
+    ++authRevision;
+    authToken = ''; player = null; writeStore(AUTH_KEY, ''); savePending([]);
+    retryScore.hidden = true;
+    applyPlayer(); setRunMessage('Du bist in diesem Browser abgemeldet.');
+    try {
+      const response = await fetch(`${apiBase}/auth/logout`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(12000) });
+      if (!response.ok) throw new Error('logout unavailable');
+    } catch { /* Lokal bereits abgemeldet; serverseitiges Token läuft regulär ab. */ }
+  });
+
+  if (form && submitBtn && formMeta) {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!form.reportValidity()) return;
+      const data = new FormData(form);
+      if (String(data.get('website') ?? '').trim()) return;
+      submitBtn.disabled = true;
+      formMeta.textContent = 'Anmeldelink wird verschickt …';
+      try {
+        const result = await api<{ ok: boolean; mail_sent: boolean; masked_email: string }>('/auth/start', {
+          email: String(data.get('email') ?? '').trim(), display_name: String(data.get('display_name') ?? '').trim(),
+          consent: data.get('terms') === 'on', age_confirmed: data.get('age') === 'on', terms_version: termsVersion,
+        });
+        if (!result.mail_sent) throw new ApiError('mail_unavailable', 503);
+        formMeta.textContent = `Schau in dein Postfach ${result.masked_email}. Bestätige den Link einmal in diesem Browser. Dein ausstehender Flug wird danach automatisch eingetragen.`;
+      } catch (error) { formMeta.textContent = errorMessage(error); }
+      finally { submitBtn.disabled = false; }
+    });
+  }
+
+  async function initAuth() {
+    const fragment = new URLSearchParams(location.hash.slice(1));
+    const loginToken = fragment.get('login');
+    if (!loginToken) { await refreshAuth(); return; }
+    fragment.delete('login');
+    history.replaceState(null, '', `${location.pathname}${location.search}${fragment.size ? '#' + fragment.toString() : ''}`);
+    const revision = ++authRevision;
+    setRunMessage('E-Mail wird bestätigt …');
+    try {
+      const result = await api<AuthResult>('/auth/verify', { token: loginToken });
+      if (revision !== authRevision || !result.token) return;
+      authToken = result.token; writeStore(AUTH_KEY, authToken); player = result.player; authReady = true;
+      applyPlayer(); setRunMessage('Du bist angemeldet. Deine Flüge zählen jetzt automatisch.');
+      await submitPending();
+    } catch (error) {
+      if (revision !== authRevision) return;
+      authReady = true; setRunMessage(errorMessage(error));
+      if (form && contestLive) form.hidden = false;
+      await refreshAuth();
+    }
+  }
+  window.addEventListener('storage', (event) => {
+    if (event.key === AUTH_KEY) { authToken = readStore(AUTH_KEY) ?? ''; void refreshAuth(); }
+  });
+  window.addEventListener('online', () => { if (player) void submitPending(); else if (authToken) void refreshAuth(); });
+  window.addEventListener('focus', () => { if (player) void submitPending(); else if (authToken) void refreshAuth(); });
+  readPending();
+  void initAuth();
+
 
   // ── Start ──────────────────────────────────────────────────────────────────
   fitCanvas();
@@ -1339,7 +1421,7 @@ const {
 <style>
   .pp {
     background: var(--navy-deep, #0e1825);
-    padding: clamp(16px, 4vw, 40px) clamp(16px, 4vw, 40px);
+    padding: 24px;
     box-sizing: border-box;
   }
 
@@ -1609,7 +1691,18 @@ const {
     box-sizing: border-box;
   }
 
-  .pp-form[hidden] { display: none; }
+  .pp-form[hidden], .pp [hidden] { display: none; }
+  .pp-account { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; color: var(--cream); margin: 0 auto 12px; max-width: 960px; }
+  .pp-account p { flex: 1; min-width: 160px; font-size: 1rem; line-height: 1.4; }
+  .pp-account-button { min-height: 44px; border: 1px solid currentColor; padding: 8px 12px; color: inherit; font-family: var(--font-mono); font-size: 0.75rem; }
+  .pp-account-button:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
+  .pp-account-button:disabled { opacity: 0.65; cursor: default; }
+  .pp-account-status { max-width: 960px; margin: 0 auto 14px; color: var(--cream); font-size: 1rem; line-height: 1.4; }
+  .pp-account-status:empty { display: none; }
+  .pp-retry { color: var(--cream); margin-bottom: 16px; }
+  .pp-form .pp-account-button { display: block; margin-top: 14px; }
+  .pp-actions .fh-link { align-self: center; }
+  #spieler-anmeldung { scroll-margin-top: 90px; }
 
   .pp-form-lead,
   .pp-soon p {

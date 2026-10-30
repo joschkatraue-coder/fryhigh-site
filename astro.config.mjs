@@ -10,6 +10,7 @@ export default defineConfig({
       filter: (page) =>
         !page.includes('/impressum') &&
         !page.includes('/datenschutz') &&
+        !page.includes('/spiel/teilnahmebedingungen') &&
         !page.includes('/crew/'),
     }),
     mdx(),

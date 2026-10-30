@@ -2,7 +2,7 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 
 // Crew-Tool für Gutscheine aus dem Pommespilot-Gewinnspiel. Intern, noindex, per robots.txt gesperrt.
-// Worker-Routen: GET /vouchers/check?code=&pin= (Details nur mit PIN), POST /vouchers/redeem { pin, code, note }.
+// Worker-Routen: GET /vouchers/check?code= mit X-Crew-Pin, POST /vouchers/redeem { pin, code, note }.
 const apiBase = "https://fryhigh-game.fryhigh-bhv.workers.dev";
 ---
 <BaseLayout
@@ -10,8 +10,9 @@ const apiBase = "https://fryhigh-game.fryhigh-bhv.workers.dev";
   description="Gutschein prüfen und einlösen. Crew-intern."
   noindex={true}
 >
-  <main class="crew">
+  <main id="main" class="crew">
     <header>
+      <p><a href="/crew/leaderboard">← Bestenliste verwalten</a></p>
       <span class="eyebrow">Crew-Tool · Pommespilot-Gutschein</span>
       <h1>Gutschein prüfen<br/>und einlösen.</h1>
       <p>Der Gast zeigt den Code aus der Gewinner-Mail (Format <code>FLY-…</code>, 20 Zeichen). Erst <strong>Prüfen</strong>, dann <strong>Einlösen</strong>. Der PIN bleibt in diesem Browser, bis du auf „Abmelden“ tippst.</p>
@@ -138,7 +139,10 @@ const apiBase = "https://fryhigh-game.fryhigh-bhv.workers.dev";
     redeemBtn.hidden = true;
     noteWrap.hidden = true;
     try {
-      const r = await fetch(apiBase + '/vouchers/check?code=' + encodeURIComponent(code) + '&pin=' + encodeURIComponent(pin));
+      const r = await fetch(apiBase + '/vouchers/check?code=' + encodeURIComponent(code), {
+        headers: { 'X-Crew-Pin': pin },
+        cache: 'no-store',
+      });
       const d = await r.json();
       if (d.ok && d.valid) {
         render('ok',

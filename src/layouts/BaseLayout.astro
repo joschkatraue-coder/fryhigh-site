@@ -10,7 +10,7 @@ interface Props {
 
 // Default-Description für Unterseiten ohne eigene (copy-master.md §0.1).
 const DEFAULT_DESCRIPTION =
-  "Fry High, First Class Fritten aus Bremerhaven. Loaded Fries, Smashburger und Catering, Restaurant im Zoo am Meer.";
+  "Fry High aus Bremerhaven. Loaded Fries und Smashburger für eure Feier. Catering mit Foodtruck oder Crew und Winterfeiern auf Anfrage.";
 
 const {
   title,
@@ -28,17 +28,16 @@ const GEO = { latitude: 53.54478, longitude: 8.57016 };
 
 const localBusinessJsonLd = {
   "@context": "https://schema.org",
-  "@type": "Restaurant",
-  "@id": "https://fryhigh.de/#restaurant",
+  "@type": "FoodEstablishment",
+  "@id": "https://fryhigh.de/#fry-high",
   name: "Fry High — First Class Fritten",
   url: "https://fryhigh.de",
   image: new URL("/og-default.jpg", Astro.site).toString(),
   description: DEFAULT_DESCRIPTION,
   // Öffentliche Nummer nur per WhatsApp (F10, Joschka 2026-09-11).
-  telephone: "+49 160 96477823",
+  telephone: "+49 162 7500673",
   email: "info@fryhigh.de",
   servesCuisine: ["Loaded Fries", "Smashburger", "Streetfood"],
-  priceRange: "€",
   address: {
     "@type": "PostalAddress",
     streetAddress: "H.-H.-Meier-Straße 7",
@@ -51,26 +50,6 @@ const localBusinessJsonLd = {
     latitude: GEO.latitude,
     longitude: GEO.longitude,
   },
-  // Saison im Zoo am Meer: „Wir haben auf, wenn der Zoo auf hat: April bis Oktober, 9 bis 19 Uhr.“
-  // Eigene Restaurant-Zeiten erst nach F07.
-  openingHoursSpecification: [
-    {
-      "@type": "OpeningHoursSpecification",
-      dayOfWeek: [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday",
-      ],
-      opens: "09:00",
-      closes: "19:00",
-      validFrom: "2026-04-01",
-      validThrough: "2026-10-31",
-    },
-  ],
   sameAs: [
     "https://instagram.com/fry_high2020",
     "https://www.tiktok.com/@fry_high2020",
@@ -85,6 +64,7 @@ const localBusinessJsonLd = {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
+    {Astro.url.pathname === "/" && <meta name="google-site-verification" content="ouupaCai7cZ_atanfqsZf_MjPM3Mp3UvUpKBiQ5cepk" />}
 
     <title>{title}</title>
     <meta name="description" content={description} />

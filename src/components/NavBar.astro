@@ -6,22 +6,19 @@
    Mobil: Panel mit Backdrop, CTA als erster Eintrag; Toggle-Logik erhalten. */
 const currentPath = Astro.url.pathname;
 const onHome = currentPath === "/" || currentPath === "";
-const onSpiel = currentPath.startsWith("/spiel");
+const onOffer = ["/catering-bremerhaven", "/weihnachtsfeier-bremerhaven"].includes(currentPath.replace(/\/$/, ""));
 
 const links = [
-  { href: "/#karte", label: "Karte" },
-  { href: "/#standorte", label: "Standort" },
-  { href: "/#tisch", label: "Tisch" },
-  { href: "/#catering", label: "Catering" },
-  { href: "/#winter", label: "Winter" },
-  { href: "/spiel", label: "Spiel" },
-  { href: "/#story", label: "Story" },
+  { href: "/catering-bremerhaven/", label: "Catering" },
+  { href: "/weihnachtsfeier-bremerhaven/", label: "Weihnachten" },
+  { href: "/kohlfahrt-bremerhaven/", label: "Grünkohl" },
+  { href: "/spiel", label: "Minigame" },
+  { href: "/#kontakt", label: "Kontakt" },
 ];
 
-const cta = { href: "/#tisch", label: "Tisch anfragen" };
+const cta = { href: onOffer ? "#anfrage" : "/#anfrage", label: "Feier anfragen" };
 
 const anchorFor = (href: string) => (onHome && href.startsWith("/#") ? href.replace("/#", "#") : null);
-const currentFor = (href: string) => (href === "/spiel" && onSpiel ? "page" : undefined);
 ---
 <header class="nav-bar" data-mobile-nav-root>
   <a href="/" class="brand" aria-label="Fry High, First Class Fritten, zur Startseite">
@@ -33,7 +30,7 @@ const currentFor = (href: string) => (href === "/spiel" && onSpiel ? "page" : un
     <ul>
       {links.map((link) => (
         <li>
-          <a href={link.href} data-anchor={anchorFor(link.href)} aria-current={currentFor(link.href)}>{link.label}</a>
+          <a href={link.href} data-anchor={anchorFor(link.href)} aria-current={currentPath.replace(/\/$/, "") === link.href.replace(/\/$/, "") ? "page" : undefined}>{link.label}</a>
         </li>
       ))}
     </ul>
@@ -64,7 +61,7 @@ const currentFor = (href: string) => (href === "/spiel" && onSpiel ? "page" : un
       </li>
       {links.map((link) => (
         <li>
-          <a href={link.href} data-anchor={anchorFor(link.href)} aria-current={currentFor(link.href)}>{link.label}</a>
+          <a href={link.href} data-anchor={anchorFor(link.href)} aria-current={currentPath.replace(/\/$/, "") === link.href.replace(/\/$/, "") ? "page" : undefined}>{link.label}</a>
         </li>
       ))}
     </ul>

@@ -1,7 +1,5 @@
 ---
-// Wochenwertung und Allzeit-Liste („Hall of Pommespiloten“). Rendert nur, wenn die
-// Wochenwertung scharf ist (contestLive). Eigener Eintrag wird aus sessionStorage
-// (pp_last_entry, gesetzt vom Spiel nach dem Eintragen) hervorgehoben.
+// Wochen- und Allzeit-Bestenliste. Die Liste bleibt unabhängig von der Gewinnrunde sichtbar.
 
 interface Props {
   apiBase?: string;
@@ -15,12 +13,11 @@ const {
   prizeLabel = "Wer am Sonntag oben steht, bekommt einen 15-€-Gutschein für Fry High.",
 } = Astro.props;
 ---
-{contestLive && (
-  <section class="leaderboard" id="wochenwertung" data-api-base={apiBase} data-prize={prizeLabel} aria-labelledby="lb-title">
+  <section class="leaderboard" id="wochenwertung" data-api-base={apiBase} data-contest-live={contestLive ? "1" : "0"} data-prize={contestLive ? prizeLabel : "Die Wochenwertung startet bald. Bis dahin bleibt dein Bestwert in diesem Browser."} aria-labelledby="lb-title">
     <div class="lb-head">
       <div class="lb-eyebrow" data-lb-eyebrow>Diese Woche · Top 10</div>
-      <h2 id="lb-title" data-lb-title>Wochenwertung.</h2>
-      <p data-lb-sub>{prizeLabel} Montag früh geht es wieder bei null los.</p>
+      <h2 id="lb-title" data-lb-title>Bestenliste.</h2>
+      <p data-lb-sub>{contestLive ? prizeLabel : "Die Wochenwertung startet bald. Bis dahin bleibt dein Bestwert in diesem Browser."}</p>
     </div>
 
     <div class="lb-tabs" role="tablist" aria-label="Zeitraum">
@@ -29,7 +26,7 @@ const {
     </div>
 
     <ol class="lb-list" data-lb-list>
-      <li class="lb-empty" data-lb-empty>Noch keine bestätigten Scores diese Woche. Mach den Anfang.</li>
+      <li class="lb-empty" data-lb-empty>Bestenliste wird geladen …</li>
     </ol>
 
     <div class="lb-meta">
@@ -37,12 +34,12 @@ const {
       <button type="button" class="lb-refresh" data-lb-refresh>Aktualisieren</button>
     </div>
   </section>
-)}
 
 <script>
   const SECTION = document.querySelector<HTMLElement>('.leaderboard');
   if (SECTION) {
     const apiBase = SECTION.dataset.apiBase ?? '';
+    const contestLive = SECTION.dataset.contestLive === '1';
     const prize = SECTION.dataset.prize ?? '';
     const list = SECTION.querySelector<HTMLOListElement>('[data-lb-list]')!;
     const empty = SECTION.querySelector<HTMLElement>('[data-lb-empty]')!;
@@ -62,15 +59,15 @@ const {
     const labels = {
       week: {
         eyebrow: 'Diese Woche · Top 10',
-        title: 'Wochenwertung.',
-        sub: `${prize} Montag früh geht es wieder bei null los.`.trim(),
-        empty: 'Noch keine bestätigten Scores diese Woche. Mach den Anfang.',
+        title: 'Bestenliste.',
+        sub: prize,
+        empty: contestLive ? 'Noch keine Scores diese Woche. Mach den Anfang.' : 'Hier erscheinen die Scores, sobald die Wochenwertung startet.',
       },
       all: {
         eyebrow: 'Allzeit · Top 10',
         title: 'Hall of Pommespiloten.',
         sub: 'Beste Scores aller Wochen. Mehrere Versuche zählen, es bleibt der höchste.',
-        empty: 'Noch keine bestätigten Scores. Flieg die erste Runde.',
+        empty: contestLive ? 'Noch keine Scores. Flieg die erste Runde.' : 'Hier erscheinen die Scores, sobald die Wochenwertung startet.',
       },
     };
 
@@ -80,26 +77,6 @@ const {
       titleEl.textContent = l.title;
       subEl.textContent = l.sub;
       empty.textContent = l.empty;
-    }
-
-    function ownEntry(): { name: string; score: number } | null {
-      try {
-        const raw = sessionStorage.getItem('pp_last_entry');
-        if (!raw) return null;
-        const parsed = JSON.parse(raw) as { name?: unknown; score?: unknown };
-        const score = Math.floor(Number(parsed.score));
-        if (!Number.isFinite(score)) return null;
-        return { name: String(parsed.name ?? '').trim(), score };
-      } catch {
-        return null;
-      }
-    }
-
-    function isMine(entry: Entry, mine: { name: string; score: number } | null, scoreNum: number, alreadyMarked: boolean) {
-      if (!mine || alreadyMarked || scoreNum !== mine.score) return false;
-      const name = String(entry.name ?? '').trim();
-      if (mine.name) return name.localeCompare(mine.name, 'de', { sensitivity: 'base' }) === 0;
-      return true; // ohne Spitznamen: Worker zeigt „Pilot #…“, nur der Score passt
     }
 
     async function load() {
@@ -123,11 +100,10 @@ const {
           : `Woche ${data.week_key ?? '–'}`;
         list.replaceChildren();
         if (!data.top || data.top.length === 0) {
+          empty.textContent = labels[currentPeriod].empty;
           list.appendChild(empty);
           return;
         }
-        const mine = currentPeriod === 'week' ? ownEntry() : null;
-        let marked = false;
         for (const entry of data.top) {
           const rankNum = Math.floor(Number(entry.rank) || 0);
           const scoreNum = Math.floor(Number(entry.score) || 0);
@@ -144,21 +120,15 @@ const {
           scoreSpan.textContent = String(scoreNum);
           li.append(rankSpan, nameSpan, scoreSpan);
           if (rankNum === 1) li.classList.add('lb-item--top');
-          if (isMine(entry, mine, scoreNum, marked)) {
-            marked = true;
-            li.classList.add('lb-item--me');
-            const tag = document.createElement('span');
-            tag.className = 'lb-me';
-            tag.textContent = 'du';
-            nameSpan.append(' ', tag);
-          }
           list.appendChild(li);
         }
       } catch (e) {
         if ((e as Error).name === 'AbortError') return;
         if (lbController !== controller) return;
         console.warn('leaderboard load failed', e);
-        weekEl.textContent = 'Wochenwertung gerade nicht erreichbar';
+        weekEl.textContent = 'Verbindung fehlgeschlagen';
+        empty.textContent = 'Die Bestenliste ist gerade nicht erreichbar. Versuch es gleich noch einmal.';
+        list.replaceChildren(empty);
       } finally {
         if (lbController === controller) refreshBtn.disabled = false;
       }
@@ -189,7 +159,8 @@ const {
   .leaderboard {
     background: var(--navy);
     color: var(--cream);
-    padding: clamp(48px, 7vw, 84px) clamp(20px, 6vw, 56px);
+    padding: 28px 24px;
+    scroll-margin-top: 90px;
   }
 
   .lb-head {
@@ -209,7 +180,7 @@ const {
 
   .lb-head h2 {
     font-family: var(--font-display);
-    font-size: clamp(2rem, 5vw, 3rem);
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
     text-transform: uppercase;
     line-height: 1;
     margin: 0 0 12px;
@@ -273,7 +244,7 @@ const {
     border-top: 1px dashed color-mix(in oklab, var(--cream) 30%, transparent);
   }
 
-  .lb-item {
+  .leaderboard :global(.lb-item) {
     display: grid;
     grid-template-columns: 52px 1fr auto;
     gap: 14px;
@@ -282,14 +253,14 @@ const {
     border-bottom: 1px dashed color-mix(in oklab, var(--cream) 20%, transparent);
   }
 
-  .lb-rank {
+  .leaderboard :global(.lb-rank) {
     font-family: var(--font-mono);
     font-size: 0.85rem;
     letter-spacing: 0.18em;
     color: color-mix(in oklab, var(--cream) 65%, transparent);
   }
 
-  .lb-name {
+  .leaderboard :global(.lb-name) {
     font-family: var(--font-display);
     font-size: 1.125rem;
     letter-spacing: 0.5px;
@@ -299,20 +270,20 @@ const {
     overflow-wrap: anywhere;
   }
 
-  .lb-score {
+  .leaderboard :global(.lb-score) {
     font-family: var(--font-display);
     font-size: 1.5rem;
     color: var(--cream);
     line-height: 1;
   }
 
-  .lb-item--top {
+  .leaderboard :global(.lb-item--top) {
     background: linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--yellow) 18%, transparent) 60%, transparent 100%);
   }
 
-  .lb-item--top .lb-rank,
-  .lb-item--top .lb-name,
-  .lb-item--top .lb-score { color: var(--yellow); }
+  .leaderboard :global(.lb-item--top .lb-rank),
+  .leaderboard :global(.lb-item--top .lb-name),
+  .leaderboard :global(.lb-item--top .lb-score) { color: var(--yellow); }
 
   .lb-item--me {
     background: color-mix(in oklab, var(--orange) 16%, transparent);

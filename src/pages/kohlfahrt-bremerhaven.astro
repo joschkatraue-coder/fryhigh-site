@@ -1,0 +1,105 @@
+---
+import OfferPage from "../components/OfferPage.astro";
+import gruenkohlPommes from "../assets/photos/gruenkohl-pinkel-pommes.jpg";
+
+const requestText = "Moin Fry High,\n\nwir möchten zur Grünkohlparty kommen.\nWunschtermin / Ausweichtermin:\nGruppe, Verein oder Firma:\nErwachsene ab 12 Jahren:\nKinder 4 bis 11 Jahre:\nKinder unter 4 Jahren:\nMit Kohlfahrt und Bollerwagen:\nVegetarisch oder vegan (Anzahl):\nBesondere Anforderungen:\n";
+const canonical = "https://fryhigh.de/kohlfahrt-bremerhaven/";
+const sections = [
+  {
+    title: "Euer Ziel für die Kohlfahrt",
+    paragraphs: [
+      "Ihr plant eure Kohltour. Wir machen das Essen und den Abend. Ob Firma, Verein, Feuerwehr oder Freundeskreis: Nach der Tour kommt ihr zu uns ins Restaurant im Zoo am Meer und feiert drinnen weiter.",
+      "Ihr wollt gar nicht erst laufen? Auch gut. Ihr könnt direkt zum Essen kommen.",
+    ],
+  },
+  {
+    title: "Was bei 59 € dabei ist",
+    paragraphs: [
+      "Grünkohl nach Familienrezept mit Pinkel und Kassler, dazu Kartoffeln und Senf. Norddeutsch verstanden.",
+      "Von 18 bis 24 Uhr sind die Getränke aus der Partykarte im Preis drin: Bier, alkoholfreies Bier, Hauswein, Softdrinks, Kaffee und Tee. Shots und Flaschen gehören nicht zur Pauschale; die rechnen wir nach Verbrauch einzeln ab.",
+      "59 € ist der Endpreis pro Person ab 12 Jahren.",
+    ],
+  },
+  {
+    title: "Mit Kindern",
+    paragraphs: [
+      "Kinder von 4 bis 11 Jahren zahlen 8,90 €. Dafür gibt es den Baby-Pinguin: Mini-Pommes und Mini Fish & Chips, dazu Softdrinks. Kinder unter 4 sind frei. Ab 12 Jahren gilt der Erwachsenenpreis.",
+    ],
+  },
+  {
+    id: "jugendschutz",
+    title: "Jugendschutz",
+    paragraphs: [
+      "Unter 16 kommt ihr nur mit euren Eltern. Alkohol schenken wir nur nach dem Jugendschutzgesetz aus; Shots und alles Hochprozentige gibt es erst ab 18. Im Zweifel fragen wir nach dem Ausweis.",
+    ],
+  },
+  {
+    title: "Termine und Ablauf",
+    paragraphs: [
+      "Vier Samstage, jeweils von 18 bis 24 Uhr: 16.01., 30.01., 13.02. und 27.02.2027. Nennt uns bei der Anfrage euren Wunschtermin und möglichst einen Ausweichtermin.",
+      "Den Zugang zum Restaurant am Abend und die geltende Eintrittsregel bestätigen wir mit eurer Anmeldung.",
+    ],
+  },
+];
+const steps = [
+  { title: "Termin und Gruppe", text: "Nennt uns Wunschtermin, Gästezahl und wie viele Kinder dabei sind." },
+  { title: "Rückmeldung", text: "Wir prüfen den Abend und melden uns mit Plätzen und Ablauf." },
+  { title: "Bestätigung", text: "Eine Anfrage reserviert noch keinen Platz. Fest ist euer Abend mit unserer Bestätigung." },
+];
+const faq = [
+  { question: "Was kostet die Grünkohlparty?", answer: "59 € pro Person ab 12 Jahren, mit Getränken von 18 bis 24 Uhr aus der Partykarte. Kinder von 4 bis 11 Jahren zahlen 8,90 €, Kinder unter 4 sind frei. Shots und Flaschen rechnen wir extra nach Verbrauch ab." },
+  { question: "Welche Getränke sind im Preis drin?", answer: "Bier, alkoholfreies Bier, Hauswein, Softdrinks, Kaffee und Tee, von 18 bis 24 Uhr. Shots und Flaschen sind nicht in der Pauschale." },
+  { question: "Können wir mit unserer Kohlfahrt direkt zu euch kommen?", answer: "Ja, genau dafür ist der Abend da. Ihr plant eure Tour, wir machen das Essen und den Abend. Ohne Tour seid ihr genauso willkommen." },
+  { question: "Wo lassen wir unseren Bollerwagen?", answer: "Sagt bei der Anfrage, ob ihr mit Bollerwagen kommt. Wo er am Abend stehen kann, klären wir vorher mit euch." },
+  { question: "Können wir bei euch unseren Kohlkönig küren?", answer: "Klar. Sagt es uns bei der Anfrage, dann stimmen wir den Moment mit euch ab." },
+  { question: "Dürfen Kinder und Jugendliche mit?", answer: "Ja, mit ihren Eltern. Unter 16 kommt niemand ohne Eltern. Kinder von 4 bis 11 bekommen den Baby-Pinguin mit Softdrinks für 8,90 €." },
+  { question: "Gibt es vegetarische oder vegane Alternativen?", answer: "Sagt uns bei der Anfrage, für wie viele Gäste. Was wir für euren Abend möglich machen, klären wir vorher mit euch." },
+  { question: "Brauchen wir Zooeintritt?", answer: "Den Zugang zum Restaurant am Abend und die geltende Eintrittsregel bestätigen wir mit eurer Anmeldung." },
+];
+const dates = [["2027-01-16", "2027-01-17"], ["2027-01-30", "2027-01-31"], ["2027-02-13", "2027-02-14"], ["2027-02-27", "2027-02-28"]];
+const events = dates.map(([day, next]) => ({
+  "@type": "Event",
+  "@id": `${canonical}#gruenkohlparty-${day}`,
+  name: "Grünkohlparty im Zoo am Meer",
+  description: "Grünkohl mit Pinkel und Kassler, Getränke von 18 bis 24 Uhr aus der Partykarte. Für Kohlfahrten mit Firma, Verein oder Freunden.",
+  startDate: `${day}T18:00:00+01:00`,
+  endDate: `${next}T00:00:00+01:00`,
+  eventStatus: "https://schema.org/EventScheduled",
+  eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+  image: "https://fryhigh.de/og-default.jpg",
+  location: {
+    "@type": "Place",
+    name: "Fry High · Restaurant im Zoo am Meer",
+    address: { "@type": "PostalAddress", streetAddress: "H.-H.-Meier-Straße 7", addressLocality: "Bremerhaven", postalCode: "27568", addressCountry: "DE" },
+  },
+  organizer: { "@type": "Organization", name: "Fry High", url: "https://fryhigh.de" },
+  offers: [
+    { "@type": "Offer", name: "Erwachsene ab 12 Jahren", price: "59.00", priceCurrency: "EUR", url: `${canonical}#anfrage` },
+    { "@type": "Offer", name: "Kinder 4 bis 11 Jahre", price: "8.90", priceCurrency: "EUR", url: `${canonical}#anfrage` },
+  ],
+}));
+---
+<OfferPage
+  title="Kohlfahrt Bremerhaven 2027: Grünkohlparty 59 € | Fry High"
+  description="Grünkohlparty im Zoo am Meer: 59 € p. P. mit Getränken 18–24 Uhr. Ziel für eure Kohlfahrt mit Firma, Verein oder Freunden. Vier Samstage ab 16.01.2027."
+  label="Grünkohlparty und Kohlfahrt"
+  eyebrow="Januar und Februar 2027 im Restaurant im Zoo am Meer"
+  headline={["Grünkohlparty", "und Kohlfahrt", "in Bremerhaven."]}
+  mark="Ihr plant die Tour. Wir machen den Abend."
+  lead="Grünkohl mit Pinkel und Kassler, Getränke von 18 bis 24 Uhr und ein Abend für eure ganze Runde: 59 € pro Person im Restaurant im Zoo am Meer. Vier Samstage: 16.01., 30.01., 13.02. und 27.02.2027."
+  facts={["59 € p. P. · Getränke 18–24 Uhr inklusive", "Kinder 4–11 Jahre 8,90 € · unter 4 frei", "Sa 16.01. · 30.01. · 13.02. · 27.02.2027"]}
+  {sections}
+  processTitle="So meldet ihr eure Gruppe an"
+  {steps}
+  {faq}
+  faqTitle="Eure Fragen zur Kohlfahrt"
+  primaryLabel="Grünkohlparty anfragen"
+  requestTitle="Wann kommt eure Kohlfahrt?"
+  requestSubject="Grünkohlparty und Kohlfahrt anfragen"
+  requestIntro="Ruft an oder schreibt uns per WhatsApp oder Mail: Wunschtermin, Gästezahl, wie viele Kinder dabei sind und ob ihr mit Kohlfahrt und Bollerwagen kommt."
+  {requestText}
+  related={{ href: "/weihnachtsfeier-bremerhaven/", label: "Weihnachtsfeier am Zoo ansehen", title: "Vorher noch Weihnachten feiern?", text: "Drei Tischbuffet-Pakete für eure Weihnachtsfeier 2026 im Restaurant im Zoo am Meer." }}
+  call
+  extraSchema={events}
+  heroImage={gruenkohlPommes}
+/>

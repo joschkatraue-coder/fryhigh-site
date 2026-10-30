@@ -1,0 +1,173 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+const apiBase = "https://fryhigh-game.fryhigh-bhv.workers.dev";
+---
+<BaseLayout title="Crew · Bestenliste · Fry High" description="Interne Übersicht der Pommespilot-Bestenliste." noindex={true}>
+  <main id="main" class="crew-board" data-api-base={apiBase}>
+    <header>
+      <span class="eyebrow">Fry High · Crew</span>
+      <h1>Bestenliste prüfen.</h1>
+      <p><a href="/spiel">Zum Spiel</a> · <a href="/crew/vouchers">Gutscheine prüfen</a></p>
+    </header>
+    <form data-crew-login class="controls">
+      <label>Crew-PIN<input type="password" name="pin" required autocomplete="off" /></label>
+      <button type="submit">Liste laden</button>
+      <button type="button" data-crew-logout>Abmelden</button>
+    </form>
+    <p class="status" data-crew-status role="status">Die Teilnehmerdaten werden erst nach PIN-Prüfung geladen.</p>
+    <section data-crew-results hidden>
+      <div class="controls">
+        <label>Woche<select data-week><option value="">Aktuelle Woche</option></select></label>
+        <button type="button" data-refresh>Aktualisieren</button>
+      </div>
+      <p data-total></p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Name / E-Mail</th><th>Score</th><th>Gewinnberechtigung</th><th>Sichtbarkeit</th></tr></thead>
+        <tbody data-rows></tbody>
+      </table></div>
+      <div class="controls"><button type="button" data-previous>Zurück</button><button type="button" data-next>Weitere Einträge</button></div>
+      <h2>Wochengewinne</h2>
+      <div class="winner-list" data-winners></div>
+    </section>
+  </main>
+</BaseLayout>
+<script>
+  const root = document.querySelector<HTMLElement>('.crew-board')!;
+  const endpoint = root.dataset.apiBase!;
+  const login = root.querySelector<HTMLFormElement>('[data-crew-login]')!;
+  const input = login.querySelector<HTMLInputElement>('[name="pin"]')!;
+  const status = root.querySelector<HTMLElement>('[data-crew-status]')!;
+  const results = root.querySelector<HTMLElement>('[data-crew-results]')!;
+  const rows = root.querySelector<HTMLElement>('[data-rows]')!;
+  const week = root.querySelector<HTMLSelectElement>('[data-week]')!;
+  const total = root.querySelector<HTMLElement>('[data-total]')!;
+  const previous = root.querySelector<HTMLButtonElement>('[data-previous]')!;
+  const next = root.querySelector<HTMLButtonElement>('[data-next]')!;
+  const winners = root.querySelector<HTMLElement>('[data-winners]')!;
+  const PIN_KEY = 'fh-game-crew-pin';
+  let pin = '';
+  let offset = 0;
+  let revision = 0;
+  const limit = 100;
+  interface Entry { id: number | string; display_name: string; email: string; score: number; hidden: number | boolean; eligible_to_win: boolean; eligible_after: number | null }
+  interface Voucher { code: string; score: number; week_key: string; issued_at: number; expires_at: number; redeemed_at: number | null; label: string; value_eur: number; winner_name: string | null; winner_email: string | null; winner_mail_status: string; crew_mail_status: string; winner_mail_retry_safe: boolean }
+  interface List { ok: boolean; week_key: string; total: number; entries: Entry[]; weeks: { week_key: string; status: string }[]; vouchers: Voucher[] }
+  try { pin = sessionStorage.getItem(PIN_KEY) ?? ''; input.value = pin; } catch { /* optional */ }
+  async function request<T>(path: string, body?: unknown): Promise<T> {
+    const response = await fetch(endpoint + path, {
+      method: body ? 'POST' : 'GET',
+      headers: { 'X-Crew-Pin': pin, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+      cache: 'no-store', signal: AbortSignal.timeout(12000),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(response.status === 401 ? 'PIN nicht gültig.' : data.error === 'delivery_uncertain' ? 'Zustellung unklar. Vor einem erneuten Versand muss sie geprüft werden.' : data.error === 'mail_unavailable' ? 'Mailversand fehlgeschlagen. Der Gutschein bleibt bestehen.' : 'Gerade nicht erreichbar. Bitte erneut versuchen.');
+    return data;
+  }
+  async function load() {
+    if (!pin) return;
+    const current = ++revision;
+    status.textContent = 'Liste wird geladen …';
+    try {
+      const query = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+      if (week.value) query.set('week_key', week.value);
+      const data = await request<List>('/admin/scores?' + query);
+      if (current !== revision) return;
+      rows.replaceChildren();
+      for (const entry of data.entries) {
+        const row = document.createElement('tr');
+        const identity = document.createElement('td');
+        const name = document.createElement('strong'); name.textContent = entry.display_name;
+        const email = document.createElement('span'); email.textContent = entry.email;
+        identity.append(name, email);
+        const score = document.createElement('td'); score.textContent = String(entry.score);
+        const eligible = document.createElement('td');
+        eligible.textContent = entry.eligible_to_win ? 'Berechtigt' : entry.eligible_after ? `Wieder ab ${new Date(entry.eligible_after).toLocaleDateString('de-DE')}` : 'Nicht berechtigt';
+        const action = document.createElement('td');
+        const toggle = document.createElement('button'); toggle.type = 'button';
+        toggle.textContent = entry.hidden ? 'Wieder anzeigen' : 'Ausblenden';
+        toggle.addEventListener('click', async () => {
+          toggle.disabled = true;
+          try {
+            await request('/admin/hide-score', { id: entry.id, hidden: !entry.hidden });
+            if (current === revision) await load();
+          } catch (error) { if (current === revision) status.textContent = error instanceof Error ? error.message : 'Änderung fehlgeschlagen.'; }
+          finally { toggle.disabled = false; }
+        });
+        action.append(toggle); row.append(identity, score, eligible, action); rows.append(row);
+      }
+      const selected = week.value;
+      week.replaceChildren(new Option('Aktuelle Woche', ''));
+      for (const item of data.weeks ?? []) week.add(new Option(`${item.week_key} · ${item.status}`, item.week_key));
+      if (selected) week.value = selected;
+      total.textContent = `${data.total} Einträge · ${data.week_key} · angezeigt ${data.total ? offset + 1 : 0}–${Math.min(offset + data.entries.length, data.total)}`;
+      previous.disabled = offset === 0; next.disabled = offset + limit >= data.total;
+      winners.replaceChildren();
+      const mailStatus: Record<string, string> = { pending: 'Noch nicht gesendet', sending: 'Versand läuft', sent: 'Versandt', failed: 'Versand fehlgeschlagen', uncertain: 'Zustellung unklar – vor erneutem Versand prüfen' };
+      for (const voucher of data.vouchers ?? []) {
+        const card = document.createElement('article'); card.className = 'winner-card';
+        const heading = document.createElement('h3'); heading.textContent = voucher.week_key;
+        const winner = document.createElement('p'); winner.textContent = `${voucher.winner_name ?? 'Name nicht mehr gespeichert'} · ${voucher.score} Punkte`;
+        const email = document.createElement('p'); email.textContent = voucher.winner_email ?? 'E-Mail nicht mehr gespeichert';
+        const code = document.createElement('p'); code.textContent = `${voucher.label || `${voucher.value_eur} € Gutschein`}: ${voucher.code}`;
+        const validity = document.createElement('p'); validity.textContent = voucher.redeemed_at ? `Eingelöst am ${new Date(voucher.redeemed_at).toLocaleDateString('de-DE')}` : `Gültig bis ${new Date(voucher.expires_at).toLocaleDateString('de-DE')}`;
+        const delivery = document.createElement('p'); delivery.textContent = `Gewinnermail: ${mailStatus[voucher.winner_mail_status] ?? 'Status unbekannt'}. Crew-Mail: ${mailStatus[voucher.crew_mail_status] ?? 'Status unbekannt'}.`;
+        card.append(heading, winner, email, code, validity, delivery);
+        if (voucher.winner_mail_retry_safe) {
+          const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Gewinnermail erneut senden';
+          retry.addEventListener('click', async () => {
+            retry.disabled = true;
+            try {
+              await request('/admin/retry-winner-mail', { wk: voucher.week_key });
+              if (current === revision) { await load(); status.textContent = 'Gewinnermail versandt. Der vorhandene Gutschein bleibt derselbe.'; }
+            } catch (error) {
+              if (current === revision) { await load(); status.textContent = error instanceof Error ? error.message : 'Versand fehlgeschlagen.'; }
+            } finally { retry.disabled = false; }
+          });
+          card.append(retry);
+        }
+        winners.append(card);
+      }
+      if (!winners.childElementCount) winners.textContent = 'Noch keine Wochengewinne ermittelt.';
+      results.hidden = false;
+      status.textContent = 'Liste geladen. E-Mail-Adressen bleiben in dieser Crew-Ansicht.';
+      try { sessionStorage.setItem(PIN_KEY, pin); } catch { /* im Arbeitsspeicher nutzbar */ }
+    } catch (error) {
+      if (current !== revision) return;
+      results.hidden = true; rows.replaceChildren(); winners.replaceChildren();
+      status.textContent = error instanceof Error ? error.message : 'Liste konnte nicht geladen werden.';
+    }
+  }
+  login.addEventListener('submit', event => { event.preventDefault(); pin = input.value.trim(); offset = 0; void load(); });
+  week.addEventListener('change', () => { offset = 0; void load(); });
+  root.querySelector('[data-refresh]')?.addEventListener('click', () => void load());
+  previous.addEventListener('click', () => { offset = Math.max(0, offset - limit); void load(); });
+  next.addEventListener('click', () => { offset += limit; void load(); });
+  root.querySelector('[data-crew-logout]')?.addEventListener('click', () => {
+    ++revision; pin = ''; input.value = ''; results.hidden = true; rows.replaceChildren(); winners.replaceChildren();
+    try { sessionStorage.removeItem(PIN_KEY); } catch { /* optional */ }
+    status.textContent = 'Abgemeldet. Teilnehmerdaten sind aus dieser Ansicht entfernt.';
+  });
+  if (pin) void load();
+</script>
+<style>
+  .crew-board { max-width: 1120px; margin: auto; padding: 40px 20px; }
+  h1 { margin: 12px 0 20px; font-size: clamp(2rem, 6vw, 4rem); }
+  a { text-decoration: underline; text-underline-offset: 3px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 24px 0; }
+  label { display: grid; gap: 8px; font-family: var(--font-mono); font-size: 0.85rem; }
+  input, select, .crew-board :global(button) { padding: 10px 14px; min-height: 44px; border: 1px solid var(--navy); }
+  .crew-board :global(button) { color: var(--cream); background: var(--navy); font-family: var(--font-mono); font-size: 0.8rem; }
+  .crew-board :global(button:disabled) { opacity: 0.45; cursor: default; }
+  .status { font-size: 1.1rem; line-height: 1.5; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  th, .crew-board :global(td) { text-align: left; padding: 14px 10px; border-bottom: 1px solid var(--navy); }
+  th { font-family: var(--font-mono); font-size: 0.8rem; }
+  .crew-board :global(td strong), .crew-board :global(td span) { display: block; overflow-wrap: anywhere; }
+  h2 { margin: 32px 0 16px; }
+  .winner-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+  .winner-list :global(.winner-card) { border: 1px solid var(--navy); padding: 20px; display: grid; gap: 12px; overflow-wrap: anywhere; }
+  .winner-list :global(h3) { font-size: 1.5rem; }
+  [hidden] { display: none; }
+</style>

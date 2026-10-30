@@ -7,13 +7,19 @@
 -- Bestehende DB (Stand Mai 2026) auf den Stand 2026-09-11 heben: NUR den Block "Migration 2026-09-11"
 -- unten ausführen (per --command), nicht diese Datei; ALTER TABLE ADD COLUMN bricht bei schon vorhandener Spalte ab.
 --
--- 4 Tables · caveman, kein Migrations-Framework.
+-- Fresh database schema, including confirmed player accounts (2026-09-16).
+-- Existing complete 2026-09-11 databases: apply game-migration-2026-09-16.sql once, not this full schema.
 
 CREATE TABLE IF NOT EXISTS sessions (
   token TEXT PRIMARY KEY,
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL,   -- 60 min nach created_at (Worker SESSION_MS)
-  used INTEGER NOT NULL DEFAULT 0
+  used INTEGER NOT NULL DEFAULT 0,
+  email_key TEXT,
+  week_key TEXT,
+  receipt_id TEXT,
+  submitted_score INTEGER,
+  submitted_duration INTEGER
   -- ip_hash entfernt 2026-09-11 (wurde nie gelesen, statischer Salt)
 );
 
@@ -34,9 +40,11 @@ CREATE TABLE IF NOT EXISTS scores (
   -- Migration 2026-09-11:
   terms_version TEXT,                  -- Version der Teilnahmebedingungen, die der Spieler bestätigt hat
   terms_accepted_at INTEGER,           -- Zeitstempel des Consent-Hakens (Nachweis)
-  age_confirmed INTEGER NOT NULL DEFAULT 0,   -- Haken "mindestens 16"
+  age_confirmed INTEGER NOT NULL DEFAULT 0,   -- Haken "mindestens 18"
   newsletter_confirmed_at INTEGER,     -- Klick auf den Magic-Link bei gesetztem Opt-in
-  hidden INTEGER NOT NULL DEFAULT 0    -- Crew blendet Eintrag aus Rangliste und Gewinnermittlung aus (/admin/hide-score)
+  hidden INTEGER NOT NULL DEFAULT 0,   -- Crew blendet Eintrag aus Rangliste und Gewinnermittlung aus (/admin/hide-score)
+  email_key TEXT,
+  entry_key TEXT UNIQUE
 );
 
 CREATE INDEX IF NOT EXISTS idx_scores_week_top ON scores(week_key, verified, score DESC);
@@ -57,7 +65,17 @@ CREATE TABLE IF NOT EXISTS vouchers (
   kind TEXT,                           -- 'meal' (Gericht nach Wahl) | 'eur'
   label TEXT,                          -- Anzeige-Text, z. B. 'Ein Gericht nach Wahl, aufs Haus'
   value_eur INTEGER,                   -- Warenwert-Deckel (bei kind='meal'), kein Rabattbetrag
-  redeem_location TEXT                 -- z. B. 'Fry High im Zoo am Meer'
+  redeem_location TEXT,
+  email_key TEXT,
+  winner_name TEXT,
+  winner_mail_status TEXT NOT NULL DEFAULT 'pending',
+  winner_mail_first_at INTEGER,
+  winner_mail_attempt_at INTEGER,
+  winner_mail_sent_at INTEGER,
+  crew_mail_status TEXT NOT NULL DEFAULT 'pending',
+  crew_mail_first_at INTEGER,
+  crew_mail_attempt_at INTEGER,
+  crew_mail_sent_at INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS idx_vouchers_week ON vouchers(week_key);
@@ -70,6 +88,48 @@ CREATE TABLE IF NOT EXISTS weeks (
   status TEXT NOT NULL DEFAULT 'open',  -- 'open' | 'frozen' | 'closed'
   frozen_at INTEGER,
   closed_at INTEGER
+);
+
+-- Confirmed player accounts. Raw addresses expire after 120 days without login.
+CREATE TABLE IF NOT EXISTS players (
+  email_key TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  verified_at INTEGER NOT NULL,
+  last_login_at INTEGER NOT NULL,
+  terms_version TEXT NOT NULL,
+  terms_accepted_at INTEGER NOT NULL,
+  age_confirmed INTEGER NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS auth_links (
+  token_hash TEXT PRIMARY KEY,
+  email_key TEXT NOT NULL,
+  email TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  used_at INTEGER,
+  terms_version TEXT NOT NULL,
+  mail_status TEXT NOT NULL DEFAULT 'pending'
+);
+CREATE TABLE IF NOT EXISTS player_sessions (
+  token_hash TEXT PRIMARY KEY,
+  email_key TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_player_sessions_expiry ON player_sessions(expires_at);
+CREATE TABLE IF NOT EXISTS request_limits (
+  bucket_key TEXT PRIMARY KEY,
+  hits INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+-- Pseudonymous one-year eligibility ledger. Delete at/after eligible_after, never at 120 days.
+CREATE TABLE IF NOT EXISTS winner_history (
+  email_key TEXT PRIMARY KEY,
+  week_key TEXT NOT NULL,
+  won_at INTEGER NOT NULL,
+  eligible_after INTEGER NOT NULL
 );
 
 -- ─── Migrationen (nur bei bestehender DB, von Hand) ───────────────────────

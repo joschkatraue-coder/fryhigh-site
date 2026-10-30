@@ -1,0 +1,69 @@
+---
+import OfferPage from "../components/OfferPage.astro";
+
+const requestText = "Moin Fry High,\n\nwir möchten Catering anfragen.\nDatum / Ausweichdatum:\nOrt / Adresse:\nGästezahl:\nAnlass:\nGewünschter Ausgabeort:\nVorhandene Ausstattung:\nWünsche zu Essen und Ablauf:\nBesondere Anforderungen:\n";
+const christmasRequest = requestText.replace("Catering anfragen", "Weihnachts-Catering anfragen");
+const sections = [
+  {
+    title: "Streetfood für euren Anlass",
+    paragraphs: ["Firmenfeier, Hochzeit oder Geburtstag: Sagt uns, wann gegessen werden soll und welche Speisen ihr euch wünscht. Für die erste Anfrage braucht ihr noch keine fertige Menüplanung."],
+  },
+  {
+    title: "Foodtruck, Crew oder Tischbuffet?",
+    paragraphs: [
+      "Der Foodtruck ist eine mögliche Ausgabe direkt bei eurer Feier. Wenn der Truck nicht zu eurem Ort passt, prüfen wir die Umsetzung mit Crew. Beim Tischbuffet stehen Platten und Schüsseln direkt auf euren Tischen: Ihr greift zu und reicht weiter.",
+      "Welche Form zum Termin und Veranstaltungsort passt, klären wir mit euch vor dem Angebot.",
+    ],
+  },
+  {
+    title: "Was wir für die erste Prüfung brauchen",
+    paragraphs: ["Schickt uns Datum und möglichst ein Ausweichdatum, die genaue Adresse, Gästezahl und Anlass. Nennt außerdem den gewünschten Ausgabeort und welche Ausstattung dort bereits vorhanden ist. So können wir Foodtruck, Crew und Tischbuffet sinnvoll prüfen."],
+  },
+  {
+    title: "Euer Ort liegt nicht in Bremerhaven?",
+    paragraphs: ["Schickt uns trotzdem die genaue Adresse. Wir prüfen Termin, Anfahrt und welche Umsetzung vor Ort möglich ist. Ob wir euren Ort bedienen und welche Anfahrt dazugehört, steht anschließend im Angebot."],
+  },
+  {
+    id: "weihnachtscatering",
+    title: "Weihnachts-Catering 2026 mit dem Foodtruck",
+    paragraphs: [
+      "Für Weihnachtsfeiern 2026 an eurem Standort bieten wir ein Truck-Angebot mit einem Smashburger und einer Portion Pommes pro Gast, Truck und Crew, Auf- und Abbau sowie bis zu zwei Stunden Ausgabe. Das Angebot startet ab 1.250 € brutto inklusive Standard-Anfahrt; Getränke sind nicht enthalten.",
+      "Ihr stellt eine ebene Fläche mit Zufahrt, 16-A-Strom und einen wettergeschützten Platz zum Essen. Schickt uns die genaue Adresse, damit wir Anfahrt und Umsetzung prüfen können. Diese Eckdaten gelten für das Weihnachts-Truck-Angebot; andere Cateringformate stimmen wir separat mit euch ab.",
+    ],
+    link: { href: `https://wa.me/491627500673?text=${encodeURIComponent(christmasRequest)}`, label: "Weihnachts-Catering anfragen" },
+  },
+];
+const steps = [
+  { title: "Eure Angaben", text: "Schickt uns Datum, genaue Adresse, Gästezahl, Anlass, gewünschten Ausgabeort und vorhandene Ausstattung. Wenn ihr flexibel seid, nennt ein Ausweichdatum." },
+  { title: "Gemeinsam abstimmen", text: "Wir prüfen die passende Umsetzung und stimmen die Speisenauswahl mit euch ab." },
+  { title: "Euer Angebot", text: "Welche Leistungen dazugehören und was sie kosten, steht im Angebot. Eure erste Anfrage ist noch keine Buchung." },
+];
+const faq = [
+  { question: "Ab wie vielen Personen bietet ihr Catering an?", answer: "Unser Catering startet ab 50 Personen. Kleinere Runden können ebenfalls anfragen. Ob und wie wir eure Feier übernehmen können, prüfen wir anhand von Termin, Ort und Umfang." },
+  { question: "Gibt es vegetarische oder vegane Optionen?", answer: "Ja, nach Abstimmung. Nennt uns die gewünschten Varianten und die ungefähre Anzahl. Allergien und Unverträglichkeiten besprechen wir vor dem Angebot; schreibt eure Anforderungen direkt in die Anfrage." },
+  { question: "Ist beim Catering automatisch ein Foodtruck dabei?", answer: "Nein. Wir prüfen Foodtruck, Crew oder Tischbuffet passend zu eurem Ort und Wunschtermin. Schreibt den gewünschten Ausgabeort und die vorhandene Ausstattung direkt in die Anfrage." },
+  { question: "Was kostet das Catering, und was ist enthalten?", answer: "Ihr erhaltet ein individuelles Angebot. Nennt auch Wünsche zu Getränken, Geschirr oder Betreuung, damit wir prüfen können, was wir anbieten. Solche Leistungen sind nicht automatisch enthalten." },
+  { question: "Kommt ihr auch außerhalb von Bremerhaven?", answer: "Anfragen sind möglich, eine pauschale Lieferzusage gibt es nicht. Schickt uns die genaue Adresse. Ob wir euren Ort bedienen und welche Anfahrt dazugehört, klären wir im Angebot." },
+];
+---
+<OfferPage
+  title="Catering in Bremerhaven: Foodtruck oder Crew | Fry High"
+  description="Loaded Fries, Smashburger und eigene Saucen für Firmenfeier, Hochzeit oder Weihnachtsfeier. Catering in Bremerhaven mit Foodtruck oder Crew anfragen."
+  label="Catering"
+  eyebrow="Foodtruck oder Crew"
+  headline={["Catering in", "Bremerhaven."]}
+  mark="Ihr feiert. Wir machen Fritten."
+  lead="Loaded Fries, Smashburger und eigene Saucen für eure Firmenfeier, Hochzeit oder Weihnachtsfeier in Bremerhaven. Foodtruck, Crew oder Tischbuffet: Was zu eurem Ort und eurer Runde passt, klären wir vor dem Angebot mit euch."
+  facts={["Loaded Fries & Smashburger", "Foodtruck · Crew · Tischbuffet", "Ab 50 Personen · kleinere Runden auf Anfrage"]}
+  {sections}
+  processTitle="Von eurer Idee zum Angebot"
+  {steps}
+  {faq}
+  faqTitle="Eure Fragen zum Catering"
+  primaryLabel="Catering anfragen"
+  requestTitle="Erzählt uns von eurer Feier."
+  requestSubject="Catering anfragen"
+  requestIntro="Für eure Anfrage brauchen wir: Datum, Veranstaltungsort mit Adresse, ungefähre Gästezahl, Anlass, gewünschten Ausgabeort und vorhandene Ausstattung. Ergänzt Essenswünsche, besondere Anforderungen und möglichst ein Ausweichdatum."
+  {requestText}
+  related={{ href: "/weihnachtsfeier-bremerhaven/", label: "Weihnachtsfeier am Zoo ansehen", title: "Ihr sucht einen Ort für eure Weihnachtsfeier?", text: "Plant euren Abend bei uns im Restaurant im Zoo am Meer." }}
+/>
