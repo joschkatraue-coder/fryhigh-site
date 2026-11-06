@@ -75,7 +75,7 @@ const {
     <div class="pp-overlay" data-overlay="idle">
       <div class="pp-card">
         <div class="pp-eyebrow">Pommespilot</div>
-        <h3>Flieg. Sammel. Schmier nicht ab.</h3>
+        <h2>Flieg. Sammel. Schmier nicht ab.</h2>
         <p>
           Jeder Klick, Tipp<span class="kbd-hint"> oder Druck auf die <kbd>Leertaste</kbd></span> gibt dem Flieger einen Aufwärtsimpuls. Danach sinkt er wieder. Drücke oder tippe für den nächsten Impuls erneut. Zutaten geben Punkte, drei von einer Kreation
           geben Bonus. Möwen, Ketchup, Wolkendecke und Wasser sind Schluss.
@@ -88,7 +88,7 @@ const {
     <div class="pp-overlay" data-overlay="pause" hidden>
       <div class="pp-card pp-card--slim">
         <div class="pp-eyebrow">Pause</div>
-        <h3>Kurz durchatmen.</h3>
+        <h2>Kurz durchatmen.</h2>
         <p>Tipp, Klick<span class="kbd-hint"> oder <kbd>Leertaste</kbd></span>, dann geht es weiter.</p>
       </div>
     </div>
@@ -96,7 +96,7 @@ const {
     <div class="pp-overlay" data-overlay="over" hidden>
       <div class="pp-card">
         <div class="pp-eyebrow">Abgeschmiert</div>
-        <h3>Abgeschmiert bei <span data-final>0</span>.</h3>
+        <h2>Abgeschmiert bei <span data-final>0</span>.</h2>
         <p class="pp-note" data-best-note hidden>Neuer Bestwert.</p>
         <p class="pp-rank" data-rank hidden></p>
         <div class="pp-actions">
@@ -114,7 +114,7 @@ const {
   <form class="pp-form" id="spieler-anmeldung" data-score-form hidden>
     <div class="pp-form-head">
       <span class="pp-eyebrow">Dein Platz in der Bestenliste</span>
-      <h3>Unter welchem Namen fliegst du?</h3>
+      <h2>Unter welchem Namen fliegst du?</h2>
       <p class="pp-form-lead">{contestLive ? "E-Mail einmal bestätigen. Danach zählen deine Flüge automatisch." : "Die Anmeldung ist noch nicht freigeschaltet. Sobald es losgeht, bestätigst du hier einmal deine E-Mail."}</p>
     </div>
     <label class="pp-field">
@@ -1617,9 +1617,9 @@ const {
     margin-bottom: 8px;
   }
 
-  .pp-card h3,
-  .pp-form h3,
-  .pp-soon h3 {
+  .pp-card h2,
+  .pp-form h2,
+  .pp-soon h2 {
     font-family: var(--font-display);
     font-size: clamp(1.4rem, 4vw, 2rem);
     text-transform: uppercase;

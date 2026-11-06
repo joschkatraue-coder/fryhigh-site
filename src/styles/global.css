@@ -49,7 +49,7 @@ h3 { font-size: var(--t-h3); }
 .accent { color: var(--accent); }
 
 /* ── Button-Familien (Design-Audit §2.5, Launch-Umbau 2026-09-11) ─────────────
-   .fh-btn                Primär: Anton, Uppercase, Cream auf Orange, kein Radius
+   .fh-btn                Primär: Anton, Uppercase, Ink auf Orange, kein Radius
    .fh-btn.fh-btn--ghost  Sekundär: JetBrains Mono, transparent, 1,5-px-Rahmen in currentColor
    .fh-link               Textlink: Mono mit 2-px-Orange-Underline
    Alle drei erben ihre Farbe (Ghost, Link) bzw. bringen sie mit (Primär) und funktionieren
@@ -69,7 +69,8 @@ h3 { font-size: var(--t-h3); }
   text-transform: uppercase;
   text-decoration: none;
   text-align: center;
-  color: var(--cream);
+  /* Ink statt Cream: Cream auf Orange hat nur 3,2:1 Kontrast, Ink 4,6:1 (WCAG AA; A11Y-Paket Variante A, 2026-11-06) */
+  color: var(--ink-text);
   background: var(--orange);
   border: 1.5px solid var(--orange);
   border-radius: 0;
@@ -84,8 +85,7 @@ h3 { font-size: var(--t-h3); }
 }
 
 .fh-btn:hover {
-  background: var(--orange-deep);
-  border-color: var(--orange-deep);
+  /* Orange bleibt: Ink auf Orange-Deep wäre unlesbar; der Hover lebt vom 2-px-Shift */
   transform: translateY(-2px);
 }
 

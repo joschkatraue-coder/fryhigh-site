@@ -6,7 +6,7 @@ hero:
     - text: "Bremerhaven."
       accent: true
   lead: "Loaded Fries, Smashburger, eigene Saucen. Wir bringen Fry High zu eurer Hochzeit, Firmenfeier oder eurem Geburtstag."
-  location_line: "Aktuell für Catering und Veranstaltungen auf Anfrage."
+  location_line: "Ab 13.11. Do bis Sa ab 17:30 Uhr im Restaurant am Zoo am Meer. Catering und Feiern auf Anfrage."
   ctas:
     - label: "Feier anfragen"
       href: "#anfrage"

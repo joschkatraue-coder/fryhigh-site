@@ -20,6 +20,8 @@ const {
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site).toString();
+// Cloudflare-Markierungen gegen den Mailschutz (siehe <body>); als Ausdruck, damit Astro sie roh ausgibt.
+const EMAIL_OFF = ["<!" + "--email_off-->", "<!" + "--/email_off-->"];
 const isHome = Astro.url.pathname === "/" || Astro.url.pathname === "";
 
 // Geo: Nominatim-Abfrage „H.-H.-Meier-Straße 7, 27568 Bremerhaven“ am 2026-09-11
@@ -101,8 +103,12 @@ const websiteJsonLd = {
     <slot name="head" />
   </head>
   <body>
+    {/* Cloudflare-Mailschutz aus: sonst ersetzt Cloudflare jede Adresse durch einen Platzhalter und lädt
+        email-decode.min.js nach (Lighthouse 2026-11-06). Astro entfernt HTML-Kommentare, daher set:html. */}
+    <Fragment set:html={EMAIL_OFF[0]} />
     <a href="#main" class="skip-link">Zum Inhalt springen</a>
     <slot />
+    <Fragment set:html={EMAIL_OFF[1]} />
     <style is:global>
       .skip-link {
         position: absolute;

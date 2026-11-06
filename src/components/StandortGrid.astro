@@ -37,7 +37,8 @@ const photoFocus: Record<string, string> = {
 const WHATSAPP = {
   label: "WhatsApp: 0162 7500 673",
   href: "https://wa.me/491627500673",
-  aria: "Fry High per WhatsApp schreiben",
+  // Kein eigenes aria-label: Der sichtbare Text ist der Linkname (WCAG 2.5.3, Lighthouse label-content-name-mismatch).
+  aria: undefined,
 };
 ---
 <section class="standorte has-mascot" id="standorte" aria-labelledby="standorte-title">

@@ -3,6 +3,8 @@
    Ortszeile (Mono) und zwei CTAs (.fh-btn / .fh-btn--ghost). Page-Reveal-Stagger per CSS
    (CI v1 §8.1/§8.2: 600 ms gesamt, 60 ms Stagger; reduced-motion: Snap). Mascot nur ab
    1024 px, rechts unten außerhalb der Textspalte. Kein Stamp im Cream-Container (CI §7.3):
+   Kopfbild (2026-11-06): nur WebP mit Qualität 60. Bei diesem Foto war AVIF größer als WebP (1280 px: 122 statt 90 KB);
+   vorher AVIF Qualität 82 mit 229 KB als größte Bremse der Startseite (Lighthouse).
    02-stamp-flat.svg ist ein Scaffold, dessen Bogentext im Browser mit dem SINCE-2020-Banner
    kollidiert (Render-Test 2026-09-11); nachziehen, sobald die finale Marke vorliegt. */
 import { Picture } from "astro:assets";
@@ -50,8 +52,8 @@ const normalizedLines = headline_lines.map((line) =>
       alt=""
       widths={[640, 1280, 1920, 2560, 3840]}
       sizes="100vw"
-      formats={["avif", "webp"]}
-      quality={82}
+      formats={["webp"]}
+      quality={60}
       loading="eager"
       fetchpriority="high"
     />

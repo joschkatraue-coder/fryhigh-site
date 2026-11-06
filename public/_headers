@@ -1,0 +1,9 @@
+# Cloudflare Pages: Dateien mit Inhalts-Hash im Namen ändern sich nie, Browser dürfen sie ein Jahr behalten.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Feste Bilder ohne Hash: eine Woche, danach Prüfung beim Server.
+/cutouts/*
+  Cache-Control: public, max-age=604800
+/lockups/*
+  Cache-Control: public, max-age=604800
